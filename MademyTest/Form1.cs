@@ -13,7 +13,7 @@ namespace MademyTest
 {
     public partial class Form1 : Form
     {
-        Solver solver = null;
+        Network solver = null;
 
         public Form1()
         {
@@ -27,7 +27,7 @@ namespace MademyTest
             layerConfig.Add(2);
             layerConfig.Add(2);
             layerConfig.Add(4);
-            solver = new Solver(Network.CreateNetworkInitRandom(layerConfig));
+            solver = Network.CreateNetworkInitRandom(layerConfig);
 
         }
 
@@ -40,7 +40,7 @@ namespace MademyTest
             input.Add(2);
             input.Add(5);
 
-            var result = solver.Solve(input);
+            var result = solver.Compute(input);
 
             label1.Text = ("Result of: " + string.Join(",", input) + " is: " + string.Join(",", result));
         }

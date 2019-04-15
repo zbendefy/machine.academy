@@ -8,7 +8,7 @@ namespace Mademy
 {
     class Layer
     {
-        List<Neuron> neurons;
+        public List<Neuron> neurons;
 
         public Layer(List<Neuron> neurons)
         {

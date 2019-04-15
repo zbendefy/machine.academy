@@ -8,8 +8,8 @@ namespace Mademy
 {
     class Neuron
     {
-        List<float> weights;
-        float bias;
+        public List<float> weights;
+        public float bias;
 
         public Neuron(List<float> weights, float bias)
         {
@@ -28,7 +28,7 @@ namespace Mademy
                 result += weights[i] * input[i];
             }
 
-            return Utils.Sigmoid( result + bias );
+            return Utils.FastSigmoid( result + bias );
         }
     }
 }

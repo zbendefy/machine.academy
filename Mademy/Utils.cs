@@ -12,9 +12,25 @@ namespace Mademy
         private static float minVal = -100;
         private static float maxVal = 100;
 
-        public static float Sigmoid(float x)
+        public static float FastSigmoid(float x)
         {
             return x / (1.0f + Math.Abs(x));
+        }
+
+        public static float ReLU(float x)
+        {
+            return Math.Max(0, x);
+        }
+
+        public static float Sigmoid(float x)
+        {
+            return x / (1.0f + (float)Math.Pow(Math.E, -x));
+        }
+
+        public static float CalculateError(float output, float expectedOutput)
+        {
+            var diff = output - expectedOutput;
+            return diff * diff;
         }
 
         public static float GetRandomValue()
