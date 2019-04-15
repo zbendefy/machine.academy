@@ -17,6 +17,12 @@ namespace Mademy
             return x / (1.0f + Math.Abs(x));
         }
 
+        public static float FastSigmoidD(float x)
+        {
+            float div = (1.0f + Math.Abs(x));
+            return 1 / (div*div);
+        }
+
         public static float ReLU(float x)
         {
             return Math.Max(0, x);

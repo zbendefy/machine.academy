@@ -29,6 +29,8 @@ namespace Mademy
             public bool UseMinibatches() { return miniBatchSize != DontSubdivideBatches; }
         };
 
+        string name;
+        string description;
         List<Layer> layers;
 
         Network(List<Layer> layers)
@@ -38,8 +40,13 @@ namespace Mademy
 
         Network(SerializationInfo info, StreamingContext context)
         {
+            name = (string)info.GetValue("name", typeof(string));
+            description = (string)info.GetValue("description", typeof(string));
             layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
         }
+
+        void AttachName(string _name) { name = _name;  }
+        void AttachDescription(string _desc) { description = _desc;  }
 
         public void Train(List<Tuple<List<float>, List<float>>> trainingData, TrainingConfig config)
         {
@@ -152,6 +159,8 @@ namespace Mademy
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
+            info.AddValue("name", name, typeof(string));
+            info.AddValue("description", description, typeof(string));
             info.AddValue("layers", layers, typeof(List<Layer>));
         }
     }
