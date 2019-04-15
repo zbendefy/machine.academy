@@ -44,5 +44,15 @@ namespace MademyTest
 
             label1.Text = ("Result of: " + string.Join(",", input) + " is: " + string.Join(",", result));
         }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            textBox1.Text = solver.GetTrainingDataJSON();
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            solver = Network.LoadTrainingDataFromJSON(textBox1.Text);
+        }
     }
 }

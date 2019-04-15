@@ -1,12 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Mademy
 {
-    class Neuron
+    [Serializable]
+    class Neuron : ISerializable
     {
         public List<float> weights;
         public float bias;
@@ -15,6 +17,12 @@ namespace Mademy
         {
             this.weights = weights;
             this.bias = bias;
+        }
+
+        Neuron(SerializationInfo info, StreamingContext context)
+        {
+            weights = (List<float>)info.GetValue("weights", typeof(List<float>));
+            bias = (float)info.GetValue("bias", typeof(float));
         }
 
         public float Compute(List<float> input)
@@ -29,6 +37,12 @@ namespace Mademy
             }
 
             return Utils.FastSigmoid( result + bias );
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("weights", weights, typeof(List<float>));
+            info.AddValue("bias", bias, typeof(float));
         }
     }
 }

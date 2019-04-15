@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
 using MathNet.Numerics.LinearAlgebra;
+using Newtonsoft.Json;
 
 namespace Mademy
 {
-    public class Network
+    [Serializable]
+    public class Network : ISerializable
     {
         public struct TrainingConfig
         {
@@ -31,6 +34,11 @@ namespace Mademy
         Network(List<Layer> layers)
         {
             this.layers = layers;
+        }
+
+        Network(SerializationInfo info, StreamingContext context)
+        {
+            layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
         }
 
         public void Train(List<Tuple<List<float>, List<float>>> trainingData, TrainingConfig config)
@@ -109,12 +117,13 @@ namespace Mademy
 
         public string GetTrainingDataJSON()
         {
-            return "";
+            string output = JsonConvert.SerializeObject(this);
+            return output;
         }
 
-        public void LoadTrainingDataFromJSON(string jsonData)
+        public static Network LoadTrainingDataFromJSON(string jsonData)
         {
-
+            return JsonConvert.DeserializeObject<Network>(jsonData);
         }
 
         public static Network CreateNetworkInitRandom(List<int> layerConfig)
@@ -139,6 +148,11 @@ namespace Mademy
             }
 
             return CreateNetwork(inputLayers);
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("layers", layers, typeof(List<Layer>));
         }
     }
 }
