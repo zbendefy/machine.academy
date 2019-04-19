@@ -24,10 +24,20 @@ namespace Mademy
 
         public List<float> Compute(List<float> input)
         {
+            List<float> zValues = null;
+            return Compute(input, ref zValues);
+        }
+
+        public List<float> Compute(List<float> input, ref List<float> zValues)
+        {
             var ret = new List<float>();
             foreach(var n in neurons)
             {
-                ret.Add(n.Compute(input));
+                ret.Add( Utils.FastSigmoid( n.Compute(input)));
+                if (zValues != null)
+                {
+                    zValues.Add(n.Compute(input));
+                }
             }
             return ret;
         }

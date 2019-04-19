@@ -9,8 +9,8 @@ namespace Mademy
     static class Utils
     {
         private static Random rnd = new Random();
-        private static float minVal = -100;
-        private static float maxVal = 100;
+        private static float minVal = -1;
+        private static float maxVal = 1;
 
         public static float FastSigmoid(float x)
         {
@@ -43,6 +43,18 @@ namespace Mademy
         {
             float ret = (float)rnd.NextDouble();
             return (ret * (maxVal - minVal)) + minVal;
+        }
+    }
+
+    public class NeuronData
+    {
+        public List<float> weights;
+        public float bias;
+
+        public NeuronData(List<float> weights, float bias)
+        {
+            this.weights = weights;
+            this.bias = bias;
         }
     }
 }

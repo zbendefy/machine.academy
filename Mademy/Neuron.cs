@@ -36,7 +36,7 @@ namespace Mademy
                 result += weights[i] * input[i];
             }
 
-            return Utils.FastSigmoid( result + bias );
+            return result + bias;
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)

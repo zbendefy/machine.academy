@@ -18,11 +18,13 @@ namespace Mademy
             public static readonly int DontSubdivideBatches = -1;
 
             public int miniBatchSize;
+            public float learningRate;
 
             public TrainingConfig CreateTrainingConfig()
             {
                 var ret = new TrainingConfig();
                 ret.miniBatchSize = DontSubdivideBatches;
+                learningRate = 0.001f;
                 return ret;
             }
 
@@ -32,6 +34,8 @@ namespace Mademy
         string name;
         string description;
         List<Layer> layers;
+
+        List<float[]> gammaValues;
 
         Network(List<Layer> layers)
         {
@@ -63,10 +67,10 @@ namespace Mademy
                     var layer = layers[i];
                     for (int j = 0; j < layer.neurons.Count; ++j)
                     {
-                        layer.neurons[j].bias += gradient[i][j].Item2;
+                        layer.neurons[j].bias -= gradient[i][j].bias * config.learningRate;
                         for (int w = 0; w < layer.neurons[j].weights.Count; ++w)
                         {
-                            layer.neurons[j].weights[w] += gradient[i][j].Item1[w];
+                            layer.neurons[j].weights[w] -= gradient[i][j].weights[w] * config.learningRate;
                         }
                     }
                 }
@@ -86,24 +90,143 @@ namespace Mademy
             }
         }
 
-        private List<List<Tuple<List<float>, float>>> CalculateGradient(List<Tuple<List<float>, List<float>>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        private float CalculateZL(Neuron neuron, List<float> prevActivations)
         {
-            float error = 0;
-            foreach (var item in trainingData)
+            float zL = 0;
+            for (int i = 0; i < neuron.weights.Count; i++)
             {
-                var output = Compute(item.Item1);
-                //error += Utils.CalculateError(output, item.Item2);
+                zL += neuron.weights[i] * prevActivations[i];
             }
-            return new List<List<Tuple<List<float>, float>>>();
+            zL += neuron.bias;
+            return zL;
+        }
+
+        private float CalculateDC_DA(List<float> layerActivation, List<float> expectedResults)
+        {
+            float ret = 0;
+            for (int i = 0; i < layerActivation.Count; i++)
+            {
+                ret += layerActivation[i] - expectedResults[i];
+            }
+            return 2.0f * ret;
+        }
+
+
+
+        private void CalculateGradientOutputLayer(ref List<List<NeuronData>> results, List<List<float>> activations, ref List<float> gammaValues , List<List<float>> zValues, Tuple<List<float>, List<float>> trainingData)
+        {
+            Layer layer = layers.Last();
+
+            for (int i = 0; i < layer.neurons.Count; i++)
+                gammaValues.Add((activations.Last()[i] - trainingData.Item2[i]) * Utils.FastSigmoidD(activations.Last()[i]));
+
+            for (int i = 0; i < layer.neurons.Count; i++)
+            {
+                for (int j = 0; j < layer.neurons[i].weights.Count; j++)
+                {
+                    results.Last()[i].weights[j] = gammaValues[i] + 
+                }
+            }
+
+
+        }
+
+
+        private void CalculateNudge(ref List<List<NeuronData>> results, List<List<float>> activations, List<List<float>> zValues, Tuple<List<float>, List<float>> trainingData)
+        {
+
+
+
+
+
+
+            var layer = layers.Last();
+            int L = layers.Count - 1;
+
+            float dC_dal = CalculateDC_DA(activations.Last(), trainingData.Item2);//not sure if function is correct
+
+            for (int j = 0; j < layer.neurons.Count; j++)
+            {
+                var neuron = layer.neurons[j];
+
+                float dal_dzl = Utils.FastSigmoidD(CalculateZL(neuron, activations[L - 1]));
+
+                for (int k = 0; k < neuron.weights.Count; k++)
+                {
+                    float dzl_dw = activations[L - 1][k]; //checked in wolfram alpha: d/dw (w*a+u*t+b) = a
+                    float sensitivityToWeight = dzl_dw * dal_dzl * dC_dal;
+                    results[L][j].weights[k] += sensitivityToWeight;
+                }
+
+                float sensitivityToBias = dal_dzl * dC_dal;
+                results[L][j].bias += sensitivityToBias;
+
+                /*
+                float sensitivityToPrevActivation = 0;
+                for (int i = 0; i < activations[L - 1].Count; i++)
+                {
+                    sensitivityToPrevActivation += weights[i] * dal_dzl * dC_dal;
+                }
+                dC_dal = sensitivityToPrevActivation;
+                */
+            }
+        }
+
+        private List<List<NeuronData>> CalculateGradient(List<Tuple<List<float>, List<float>>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        {
+            //Backpropagation
+            var ret = new List<List<NeuronData>>();
+            {
+                for (int i = 0; i < layers.Count; i++)
+                {
+                    var nlist = new List<NeuronData>();
+                    for (int j = 0; j < layers[i].neurons.Count; j++)
+                    {
+                        var wlist = new List<float>();
+                        for (int k = 0; k < layers[i].neurons[j].weights.Count; k++)
+                        {
+                            wlist.Add(0);
+                        }
+                        nlist.Add(new NeuronData(wlist, 0));
+                    }
+                    ret.Add(nlist);
+                }
+            }
+
+            for (int t = trainingDataBegin; t < trainingDataEnd; ++t)
+            {
+                List<List<float>> activations = new List<List<float>>();
+                List<List<float>> zValues = new List<List<float>>();
+                Compute(trainingData[t].Item1, ref activations, ref zValues);
+                CalculateNudge(ref ret, activations, zValues, trainingData[t]);
+            }
+            return ret;
+        }
+
+        private List<float> Compute(List<float> input, ref List<List<float>> activations, ref List<List<float>> zValues)
+        {
+            var current = input;
+            foreach(var layer in layers)
+            {
+                List<float> zvalueList = null;
+                if (zValues != null)
+                {
+                    zvalueList = new List<float>();
+                    zValues.Add(zvalueList);
+                }
+
+                current = layer.Compute(current, ref zvalueList);
+                if (activations != null)
+                    activations.Add(current);
+            }
+            return current;
         }
 
         public List<float> Compute(List<float> input)
         {
-            var current = input;
-            foreach(var layer in layers){
-                current = layer.Compute(current);
-            }
-            return current;
+            List<List<float>> doesntNeedActivations = null;
+            List<List<float>> doesntNeedZValues = null;
+            return Compute(input, ref doesntNeedActivations, ref doesntNeedZValues);
         }
 
         public static Network CreateNetwork(List< List< Tuple< List<float>, float> > > inputLayers)
