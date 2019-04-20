@@ -48,10 +48,10 @@ namespace Mademy
 
     public class NeuronData
     {
-        public List<float> weights;
+        public float[] weights;
         public float bias;
 
-        public NeuronData(List<float> weights, float bias)
+        public NeuronData(float[] weights, float bias)
         {
             this.weights = weights;
             this.bias = bias;

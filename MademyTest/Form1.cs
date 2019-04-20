@@ -1,4 +1,5 @@
-﻿using Mademy;
+﻿using CLMath;
+using Mademy;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -14,6 +15,7 @@ namespace MademyTest
     public partial class Form1 : Form
     {
         Network solver = null;
+        MathLib mathLib = null;
 
         public Form1()
         {
@@ -29,6 +31,11 @@ namespace MademyTest
             layerConfig.Add(4);
             solver = Network.CreateNetworkInitRandom(layerConfig);
 
+
+            foreach (var device in CLMath.ComputeDevice.GetDevices())
+            {
+                comboBox1.Items.Add(device);
+            }
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -40,7 +47,10 @@ namespace MademyTest
             input.Add(2);
             input.Add(5);
 
-            var result = solver.Compute(input);
+            if ( mathLib == null)
+                mathLib = new MathLib((ComputeDevice)comboBox1.SelectedItem);
+
+            var result = solver.Compute(mathLib, input.ToArray());
 
             label1.Text = ("Result of: " + string.Join(",", input) + " is: " + string.Join(",", result));
         }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CLMath;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.Serialization;
@@ -10,41 +11,44 @@ namespace Mademy
     [Serializable]
     class Layer : ISerializable
     {
-        public List<Neuron> neurons;
+        public float[,] weightMx;
+        public float[] biases;
 
-        public Layer(List<Neuron> neurons)
+        public Layer(float[,] weightMx, float[] biases)
         {
-            this.neurons = neurons;
+            this.weightMx = weightMx;
+            this.biases = biases;
+
+            if (weightMx.GetLength(0) != biases.GetLength(0))
+                throw new Exception("Invalid layer!");
+        }
+
+        public int GetNeuronCount()
+        {
+            return biases.Length;
+        }
+
+        public int GetWeightsPerNeuron() { return weightMx.GetLength(1); }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("weightMx", weightMx);
+            info.AddValue("biases", biases);
         }
 
         Layer(SerializationInfo info, StreamingContext context)
         {
-            neurons = (List<Neuron>)info.GetValue("neurons", typeof(List<Neuron>));
+            weightMx = (float[,])info.GetValue("weightMx", typeof(float[,]));
+            biases = (float[])info.GetValue("biases", typeof(float[]));
         }
 
-        public List<float> Compute(List<float> input)
+        public float[] Compute(MathLib mathLib, float[] input, bool applySigmoid = true)
         {
-            List<float> zValues = null;
-            return Compute(input, ref zValues);
+            if (applySigmoid)
+                return mathLib.MatrixVecMulSigmoid(weightMx, input);
+            else
+                return mathLib.MatrixVecMul(weightMx, input);
         }
 
-        public List<float> Compute(List<float> input, ref List<float> zValues)
-        {
-            var ret = new List<float>();
-            foreach(var n in neurons)
-            {
-                ret.Add( Utils.FastSigmoid( n.Compute(input)));
-                if (zValues != null)
-                {
-                    zValues.Add(n.Compute(input));
-                }
-            }
-            return ret;
-        }
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue("neurons", neurons, typeof(List<Neuron>));
-        }
     }
 }

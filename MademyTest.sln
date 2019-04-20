@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MademyTest", "MademyTest\Ma
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mademy", "Mademy\Mademy.csproj", "{88AD671C-2D39-4D63-8D8D-55D2C9E07738}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLMath", "CLMath\CLMath.csproj", "{B9271ED7-2621-4186-ADF0-169EFB29BB90}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{88AD671C-2D39-4D63-8D8D-55D2C9E07738}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{88AD671C-2D39-4D63-8D8D-55D2C9E07738}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{88AD671C-2D39-4D63-8D8D-55D2C9E07738}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B9271ED7-2621-4186-ADF0-169EFB29BB90}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B9271ED7-2621-4186-ADF0-169EFB29BB90}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B9271ED7-2621-4186-ADF0-169EFB29BB90}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B9271ED7-2621-4186-ADF0-169EFB29BB90}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

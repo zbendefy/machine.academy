@@ -5,6 +5,7 @@ using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
 using System.Threading.Tasks;
+using CLMath;
 using MathNet.Numerics.LinearAlgebra;
 using Newtonsoft.Json;
 
@@ -35,7 +36,6 @@ namespace Mademy
         string description;
         List<Layer> layers;
 
-        List<float[]> gammaValues;
 
         Network(List<Layer> layers)
         {
@@ -51,26 +51,26 @@ namespace Mademy
 
         void AttachName(string _name) { name = _name;  }
         void AttachDescription(string _desc) { description = _desc;  }
-
-        public void Train(List<Tuple<List<float>, List<float>>> trainingData, TrainingConfig config)
+        
+        public void Train(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, TrainingConfig config)
         {
             int trainingDataBegin = 0;
             int trainingDataEnd = config.UseMinibatches() ? config.miniBatchSize : trainingData.Count;
 
             while(true)
             {
-                var gradient = CalculateGradient(trainingData, trainingDataBegin, trainingDataEnd);
+                var gradient = CalculateGradient(mathLib, trainingData, trainingDataBegin, trainingDataEnd);
 
                 //Apply gradient to network
                 for (int i = 0; i < layers.Count; ++i)
                 {
                     var layer = layers[i];
-                    for (int j = 0; j < layer.neurons.Count; ++j)
+                    for (int j = 0; j < layer.GetNeuronCount(); ++j)
                     {
-                        layer.neurons[j].bias -= gradient[i][j].bias * config.learningRate;
-                        for (int w = 0; w < layer.neurons[j].weights.Count; ++w)
+                        layer.biases[j] -= gradient[i][j].bias * config.learningRate;
+                        for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
                         {
-                            layer.neurons[j].weights[w] -= gradient[i][j].weights[w] * config.learningRate;
+                            layer.weightMx[j, w] -= gradient[i][j].weights[w] * config.learningRate;
                         }
                     }
                 }
@@ -90,16 +90,95 @@ namespace Mademy
             }
         }
 
-        private float CalculateZL(Neuron neuron, List<float> prevActivations)
+        private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, List<float[]> activations, List<float[]> zValues, float[] desiredOutput)
+        {
+            for (int i = 0; i < layers.Last().GetNeuronCount(); i++)
+            {
+                float outputValue = activations.Last()[i];
+                float delta_k = (outputValue - desiredOutput[i]) * MathLib.SigmoidPrime(zValues.Last()[i]);
+
+                for (int j = 0; j < layers.Last().GetWeightsPerNeuron(); j++)
+                {
+                    gradientData[i].weights[j] = delta_k * (activations[activations.Count-2][j]);
+                }
+                gradientData[i].bias = delta_k;
+                delta_k_vector.Add(delta_k);
+            }
+        }
+
+        private void CalculateHiddenLayerGradient(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, float[] prevLayerActivations, List<float[]> zValues)
+        {
+            List<float> newDeltaK = new List<float>();
+            for (int i = 0; i < layers[L].GetNeuronCount(); i++)
+            {
+                float delta_j = 0;
+                for (int k = 0; k < delta_k_vector.Count; k++)
+                {
+                    delta_j += delta_k_vector[i] * layers[L].weightMx[i, k];
+                }
+                delta_j *= MathLib.SigmoidPrime(zValues[L][i]);
+                newDeltaK.Add(delta_j);
+
+                for (int j = 0; j < layers[L].GetWeightsPerNeuron(); j++)
+                {
+                    gradientData[i].weights[j] = delta_j * (prevLayerActivations[j]);
+                }
+                gradientData[i].bias = delta_j;
+            }
+
+            delta_k_vector = newDeltaK;
+        }
+
+        private List<List<NeuronData>> CalculateGradient(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        {
+            //Backpropagation
+            var ret = new List<List<NeuronData>>();
+            {
+                for (int i = 0; i < layers.Count; i++)
+                {
+                    var nlist = new List<NeuronData>();
+                    for (int j = 0; j < layers[i].GetNeuronCount(); j++)
+                    {
+                        var wlist = new float[layers[i].GetWeightsPerNeuron()];
+                        nlist.Add(new NeuronData(wlist, 0));
+                    }
+                    ret.Add(nlist);
+                }
+            }
+
+            for (int t = trainingDataBegin; t < trainingDataEnd; ++t)
+            {
+                List<float[]> activations = new List<float[]>();
+                List<float[]> zValues = new List<float[]>();
+                Compute(mathLib, trainingData[t].Item1, ref activations, ref zValues);
+
+                var lastLayerGradient = ret.Last();
+                List<float> delta_k_holder = new List<float>();
+                CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, zValues, trainingData[t].Item2);
+
+                for (int i = layers.Count-2; i >= 0; --i)
+                {
+                    var layerGradient = ret[i];
+                    CalculateHiddenLayerGradient(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingData[t].Item1 : activations[i], zValues);
+                }
+
+            }
+            return ret;
+        }
+
+        /*
+        private float CalculateZL(float[,] weightMx, int neuronId, float bias, float[] prevActivations)
         {
             float zL = 0;
-            for (int i = 0; i < neuron.weights.Count; i++)
+            for (int i = 0; i < weightMx.GetLength(1); i++)
             {
-                zL += neuron.weights[i] * prevActivations[i];
+                zL += weightMx[neuronId, i] * prevActivations[i];
             }
-            zL += neuron.bias;
+            zL += bias;
             return zL;
-        }
+        }*/
+
+        /*
 
         private float CalculateDC_DA(List<float> layerActivation, List<float> expectedResults)
         {
@@ -161,72 +240,35 @@ namespace Mademy
                 float sensitivityToBias = dal_dzl * dC_dal;
                 results[L][j].bias += sensitivityToBias;
 
-                /*
-                float sensitivityToPrevActivation = 0;
-                for (int i = 0; i < activations[L - 1].Count; i++)
-                {
-                    sensitivityToPrevActivation += weights[i] * dal_dzl * dC_dal;
-                }
-                dC_dal = sensitivityToPrevActivation;
-                */
             }
         }
 
-        private List<List<NeuronData>> CalculateGradient(List<Tuple<List<float>, List<float>>> trainingData, int trainingDataBegin, int trainingDataEnd)
-        {
-            //Backpropagation
-            var ret = new List<List<NeuronData>>();
-            {
-                for (int i = 0; i < layers.Count; i++)
-                {
-                    var nlist = new List<NeuronData>();
-                    for (int j = 0; j < layers[i].neurons.Count; j++)
-                    {
-                        var wlist = new List<float>();
-                        for (int k = 0; k < layers[i].neurons[j].weights.Count; k++)
-                        {
-                            wlist.Add(0);
-                        }
-                        nlist.Add(new NeuronData(wlist, 0));
-                    }
-                    ret.Add(nlist);
-                }
-            }
+        */
 
-            for (int t = trainingDataBegin; t < trainingDataEnd; ++t)
-            {
-                List<List<float>> activations = new List<List<float>>();
-                List<List<float>> zValues = new List<List<float>>();
-                Compute(trainingData[t].Item1, ref activations, ref zValues);
-                CalculateNudge(ref ret, activations, zValues, trainingData[t]);
-            }
-            return ret;
-        }
-
-        private List<float> Compute(List<float> input, ref List<List<float>> activations, ref List<List<float>> zValues)
+        private float[] Compute(MathLib mathLib, float[] input, ref List<float[]> activations, ref List<float[]> zValues)
         {
             var current = input;
             foreach(var layer in layers)
             {
-                List<float> zvalueList = null;
+                current = layer.Compute(mathLib, current, false);
                 if (zValues != null)
                 {
-                    zvalueList = new List<float>();
-                    zValues.Add(zvalueList);
+                    float[] zlist = new float[current.Length];
+                    for (int i = 0; i < zlist.Length; i++)
+                        zlist[i] = MathLib.Sigmoid(current[i]);
+                    zValues.Add(zlist);
                 }
-
-                current = layer.Compute(current, ref zvalueList);
                 if (activations != null)
                     activations.Add(current);
             }
             return current;
         }
 
-        public List<float> Compute(List<float> input)
+        public float[] Compute(MathLib mathLib, float[] input)
         {
-            List<List<float>> doesntNeedActivations = null;
-            List<List<float>> doesntNeedZValues = null;
-            return Compute(input, ref doesntNeedActivations, ref doesntNeedZValues);
+            List<float[]> doesntNeedActivations = null;
+            List<float[]> doesntNeedZ = null;
+            return Compute(mathLib, input, ref doesntNeedActivations, ref doesntNeedZ);
         }
 
         public static Network CreateNetwork(List< List< Tuple< List<float>, float> > > inputLayers)
@@ -234,12 +276,22 @@ namespace Mademy
             List<Layer> layers = new List<Layer>();
             foreach (var layerData in inputLayers)
             {
-                List<Neuron> neurons = new List<Neuron>();
-                foreach (var neuronData in layerData)
+                int neuronCountInLayer = layerData.Count;
+                int weightsPerNeuron = layerData[0].Item1.Count;
+
+                float[,] weightMx = new float[neuronCountInLayer, weightsPerNeuron];
+                float[] biases = new float[neuronCountInLayer];
+
+                for (int i = 0; i < neuronCountInLayer; i++)
                 {
-                    neurons.Add(new Neuron(neuronData.Item1, neuronData.Item2));
+                    for (int j = 0; j < weightsPerNeuron; j++)
+                    {
+                        weightMx[i, j] = layerData[i].Item1[j];
+                    }
+                    biases[i] = layerData[i].Item2;
                 }
-                layers.Add( new Layer(neurons) ); 
+
+                layers.Add( new Layer(weightMx, biases) ); 
             }
 
             return new Network(layers);

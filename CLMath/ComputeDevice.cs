@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using OpenCL.Net;
 
-namespace Mademy
+namespace CLMath
 {
     public class ComputeDevice
     {
@@ -102,5 +102,7 @@ namespace Mademy
         {
             return deviceId;
         }
+
+        public override String ToString() { return GetName(); }
     }
 }
