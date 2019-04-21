@@ -80,22 +80,55 @@ namespace CLMath
             }
         }
 
-        public float[] MatrixVecMulSigmoid(float[,] A, float[] B)
+        public float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations)
         {
-            if (A.GetLength(1) != B.GetLength(0))
+            if (weightMx.GetLength(1) != prevActivations.GetLength(0))
                 throw new Exception("Invalid input");
 
-            if (clDevice == null)
+            //if (clDevice == null)
             {
-                float[] ret = new float[A.GetLength(0)];
-                for (int m = 0; m < A.GetLength(0); m++)
+                float[] ret = new float[weightMx.GetLength(0)];
+                for (int m = 0; m < weightMx.GetLength(0); m++)
                 {
                     float acc = 0.0f;
-                    for (int k = 0; k < A.GetLength(1); k++)
+                    for (int k = 0; k < weightMx.GetLength(1); k++)
                     {
-                        acc += A[m, k] * B[k];
+                        acc += weightMx[m, k] * prevActivations[k];
                     }
-                    ret[m] = Sigmoid(acc);
+                    ret[m] = Sigmoid(acc + bias[m]);
+                }
+                return ret;
+            }
+            return null;
+
+            /*int[] sizes = new int[] { size1, size2, size3 };
+
+            InitCL();
+
+            ErrorCode err;
+            var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
+            var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
+            var mem_param_sizes = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, sizes, out err);
+            */
+
+        }
+
+        public float[] CalculateZ(float[,] weightMx, float[] bias, float[] prevActivations)
+        {
+            if (weightMx.GetLength(1) != prevActivations.GetLength(0) || weightMx.GetLength(0) != bias.Length) 
+                throw new Exception("Invalid input");
+
+            //if (clDevice == null)
+            {
+                float[] ret = new float[weightMx.GetLength(0)];
+                for (int m = 0; m < weightMx.GetLength(0); m++)
+                {
+                    float acc = 0.0f;
+                    for (int k = 0; k < weightMx.GetLength(1); k++)
+                    {
+                        acc += weightMx[m, k] * prevActivations[k];
+                    }
+                    ret[m] = acc + bias[m];
                 }
                 return ret;
             }
@@ -118,7 +151,7 @@ namespace CLMath
             if (A.GetLength(1) != B.GetLength(0))
                 throw new Exception("Invalid input");
 
-            if (clDevice == null)
+            //if (clDevice == null)
             {
                 float[] ret = new float[A.GetLength(0)];
                 for (int m = 0; m < A.GetLength(0); m++)
@@ -152,7 +185,7 @@ namespace CLMath
             if (A.GetLength(1) != B.GetLength(0))
                 throw new Exception("Invalid input");
 
-            if (clDevice == null)
+            //if (clDevice == null)
             {
                 float[,] ret = new float[A.GetLength(0), B.GetLength(1)];
                 for (int m = 0; m < A.GetLength(0); m++)

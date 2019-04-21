@@ -21,11 +21,11 @@ namespace Mademy
             public int miniBatchSize;
             public float learningRate;
 
-            public TrainingConfig CreateTrainingConfig()
+            public static TrainingConfig CreateTrainingConfig()
             {
                 var ret = new TrainingConfig();
-                ret.miniBatchSize = DontSubdivideBatches;
-                learningRate = 0.001f;
+                ret.miniBatchSize = 1000;
+                ret.learningRate = 0.001f;
                 return ret;
             }
 
@@ -95,38 +95,38 @@ namespace Mademy
             for (int i = 0; i < layers.Last().GetNeuronCount(); i++)
             {
                 float outputValue = activations.Last()[i];
-                float delta_k = (outputValue - desiredOutput[i]) * MathLib.SigmoidPrime(zValues.Last()[i]);
+                float gamma_k = (outputValue - desiredOutput[i]) * MathLib.SigmoidPrime(zValues.Last()[i]);
 
                 for (int j = 0; j < layers.Last().GetWeightsPerNeuron(); j++)
                 {
-                    gradientData[i].weights[j] = delta_k * (activations[activations.Count-2][j]);
+                    gradientData[i].weights[j] = gamma_k * (activations[activations.Count-2][j]);
                 }
-                gradientData[i].bias = delta_k;
-                delta_k_vector.Add(delta_k);
+                gradientData[i].bias = gamma_k;
+                delta_k_vector.Add(gamma_k);
             }
         }
 
-        private void CalculateHiddenLayerGradient(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, float[] prevLayerActivations, List<float[]> zValues)
+        private void CalculateHiddenLayerGradient(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
         {
             List<float> newDeltaK = new List<float>();
             for (int i = 0; i < layers[L].GetNeuronCount(); i++)
             {
-                float delta_j = 0;
-                for (int k = 0; k < delta_k_vector.Count; k++)
+                float gamma_j = 0;
+                for (int k = 0; k < gamma_k_vector.Count; k++)
                 {
-                    delta_j += delta_k_vector[i] * layers[L].weightMx[i, k];
+                    gamma_j += gamma_k_vector[k] * layers[L+1].weightMx[k, i];
                 }
-                delta_j *= MathLib.SigmoidPrime(zValues[L][i]);
-                newDeltaK.Add(delta_j);
+                gamma_j *= MathLib.SigmoidPrime(zValues[L][i]);
+                newDeltaK.Add(gamma_j);
 
                 for (int j = 0; j < layers[L].GetWeightsPerNeuron(); j++)
                 {
-                    gradientData[i].weights[j] = delta_j * (prevLayerActivations[j]);
+                    gradientData[i].weights[j] = gamma_j * (prevLayerActivations[j]);
                 }
-                gradientData[i].bias = delta_j;
+                gradientData[i].bias = gamma_j;
             }
 
-            delta_k_vector = newDeltaK;
+            gamma_k_vector = newDeltaK;
         }
 
         private List<List<NeuronData>> CalculateGradient(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
@@ -250,7 +250,8 @@ namespace Mademy
             var current = input;
             foreach(var layer in layers)
             {
-                current = layer.Compute(mathLib, current, false);
+                bool applySigmoid = zValues != null;
+                current = layer.Compute(mathLib, current, applySigmoid);
                 if (zValues != null)
                 {
                     float[] zlist = new float[current.Length];

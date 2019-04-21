@@ -45,9 +45,9 @@ namespace Mademy
         public float[] Compute(MathLib mathLib, float[] input, bool applySigmoid = true)
         {
             if (applySigmoid)
-                return mathLib.MatrixVecMulSigmoid(weightMx, input);
+                return mathLib.CalculateLayer(weightMx, biases, input);
             else
-                return mathLib.MatrixVecMul(weightMx, input);
+                return mathLib.CalculateZ(weightMx, biases, input);
         }
 
     }
