@@ -90,35 +90,45 @@ namespace Mademy
             }
         }
 
-        private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, List<float[]> activations, List<float[]> zValues, float[] desiredOutput)
+        private void Assert(bool v)
         {
+            if (!v)
+                throw new Exception("baaad");
+        }
+
+        private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, List<float[]> zValues, float[] desiredOutput)
+        {
+            var prevActivations = activations[activations.Count - 2];
             for (int i = 0; i < layers.Last().GetNeuronCount(); i++)
             {
                 float outputValue = activations.Last()[i];
                 float gamma_k = (outputValue - desiredOutput[i]) * MathLib.SigmoidPrime(zValues.Last()[i]);
 
+                Assert(gradientData[i].weights.Length == prevActivations.Length);
                 for (int j = 0; j < layers.Last().GetWeightsPerNeuron(); j++)
                 {
-                    gradientData[i].weights[j] = gamma_k * (activations[activations.Count-2][j]);
+                    gradientData[i].weights[j] = gamma_k * (prevActivations[j]);
                 }
                 gradientData[i].bias = gamma_k;
-                delta_k_vector.Add(gamma_k);
+                gamma_k_vector.Add(gamma_k);
             }
         }
 
         private void CalculateHiddenLayerGradient(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
         {
-            List<float> newDeltaK = new List<float>();
+            List<float> newGammak = new List<float>();
             for (int i = 0; i < layers[L].GetNeuronCount(); i++)
             {
                 float gamma_j = 0;
+                Assert(gamma_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
                 for (int k = 0; k < gamma_k_vector.Count; k++)
                 {
                     gamma_j += gamma_k_vector[k] * layers[L+1].weightMx[k, i];
                 }
                 gamma_j *= MathLib.SigmoidPrime(zValues[L][i]);
-                newDeltaK.Add(gamma_j);
+                newGammak.Add(gamma_j);
 
+                Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
                 for (int j = 0; j < layers[L].GetWeightsPerNeuron(); j++)
                 {
                     gradientData[i].weights[j] = gamma_j * (prevLayerActivations[j]);
@@ -126,7 +136,7 @@ namespace Mademy
                 gradientData[i].bias = gamma_j;
             }
 
-            gamma_k_vector = newDeltaK;
+            gamma_k_vector = newGammak;
         }
 
         private List<List<NeuronData>> CalculateGradient(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
@@ -146,20 +156,48 @@ namespace Mademy
                 }
             }
 
+            var intermediate = new List<List<NeuronData>>();
+            {
+                for (int i = 0; i < layers.Count; i++)
+                {
+                    var nlist = new List<NeuronData>();
+                    for (int j = 0; j < layers[i].GetNeuronCount(); j++)
+                    {
+                        var wlist = new float[layers[i].GetWeightsPerNeuron()];
+                        nlist.Add(new NeuronData(wlist, 0));
+                    }
+                    intermediate.Add(nlist);
+                }
+            }
+
+            float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
             for (int t = trainingDataBegin; t < trainingDataEnd; ++t)
             {
                 List<float[]> activations = new List<float[]>();
                 List<float[]> zValues = new List<float[]>();
                 Compute(mathLib, trainingData[t].Item1, ref activations, ref zValues);
 
-                var lastLayerGradient = ret.Last();
+                var lastLayerGradient = intermediate.Last();
                 List<float> delta_k_holder = new List<float>();
                 CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, zValues, trainingData[t].Item2);
 
                 for (int i = layers.Count-2; i >= 0; --i)
                 {
-                    var layerGradient = ret[i];
-                    CalculateHiddenLayerGradient(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingData[t].Item1 : activations[i], zValues);
+                    var layerGradient = intermediate[i];
+                    CalculateHiddenLayerGradient(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingData[t].Item1 : activations[i - 1], zValues);
+                }
+
+
+                for (int i = 0; i < intermediate.Count; i++)
+                {
+                    for (int j = 0; j < intermediate[i].Count; j++)
+                    {
+                        for (int k = 0; k < intermediate[i][j].weights.Length; k++)
+                        {
+                            ret[i][j].weights[k] += intermediate[i][j].weights[k] * sizeDivisor;
+                        }
+                        ret[i][j].bias += intermediate[i][j].bias * sizeDivisor;
+                    }
                 }
 
             }
@@ -250,14 +288,13 @@ namespace Mademy
             var current = input;
             foreach(var layer in layers)
             {
-                bool applySigmoid = zValues != null;
+                bool applySigmoid = zValues == null;
                 current = layer.Compute(mathLib, current, applySigmoid);
                 if (zValues != null)
                 {
-                    float[] zlist = new float[current.Length];
-                    for (int i = 0; i < zlist.Length; i++)
-                        zlist[i] = MathLib.Sigmoid(current[i]);
-                    zValues.Add(zlist);
+                    zValues.Add((float[])current.Clone());
+                    for (int i = 0; i < current.Length; i++)
+                        current[i] = MathLib.Sigmoid(current[i]);
                 }
                 if (activations != null)
                     activations.Add(current);

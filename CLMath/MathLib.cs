@@ -24,13 +24,12 @@ namespace CLMath
 
         public static float Sigmoid(float x)
         {
-            return x / (1.0f + Math.Abs(x));
+            return 1.0f / (1.0f + (float)Math.Exp(-x));
         }
 
         public static float SigmoidPrime(float x)
         {
-            float div = (1.0f + Math.Abs(x));
-            return 1 / (div * div);
+            return Sigmoid(x) * (1.0f - Sigmoid(x));
         }
 
         private void CleanupCLResources()

@@ -26,8 +26,8 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
-            layerConfig.Add(8);
-            layerConfig.Add(8);
+            layerConfig.Add(16);
+            layerConfig.Add(20);
             layerConfig.Add(5);
             solver = Network.CreateNetworkInitRandom(layerConfig);
 
@@ -70,7 +70,7 @@ namespace MademyTest
             List<Tuple<float[], float[]>> trainingData = new List<Tuple<float[], float[]>>();
 
             var rnd = new Random();
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 100000; i++)
             {
                 float[] input = new float[] { 0,0,0,0,0 };
                 float[] output = new float[] { 0,0,0,0,0 };
@@ -90,6 +90,11 @@ namespace MademyTest
         {
 
             mathLib = new MathLib((ComputeDevice)comboBox1.SelectedItem);
+        }
+
+        private void label1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
