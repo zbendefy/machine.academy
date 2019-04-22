@@ -52,10 +52,10 @@ namespace CLMath
         {
             if (!hasClInitialized && clDevice != null)
             {
-                /*
                 ErrorCode err;
+                Cl.ContextNotify notif = (string a, byte[] b,System.IntPtr c,System.IntPtr d) => { };
                 ContextProperty[] contextProps = new ContextProperty[] { new ContextProperty(ContextProperties.Platform, (IntPtr)clDevice.GetPlatformID()) };
-                clContext = Cl.CreateContext(contextProps, 1, new Device[] { clDevice.GetDevice() }, null, IntPtr.Zero, out err);
+                clContext = Cl.CreateContext(contextProps, 1, new Device[] { clDevice.GetDevice() }, notif, IntPtr.Zero, out err);
                 if (err != ErrorCode.Success) throw new Exception("Failed to create context! " + err.ToString());
 
                 commandQueue = Cl.CreateCommandQueue(clContext, clDevice.GetDevice(), CommandQueueProperties.None, out err);
@@ -75,7 +75,6 @@ namespace CLMath
                 if (err != ErrorCode.Success) throw new Exception("Failed to create compute kernel! " + err.ToString());
 
                 hasClInitialized = true;
-                */
             }
         }
 
@@ -84,7 +83,7 @@ namespace CLMath
             if (weightMx.GetLength(1) != prevActivations.GetLength(0))
                 throw new Exception("Invalid input");
 
-            //if (clDevice == null)
+            if (clDevice == null)
             {
                 float[] ret = new float[weightMx.GetLength(0)];
                 for (int m = 0; m < weightMx.GetLength(0); m++)
@@ -98,18 +97,18 @@ namespace CLMath
                 }
                 return ret;
             }
-            return null;
 
-            /*int[] sizes = new int[] { size1, size2, size3 };
+            int[] sizes = new int[] { weightMx.GetLength(0), weightMx.GetLength(1) };
 
             InitCL();
 
             ErrorCode err;
-            var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
-            var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
+            //var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
+            //var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
             var mem_param_sizes = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, sizes, out err);
-            */
+            
 
+            return null;
         }
 
         public float[] CalculateZ(float[,] weightMx, float[] bias, float[] prevActivations)
@@ -144,75 +143,6 @@ namespace CLMath
             */
 
         }
-
-        public float[] MatrixVecMul(float[,] A, float[] B)
-        {
-            if (A.GetLength(1) != B.GetLength(0))
-                throw new Exception("Invalid input");
-
-            //if (clDevice == null)
-            {
-                float[] ret = new float[A.GetLength(0)];
-                for (int m = 0; m < A.GetLength(0); m++)
-                {
-                    float acc = 0.0f;
-                    for (int k = 0; k < A.GetLength(1); k++)
-                    {
-                        acc += A[m, k] * B[k];
-                    }
-                    ret[m] = acc;
-                }
-                return ret;
-            }
-            return null;
-
-            /*int[] sizes = new int[] { size1, size2, size3 };
-
-            InitCL();
-
-            ErrorCode err;
-            var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
-            var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
-            var mem_param_sizes = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, sizes, out err);
-            */
-
-        }
-
-
-        public float[,] MatrixMul(float[,] A, float[,] B)
-        {
-            if (A.GetLength(1) != B.GetLength(0))
-                throw new Exception("Invalid input");
-
-            //if (clDevice == null)
-            {
-                float[,] ret = new float[A.GetLength(0), B.GetLength(1)];
-                for (int m = 0; m < A.GetLength(0); m++)
-                {
-                    for (int n = 0; n < B.GetLength(1); n++)
-                    {
-                        float acc = 0.0f;
-                        for (int k = 0; k < A.GetLength(1); k++)
-                        {
-                            acc += A[m, k] * B[k,n];
-                        }
-                        ret[m, n] = acc;
-                    }
-                }
-                return ret;
-            }
-            return null;
-
-            /*int[] sizes = new int[] { size1, size2, size3 };
-
-            InitCL();
-
-            ErrorCode err;
-            var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
-            var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
-            var mem_param_sizes = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, sizes, out err);
-            */
-
-        }
+        
     }
 }

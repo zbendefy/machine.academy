@@ -31,7 +31,15 @@ namespace MademyTest
             layerConfig.Add(5);
             solver = Network.CreateNetworkInitRandom(layerConfig);
 
-            mathLib = new MathLib( ComputeDevice.GetDevices()[0]);
+            try
+            {
+                mathLib = new MathLib( ComputeDevice.GetDevices()[0]);
+            }
+            catch (Exception)
+            {
+                mathLib = new MathLib();
+                throw;
+            }
 
             foreach (var device in ComputeDevice.GetDevices())
             {
@@ -50,7 +58,7 @@ namespace MademyTest
 
             var result = solver.Compute(mathLib, input.ToArray());
 
-            label1.Text = ("Result of: " + string.Join(",", input) + " is: " + string.Join(",", result));
+            label1.Text = ("Result of: " + string.Join(", ", input) + " is: \n" + string.Join("\n", result));
         }
 
         private void button2_Click(object sender, EventArgs e)
@@ -66,18 +74,19 @@ namespace MademyTest
         private void button4_Click(object sender, EventArgs e)
         {
             var config = Network.TrainingConfig.CreateTrainingConfig();
-            config.miniBatchSize = 100;
+            config.miniBatchSize = 10;
             List<Tuple<float[], float[]>> trainingData = new List<Tuple<float[], float[]>>();
 
             var rnd = new Random();
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10000000; i++)
             {
                 float[] input = new float[] { 0,0,0,0,0 };
                 float[] output = new float[] { 0,0,0,0,0 };
 
                 float j = (float)rnd.NextDouble() * 5;
-                input[(int)Math.Floor(j)] = 1.0f;
-                output[(int)Math.Floor(j)] = 1.0f;
+                int jint = Math.Min(4, (int)Math.Floor(j));
+                input[jint] = 1.0f;
+                output[jint] = 1.0f;
 
                 trainingData.Add(new Tuple<float[], float[]>(input, output));
             }
