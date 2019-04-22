@@ -31,19 +31,14 @@ namespace MademyTest
             layerConfig.Add(5);
             solver = Network.CreateNetworkInitRandom(layerConfig);
 
-            try
-            {
-                mathLib = new MathLib( ComputeDevice.GetDevices()[0]);
-            }
-            catch (Exception)
-            {
-                mathLib = new MathLib();
-                throw;
-            }
+            mathLib = new MathLib( null );
 
+            comboBox1.Items.Add("Use CPU calculation");
+            comboBox1.SelectedIndex = 0;
             foreach (var device in ComputeDevice.GetDevices())
             {
-                comboBox1.Items.Add(device);
+                string item = "[" + device.GetPlatformID() + ":" + device.GetDeviceID() + ", " + device.GetDeviceType().ToString() + "] " + device.GetName();
+                comboBox1.Items.Add(item);
             }
         }
 
@@ -97,8 +92,10 @@ namespace MademyTest
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-
-            mathLib = new MathLib((ComputeDevice)comboBox1.SelectedItem);
+            if (comboBox1.SelectedIndex == 0)
+                mathLib = new MathLib();
+            else
+                mathLib = new MathLib( ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1] );
         }
 
         private void label1_Click(object sender, EventArgs e)

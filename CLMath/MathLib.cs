@@ -9,14 +9,16 @@ namespace CLMath
 {
     public class MathLib
     {
+        private static string calcLayerKernel = "calcLayer";
+
         Context clContext;
         ComputeDevice clDevice = null;
         CommandQueue commandQueue;
         Program clProgram;
-        Dictionary<String, Kernel> kernels;
+        Dictionary<String, Kernel> kernels = new Dictionary<string, Kernel>();
         bool hasClInitialized = false;
 
-        public MathLib(ComputeDevice clDevice)
+        public MathLib(ComputeDevice clDevice = null)
         {
             this.clDevice = clDevice;
             InitCL();
@@ -53,25 +55,24 @@ namespace CLMath
             if (!hasClInitialized && clDevice != null)
             {
                 ErrorCode err;
-                Cl.ContextNotify notif = (string a, byte[] b,System.IntPtr c,System.IntPtr d) => { };
-                ContextProperty[] contextProps = new ContextProperty[] { new ContextProperty(ContextProperties.Platform, (IntPtr)clDevice.GetPlatformID()) };
-                clContext = Cl.CreateContext(contextProps, 1, new Device[] { clDevice.GetDevice() }, notif, IntPtr.Zero, out err);
+                var devicesArray = new Device[] { clDevice.GetDevice() };
+                clContext = Cl.CreateContext(null, 1, devicesArray, null, IntPtr.Zero, out err);
                 if (err != ErrorCode.Success) throw new Exception("Failed to create context! " + err.ToString());
 
                 commandQueue = Cl.CreateCommandQueue(clContext, clDevice.GetDevice(), CommandQueueProperties.None, out err);
                 if (err != ErrorCode.Success) throw new Exception("Failed to create command queue! " + err.ToString());
 
-                clProgram = Cl.CreateProgramWithSource(clContext, 1, new string[] { "clsrc" }, null, out err);
+                clProgram = Cl.CreateProgramWithSource(clContext, 1, new String[] { CLSourceProvider.ReadSourceFile() }, null, out err);
                 if (err != ErrorCode.Success) throw new Exception("Failed to create program! " + err.ToString());
 
-                Cl.BuildProgram(clProgram, 1, new Device[] { clDevice.GetDevice() }, "", null, IntPtr.Zero);
+                err = Cl.BuildProgram(clProgram, 1, new Device[] { clDevice.GetDevice() }, "-cl-finite-math-only -Werror", null, IntPtr.Zero);
                 if (err != ErrorCode.Success)
                 {
-                    //TODO print build log!
-                    throw new Exception("Failed to build program! " + err.ToString());
+                    var infoBuffer = Cl.GetProgramBuildInfo(clProgram, clDevice.GetDevice(), ProgramBuildInfo.Log, out err);
+                    throw new Exception("Failed to build program! " + err.ToString() + " " + infoBuffer.ToString());
                 }
 
-                kernels["mxMul"] = Cl.CreateKernel(clProgram, "mxMul", out err);
+                kernels[calcLayerKernel] = Cl.CreateKernel(clProgram, calcLayerKernel, out err);
                 if (err != ErrorCode.Success) throw new Exception("Failed to create compute kernel! " + err.ToString());
 
                 hasClInitialized = true;
@@ -80,10 +81,15 @@ namespace CLMath
 
         public float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations)
         {
+            return CalculateLayer(weightMx, bias, prevActivations, true);
+        }
+
+        private float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, bool applySigmoid)
+        {
             if (weightMx.GetLength(1) != prevActivations.GetLength(0))
                 throw new Exception("Invalid input");
 
-            if (clDevice == null)
+            if (!hasClInitialized) //CPU fallback
             {
                 float[] ret = new float[weightMx.GetLength(0)];
                 for (int m = 0; m < weightMx.GetLength(0); m++)
@@ -93,55 +99,54 @@ namespace CLMath
                     {
                         acc += weightMx[m, k] * prevActivations[k];
                     }
-                    ret[m] = Sigmoid(acc + bias[m]);
+                    acc += bias[m];
+                    if ( applySigmoid )
+                        acc = Sigmoid(acc);
+                    ret[m] = acc;
                 }
                 return ret;
             }
 
-            int[] sizes = new int[] { weightMx.GetLength(0), weightMx.GetLength(1) };
+            int matrixRows = weightMx.GetLength(0);
 
-            InitCL();
+            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ applySigmoid ? 1 : 0 };
+            float[] output = new float[matrixRows];
+
+            float[] weightMxContinous = new float[weightMx.GetLength(0) * weightMx.GetLength(1)];
+            Buffer.BlockCopy(weightMx, 0, weightMxContinous, 0, weightMx.GetLength(0) * weightMx.GetLength(1) * 4);
 
             ErrorCode err;
-            //var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
-            //var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
-            var mem_param_sizes = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, sizes, out err);
-            
+            var mem_param_weightMx = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, weightMxContinous, out err);
+            var mem_param_bias = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, bias, out err);
+            var mem_param_prevActivation = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, prevActivations, out err);
+            var mem_param_config = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, configParams, out err);
+            var mem_param_output = Cl.CreateBuffer<float>(clContext, MemFlags.WriteOnly, output.Length, out err);
 
-            return null;
+            var kernel = kernels[calcLayerKernel];
+            Cl.SetKernelArg(kernel, 0, mem_param_weightMx);
+            Cl.SetKernelArg(kernel, 1, mem_param_bias);
+            Cl.SetKernelArg(kernel, 2, mem_param_prevActivation);
+            Cl.SetKernelArg(kernel, 3, mem_param_config);
+            Cl.SetKernelArg(kernel, 4, mem_param_output);
+
+            Event ev;
+            int localWorkgroupSize = 32;
+            int globalWorkSize = (matrixRows % localWorkgroupSize == 0) ? matrixRows : (matrixRows + (localWorkgroupSize - (matrixRows % localWorkgroupSize)));
+            Cl.EnqueueNDRangeKernel(commandQueue, kernel, 1, null, new IntPtr[] { new IntPtr(globalWorkSize) }, new IntPtr[] { new IntPtr(localWorkgroupSize) }, 0, null, out ev);
+            Cl.EnqueueReadBuffer(commandQueue, mem_param_output, Bool.True, 0, matrixRows, output, 0, null, out ev);
+
+            Cl.ReleaseMemObject(mem_param_weightMx);
+            Cl.ReleaseMemObject(mem_param_bias);
+            Cl.ReleaseMemObject(mem_param_prevActivation);
+            Cl.ReleaseMemObject(mem_param_config);
+            Cl.ReleaseMemObject(mem_param_output);
+
+            return output;
         }
 
         public float[] CalculateZ(float[,] weightMx, float[] bias, float[] prevActivations)
         {
-            if (weightMx.GetLength(1) != prevActivations.GetLength(0) || weightMx.GetLength(0) != bias.Length) 
-                throw new Exception("Invalid input");
-
-            //if (clDevice == null)
-            {
-                float[] ret = new float[weightMx.GetLength(0)];
-                for (int m = 0; m < weightMx.GetLength(0); m++)
-                {
-                    float acc = 0.0f;
-                    for (int k = 0; k < weightMx.GetLength(1); k++)
-                    {
-                        acc += weightMx[m, k] * prevActivations[k];
-                    }
-                    ret[m] = acc + bias[m];
-                }
-                return ret;
-            }
-            return null;
-
-            /*int[] sizes = new int[] { size1, size2, size3 };
-
-            InitCL();
-
-            ErrorCode err;
-            var mem_param_A = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, A, out err);
-            var mem_param_B = Cl.CreateBuffer<float>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, B, out err);
-            var mem_param_sizes = Cl.CreateBuffer<int>(clContext, MemFlags.ReadOnly | MemFlags.CopyHostPtr, sizes, out err);
-            */
-
+            return CalculateLayer(weightMx, bias, prevActivations, false);
         }
         
     }
