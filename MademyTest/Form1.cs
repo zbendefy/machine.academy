@@ -76,7 +76,7 @@ namespace MademyTest
             List<Tuple<float[], float[]>> trainingData = new List<Tuple<float[], float[]>>();
 
             var rnd = new Random();
-            for (int i = 0; i < 10000000; i++)
+            for (int i = 0; i < 1000000; i++)
             {
                 float[] input = new float[] { 0,0,0,0,0 };
                 float[] output = new float[] { 0,0,0,0,0 };

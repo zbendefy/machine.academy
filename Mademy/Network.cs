@@ -114,8 +114,11 @@ namespace Mademy
 
                 while(true)
                 {
-                    //var gradient = CalculateGradientMultiThreaded(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
-                    var gradient = CalculateGradientSingleThread(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
+                    List<List<NeuronData>> gradient = null;
+                    if(config.numThreads <= 1)
+                        gradient = CalculateGradientSingleThread(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
+                    else
+                        gradient = CalculateGradientMultiThreaded(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
 
                     //Apply gradient to network
                     for (int i = 0; i < layers.Count; ++i)
