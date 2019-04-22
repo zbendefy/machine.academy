@@ -11,6 +11,7 @@ namespace CLMath
     {
         private static string calcLayerKernel = "calcLayer";
 
+        private object lockObj = new object();
         Context clContext;
         ComputeDevice clDevice = null;
         CommandQueue commandQueue;
@@ -50,32 +51,40 @@ namespace CLMath
             }
         }
 
+        public MathLib Clone()
+        {
+            return new MathLib(this.clDevice);
+        }
+
         private void InitCL()
         {
-            if (!hasClInitialized && clDevice != null)
+            lock (lockObj)
             {
-                ErrorCode err;
-                var devicesArray = new Device[] { clDevice.GetDevice() };
-                clContext = Cl.CreateContext(null, 1, devicesArray, null, IntPtr.Zero, out err);
-                if (err != ErrorCode.Success) throw new Exception("Failed to create context! " + err.ToString());
-
-                commandQueue = Cl.CreateCommandQueue(clContext, clDevice.GetDevice(), CommandQueueProperties.None, out err);
-                if (err != ErrorCode.Success) throw new Exception("Failed to create command queue! " + err.ToString());
-
-                clProgram = Cl.CreateProgramWithSource(clContext, 1, new String[] { CLSourceProvider.ReadSourceFile() }, null, out err);
-                if (err != ErrorCode.Success) throw new Exception("Failed to create program! " + err.ToString());
-
-                err = Cl.BuildProgram(clProgram, 1, new Device[] { clDevice.GetDevice() }, "-cl-finite-math-only -Werror", null, IntPtr.Zero);
-                if (err != ErrorCode.Success)
+                if (!hasClInitialized && clDevice != null)
                 {
-                    var infoBuffer = Cl.GetProgramBuildInfo(clProgram, clDevice.GetDevice(), ProgramBuildInfo.Log, out err);
-                    throw new Exception("Failed to build program! " + err.ToString() + " " + infoBuffer.ToString());
+                    ErrorCode err;
+                    var devicesArray = new Device[] { clDevice.GetDevice() };
+                    clContext = Cl.CreateContext(null, 1, devicesArray, null, IntPtr.Zero, out err);
+                    if (err != ErrorCode.Success) throw new Exception("Failed to create context! " + err.ToString());
+
+                    commandQueue = Cl.CreateCommandQueue(clContext, clDevice.GetDevice(), CommandQueueProperties.None, out err);
+                    if (err != ErrorCode.Success) throw new Exception("Failed to create command queue! " + err.ToString());
+
+                    clProgram = Cl.CreateProgramWithSource(clContext, 1, new String[] { CLSourceProvider.ReadSourceFile() }, null, out err);
+                    if (err != ErrorCode.Success) throw new Exception("Failed to create program! " + err.ToString());
+
+                    err = Cl.BuildProgram(clProgram, 1, new Device[] { clDevice.GetDevice() }, "-cl-finite-math-only -Werror", null, IntPtr.Zero);
+                    if (err != ErrorCode.Success)
+                    {
+                        var infoBuffer = Cl.GetProgramBuildInfo(clProgram, clDevice.GetDevice(), ProgramBuildInfo.Log, out err);
+                        throw new Exception("Failed to build program! " + err.ToString() + " " + infoBuffer.ToString());
+                    }
+
+                    kernels[calcLayerKernel] = Cl.CreateKernel(clProgram, calcLayerKernel, out err);
+                    if (err != ErrorCode.Success) throw new Exception("Failed to create compute kernel! " + err.ToString());
+
+                    hasClInitialized = true;
                 }
-
-                kernels[calcLayerKernel] = Cl.CreateKernel(clProgram, calcLayerKernel, out err);
-                if (err != ErrorCode.Success) throw new Exception("Failed to create compute kernel! " + err.ToString());
-
-                hasClInitialized = true;
             }
         }
 

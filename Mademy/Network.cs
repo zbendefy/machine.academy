@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using CLMath;
 using MathNet.Numerics.LinearAlgebra;
@@ -17,25 +18,72 @@ namespace Mademy
         public struct TrainingConfig
         {
             public static readonly int DontSubdivideBatches = -1;
+            public static readonly int AutoDetectThreads = -1;
+            private static int CpuCount = 1;
 
             public int miniBatchSize;
             public float learningRate;
+            public int numThreads;
 
             public static TrainingConfig CreateTrainingConfig()
             {
                 var ret = new TrainingConfig();
+
+                CpuCount = Environment.ProcessorCount;
+
                 ret.miniBatchSize = 1000;
-                ret.learningRate = 0.001f;
+                ret.learningRate = 0.01f;
+                ret.numThreads = AutoDetectThreads;
                 return ret;
             }
 
             public bool UseMinibatches() { return miniBatchSize != DontSubdivideBatches; }
+
+            internal int GetThreadCount()
+            {
+                return numThreads == AutoDetectThreads ? CpuCount : numThreads;
+            }
         };
 
-        string name;
-        string description;
-        List<Layer> layers;
+        public class TrainingPromise
+        {
+            private static readonly int maxProgress = 100;
 
+            private object lockObj = new object();
+            private int progress = 0;
+
+            public bool IsReady()
+            {
+                lock (lockObj)
+                {
+                    return progress >= maxProgress;
+                }
+            }
+
+            public float GetProgress()
+            {
+                lock (lockObj)
+                {
+                    return (float)progress / (float)maxProgress;
+                }
+            }
+
+            internal void SetProgress(float _progress)
+            {
+                lock (lockObj)
+                {
+                    progress = (int)(_progress * 100.0f);
+                }
+            }
+        }
+
+        internal string name;
+        internal string description;
+        internal List<Layer> layers;
+
+        internal TrainingPromise trainingPromise = null;
+        private Thread trainingThread = null;
+        private Object lockObj_gradientAccess = new object();
 
         Network(List<Layer> layers)
         {
@@ -52,64 +100,79 @@ namespace Mademy
         void AttachName(string _name) { name = _name;  }
         void AttachDescription(string _desc) { description = _desc;  }
         
-        public void Train(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, TrainingConfig config)
+        public TrainingPromise Train(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, TrainingConfig config)
         {
-            int trainingDataBegin = 0;
-            int trainingDataEnd = config.UseMinibatches() ? config.miniBatchSize : trainingData.Count;
+            if (trainingPromise != null)
+                throw new Exception("Cannot perform operation while training is in progress!");
 
-            while(true)
-            {
-                var gradient = CalculateGradient(mathLib, trainingData, trainingDataBegin, trainingDataEnd);
+            trainingPromise = new TrainingPromise();
 
-                //Apply gradient to network
-                for (int i = 0; i < layers.Count; ++i)
+            trainingThread = new Thread(() => {
+
+                int trainingDataBegin = 0;
+                int trainingDataEnd = config.UseMinibatches() ? config.miniBatchSize : trainingData.Count;
+
+                while(true)
                 {
-                    var layer = layers[i];
-                    for (int j = 0; j < layer.GetNeuronCount(); ++j)
+                    //var gradient = CalculateGradientMultiThreaded(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
+                    var gradient = CalculateGradientSingleThread(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
+
+                    //Apply gradient to network
+                    for (int i = 0; i < layers.Count; ++i)
                     {
-                        layer.biases[j] -= gradient[i][j].bias * config.learningRate;
-                        for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
+                        var layer = layers[i];
+                        for (int j = 0; j < layer.GetNeuronCount(); ++j)
                         {
-                            layer.weightMx[j, w] -= gradient[i][j].weights[w] * config.learningRate;
+                            layer.biases[j] -= gradient[i][j].bias * config.learningRate;
+                            for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
+                            {
+                                layer.weightMx[j, w] -= gradient[i][j].weights[w] * config.learningRate;
+                            }
                         }
                     }
-                }
 
-                if (config.UseMinibatches())
-                {
-                    if (trainingDataEnd >= trainingData.Count)
+                    if (config.UseMinibatches())
+                    {
+                        if (trainingDataEnd >= trainingData.Count)
+                            break;
+
+                        trainingPromise.SetProgress((float)trainingDataEnd / (float)trainingData.Count);
+
+                        trainingDataBegin = trainingDataEnd;
+                        trainingDataEnd = Math.Min( trainingDataEnd + config.miniBatchSize, trainingData.Count);
+                    }
+                    else
+                    {
                         break;
-
-                    trainingDataBegin = trainingDataEnd;
-                    trainingDataEnd = Math.Min( trainingDataEnd + config.miniBatchSize, trainingData.Count);
+                    }
                 }
-                else
-                {
-                    break;
-                }
-            }
-        }
+                trainingPromise.SetProgress(1);
+                trainingPromise = null;
+            });
 
-        private void Assert(bool v)
-        {
-            if (!v)
-                throw new Exception("baaad");
+            trainingThread.Start();
+
+
+            return trainingPromise;
         }
 
         private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, List<float[]> zValues, float[] desiredOutput)
         {
             var prevActivations = activations[activations.Count - 2];
-            for (int i = 0; i < layers.Last().GetNeuronCount(); i++)
+            int lastLayerWeightCount = layers.Last().GetWeightsPerNeuron();
+            int lastLayerNeuronCount = layers.Last().GetNeuronCount();
+            for (int i = 0; i < lastLayerNeuronCount; i++)
             {
                 float outputValue = activations.Last()[i];
                 float gamma_k = (outputValue - desiredOutput[i]) * MathLib.SigmoidPrime(zValues.Last()[i]);
 
-                Assert(gradientData[i].weights.Length == prevActivations.Length);
-                for (int j = 0; j < layers.Last().GetWeightsPerNeuron(); j++)
+                var gradientDataItem = gradientData[i];
+                //Assert(gradientData[i].weights.Length == prevActivations.Length);
+                for (int j = 0; j < lastLayerWeightCount; j++)
                 {
-                    gradientData[i].weights[j] = gamma_k * (prevActivations[j]);
+                    gradientDataItem.weights[j] += gamma_k * (prevActivations[j]);
                 }
-                gradientData[i].bias = gamma_k;
+                gradientDataItem.bias += gamma_k;
                 gamma_k_vector.Add(gamma_k);
             }
         }
@@ -117,10 +180,13 @@ namespace Mademy
         private void CalculateHiddenLayerGradient(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
         {
             List<float> newGammak = new List<float>();
-            for (int i = 0; i < layers[L].GetNeuronCount(); i++)
+            int layerWeightCount = layers[L].GetWeightsPerNeuron();
+            int layerNeuronCount = layers[L].GetNeuronCount();
+
+            for (int i = 0; i < layerNeuronCount; i++)
             {
                 float gamma_j = 0;
-                Assert(gamma_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
+                //Assert(gamma_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
                 for (int k = 0; k < gamma_k_vector.Count; k++)
                 {
                     gamma_j += gamma_k_vector[k] * layers[L+1].weightMx[k, i];
@@ -128,20 +194,63 @@ namespace Mademy
                 gamma_j *= MathLib.SigmoidPrime(zValues[L][i]);
                 newGammak.Add(gamma_j);
 
-                Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
-                for (int j = 0; j < layers[L].GetWeightsPerNeuron(); j++)
+                //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
+                var gradientDataItem = gradientData[i];
+                for (int j = 0; j < layerWeightCount; j++)
                 {
-                    gradientData[i].weights[j] = gamma_j * (prevLayerActivations[j]);
+                    gradientDataItem.weights[j] += gamma_j * (prevLayerActivations[j]);
                 }
-                gradientData[i].bias = gamma_j;
+                gradientDataItem.bias += gamma_j;
             }
 
             gamma_k_vector = newGammak;
         }
 
-        private List<List<NeuronData>> CalculateGradient(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        private void CalculateGradientThread(MathLib mathLib, TrainingConfig config, ref List<List<NeuronData>> gradientVector, List<Tuple<float[], float[]>> trainingData, int threadId, int trainingDataBegin, int trainingDataEnd)
         {
-            //Backpropagation
+            var myMathLib = mathLib.Clone();
+            var intermediateResult = CreateGradientVector();
+            int threadCount = config.GetThreadCount();
+            for (int i = trainingDataBegin + threadId; i < trainingDataEnd; i+= threadCount)
+            {
+                CalculateGradientForSingleTrainingExample(myMathLib, ref intermediateResult, trainingData[i].Item1, trainingData[i].Item2);
+            }
+
+            lock (lockObj_gradientAccess)
+            {
+                for (int i = 0; i < gradientVector.Count; i++)
+                {
+                    for (int j = 0; j < gradientVector[i].Count; j++)
+                    {
+                        for (int k = 0; k < gradientVector[i][j].weights.Length; k++)
+                        {
+                            gradientVector[i][j].weights[k] += intermediateResult[i][j].weights[k];
+                        }
+                        gradientVector[i][j].bias += intermediateResult[i][j].bias;
+                    }
+                }
+            }
+        }
+
+        private void CalculateGradientForSingleTrainingExample(MathLib mathLib, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
+        {
+            List<float[]> activations = new List<float[]>();
+            List<float[]> zValues = new List<float[]>();
+            Compute(mathLib, trainingInput, ref activations, ref zValues);
+
+            var lastLayerGradient = intermediateResults.Last();
+            List<float> delta_k_holder = new List<float>();
+            CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, zValues, trainingDesiredOutput);
+
+            for (int i = layers.Count - 2; i >= 0; --i)
+            {
+                var layerGradient = intermediateResults[i];
+                CalculateHiddenLayerGradient(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingInput : activations[i - 1], zValues);
+            }
+        }
+
+        private List<List<NeuronData>> CreateGradientVector()
+        {
             var ret = new List<List<NeuronData>>();
             {
                 for (int i = 0; i < layers.Count; i++)
@@ -155,52 +264,64 @@ namespace Mademy
                     ret.Add(nlist);
                 }
             }
+            return ret;
+        }
 
-            var intermediate = new List<List<NeuronData>>();
+        private void AdjustGradientVectorWithToAverage(ref List<List<NeuronData>> gradientVector, float multiplier)
+        {
+            for (int i = 0; i < gradientVector.Count; i++)
             {
-                for (int i = 0; i < layers.Count; i++)
+                for (int j = 0; j < gradientVector[i].Count; j++)
                 {
-                    var nlist = new List<NeuronData>();
-                    for (int j = 0; j < layers[i].GetNeuronCount(); j++)
+                    for (int k = 0; k < gradientVector[i][j].weights.Length; k++)
                     {
-                        var wlist = new float[layers[i].GetWeightsPerNeuron()];
-                        nlist.Add(new NeuronData(wlist, 0));
+                        gradientVector[i][j].weights[k] *= multiplier;
                     }
-                    intermediate.Add(nlist);
+                    gradientVector[i][j].bias *= multiplier;
                 }
+            }
+        }
+
+        private List<List<NeuronData>> CalculateGradientSingleThread(MathLib mathLib, TrainingConfig config, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        {
+            //Backpropagation
+            var ret = CreateGradientVector();
+
+            for (int i = trainingDataBegin; i < trainingDataEnd; i++)
+            {
+                CalculateGradientForSingleTrainingExample(mathLib, ref ret, trainingData[i].Item1, trainingData[i].Item2);
             }
 
             float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
-            for (int t = trainingDataBegin; t < trainingDataEnd; ++t)
+            AdjustGradientVectorWithToAverage(ref ret, sizeDivisor);
+
+            return ret;
+        }
+
+        private List<List<NeuronData>> CalculateGradientMultiThreaded(MathLib mathLib, TrainingConfig config, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        {
+            //Backpropagation
+            var ret = CreateGradientVector();
+
+            Thread[] workerThreads = new Thread[config.GetThreadCount()];
+
+            for (int i = 0; i < workerThreads.Length; i++)
             {
-                List<float[]> activations = new List<float[]>();
-                List<float[]> zValues = new List<float[]>();
-                Compute(mathLib, trainingData[t].Item1, ref activations, ref zValues);
-
-                var lastLayerGradient = intermediate.Last();
-                List<float> delta_k_holder = new List<float>();
-                CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, zValues, trainingData[t].Item2);
-
-                for (int i = layers.Count-2; i >= 0; --i)
-                {
-                    var layerGradient = intermediate[i];
-                    CalculateHiddenLayerGradient(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingData[t].Item1 : activations[i - 1], zValues);
-                }
-
-
-                for (int i = 0; i < intermediate.Count; i++)
-                {
-                    for (int j = 0; j < intermediate[i].Count; j++)
-                    {
-                        for (int k = 0; k < intermediate[i][j].weights.Length; k++)
-                        {
-                            ret[i][j].weights[k] += intermediate[i][j].weights[k] * sizeDivisor;
-                        }
-                        ret[i][j].bias += intermediate[i][j].bias * sizeDivisor;
-                    }
-                }
-
+                int idx = i;
+                workerThreads[i] = new Thread(() => {
+                    CalculateGradientThread(mathLib, config, ref ret, trainingData, idx, trainingDataBegin, trainingDataEnd);
+                });
+                workerThreads[i].Start();
             }
+
+            for (int i = 0; i < workerThreads.Length; i++)
+            {
+                workerThreads[i].Join();
+            }
+
+            float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
+            AdjustGradientVectorWithToAverage(ref ret, sizeDivisor);
+
             return ret;
         }
 
@@ -225,6 +346,8 @@ namespace Mademy
 
         public float[] Compute(MathLib mathLib, float[] input)
         {
+            if (trainingPromise != null)
+                throw new Exception("Cannot perform operation while training is in progress!");
             List<float[]> doesntNeedActivations = null;
             List<float[]> doesntNeedZ = null;
             return Compute(mathLib, input, ref doesntNeedActivations, ref doesntNeedZ);
@@ -258,6 +381,8 @@ namespace Mademy
 
         public string GetTrainingDataJSON()
         {
+            if (trainingPromise != null)
+                throw new Exception("Cannot perform operation while training is in progress!");
             string output = JsonConvert.SerializeObject(this);
             return output;
         }

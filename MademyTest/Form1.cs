@@ -16,6 +16,8 @@ namespace MademyTest
     {
         Network solver = null;
         MathLib mathLib = null;
+        Network.TrainingPromise trainingPromise = null;
+        DateTime trainingBegin;
 
         public Form1()
         {
@@ -26,8 +28,8 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
-            layerConfig.Add(16);
-            layerConfig.Add(20);
+            layerConfig.Add(8);
+            layerConfig.Add(8);
             layerConfig.Add(5);
             solver = Network.CreateNetworkInitRandom(layerConfig);
 
@@ -70,6 +72,7 @@ namespace MademyTest
         {
             var config = Network.TrainingConfig.CreateTrainingConfig();
             config.miniBatchSize = 10;
+            config.numThreads = 1;
             List<Tuple<float[], float[]>> trainingData = new List<Tuple<float[], float[]>>();
 
             var rnd = new Random();
@@ -87,7 +90,12 @@ namespace MademyTest
             }
 
 
-            solver.Train(mathLib, trainingData, config);
+            trainingPromise = solver.Train(mathLib, trainingData, config);
+
+            progressBar1.Value = 0;
+            label2.Text = "Training...";
+            trainingBegin = DateTime.Now;
+            timer1.Start();
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -101,6 +109,28 @@ namespace MademyTest
         private void label1_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void timer1_Tick(object sender, EventArgs e)
+        {
+            if (trainingPromise != null)
+            {
+                progressBar1.Value = (int)(trainingPromise.GetProgress() * 100.0f);
+                if (trainingPromise.IsReady())
+                {
+                    var period = DateTime.Now.Subtract(trainingBegin);
+                    label2.Text = "Training done in " + period.TotalSeconds+"s";
+
+
+
+                    timer1.Stop();
+                }
+            }
+            else
+            {
+                timer1.Stop();
+            }
+               
         }
     }
 }
