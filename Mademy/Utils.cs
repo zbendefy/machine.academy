@@ -9,8 +9,6 @@ namespace Mademy
     static class Utils
     {
         private static Random rnd = new Random();
-        private static float minVal = -1;
-        private static float maxVal = 1;
 
         public static float FastSigmoid(float x)
         {
@@ -39,10 +37,23 @@ namespace Mademy
             return diff * diff;
         }
 
-        public static float GetRandomValue()
+        public static float GetRandomWeight(int numberOfInputWeights)
         {
-            float ret = (float)rnd.NextDouble();
-            return (ret * (maxVal - minVal)) + minVal;
+            return GetGaussianRandom(0, (float)Math.Sqrt( (double)numberOfInputWeights)); 
+        }
+
+        public static float GetRandomBias()
+        {
+            return GetGaussianRandom(0, 1);
+        }
+
+        public static float GetGaussianRandom(float mean, float stdDev)
+        {
+            float u1 = 1.0f - (float)rnd.NextDouble(); //uniform(0,1] random doubles
+            float u2 = 1.0f - (float)rnd.NextDouble();
+            float randStdNormal = (float)Math.Sqrt(-2.0 * Math.Log(u1)) * (float)Math.Sin(2.0 * Math.PI * u2); //random normal(0,1)
+            float randNormal = mean + stdDev * randStdNormal; //random normal(mean,stdDev^2)
+            return randNormal;
         }
     }
 

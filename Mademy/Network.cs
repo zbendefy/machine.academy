@@ -407,11 +407,11 @@ namespace Mademy
                 for (int i = 0; i < layerSize; i++)
                 {
                     List<float> weights = new List<float>();
-                    for (int j = 0; j < prevLayerSize; j++)
+                    for (int j = 0; j < prevLayerSize; ++j)
                     {
-                        weights.Add(Utils.GetRandomValue());
+                        weights.Add(Utils.GetRandomWeight(prevLayerSize));
                     }
-                    neuronList.Add(new Tuple<List<float>, float>(weights, Utils.GetRandomValue()));
+                    neuronList.Add(new Tuple<List<float>, float>(weights, Utils.GetRandomBias()));
                 }
                 inputLayers.Add(neuronList);
             }
