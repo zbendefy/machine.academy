@@ -13,10 +13,13 @@ namespace CLMath
             public static readonly int DontSubdivideBatches = -1;
             public static readonly int AutoDetectThreads = -1;
             private static int CpuCount = 1;
+            public enum NeuronFunction { Sigmoid };
 
             public int miniBatchSize;
             public float learningRate;
             public int numThreads;
+            public int epochs;
+            public NeuronFunction neuronFunction;
 
             public static TrainingConfig CreateTrainingConfig()
             {
@@ -26,7 +29,9 @@ namespace CLMath
 
                 ret.miniBatchSize = 1000;
                 ret.learningRate = 0.01f;
+                ret.epochs = 1;
                 ret.numThreads = AutoDetectThreads;
+                ret.neuronFunction = NeuronFunction.Sigmoid;
                 return ret;
             }
 

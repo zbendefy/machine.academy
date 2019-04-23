@@ -19,6 +19,8 @@ namespace CLMath
         Dictionary<String, Kernel> kernels = new Dictionary<string, Kernel>();
         bool hasClInitialized = false;
 
+        public enum SigmoidFunction { Passtrough, Sigmoid };
+
         public MathLib(ComputeDevice clDevice = null)
         {
             this.clDevice = clDevice;
@@ -90,12 +92,7 @@ namespace CLMath
             }
         }
 
-        public float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations)
-        {
-            return CalculateLayer(weightMx, bias, prevActivations, true);
-        }
-
-        private float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, bool applySigmoid)
+        public float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, SigmoidFunction sigmoidFunction)
         {
             if (weightMx.GetLength(1) != prevActivations.GetLength(0))
                 throw new Exception("Invalid input");
@@ -111,8 +108,17 @@ namespace CLMath
                         acc += weightMx[m, k] * prevActivations[k];
                     }
                     acc += bias[m];
-                    if ( applySigmoid )
-                        acc = Sigmoid(acc);
+
+                    switch (sigmoidFunction)
+                    {
+                        case SigmoidFunction.Sigmoid:
+                            acc = Sigmoid(acc);
+                            break;
+                        case SigmoidFunction.Passtrough:
+                        default:
+                            break;
+                    }
+
                     ret[m] = acc;
                 }
                 return ret;
@@ -120,7 +126,7 @@ namespace CLMath
 
             int matrixRows = weightMx.GetLength(0);
 
-            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ applySigmoid ? 1 : 0 };
+            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ (int)sigmoidFunction };
             float[] output = new float[matrixRows];
 
             float[] weightMxContinous = new float[weightMx.GetLength(0) * weightMx.GetLength(1)];
@@ -153,11 +159,6 @@ namespace CLMath
             Cl.ReleaseMemObject(mem_param_output);
 
             return output;
-        }
-
-        public float[] CalculateZ(float[,] weightMx, float[] bias, float[] prevActivations)
-        {
-            return CalculateLayer(weightMx, bias, prevActivations, false);
         }
         
     }

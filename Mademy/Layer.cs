@@ -45,9 +45,9 @@ namespace Mademy
         public float[] Compute(MathLib mathLib, float[] input, bool applySigmoid = true)
         {
             if (applySigmoid)
-                return mathLib.CalculateLayer(weightMx, biases, input);
+                return mathLib.CalculateLayer(weightMx, biases, input, MathLib.SigmoidFunction.Sigmoid);
             else
-                return mathLib.CalculateZ(weightMx, biases, input);
+                return mathLib.CalculateLayer(weightMx, biases, input, MathLib.SigmoidFunction.Passtrough);
         }
 
     }

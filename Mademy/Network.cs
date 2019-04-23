@@ -77,46 +77,55 @@ namespace Mademy
 
             trainingPromise = new TrainingPromise();
 
+            if (trainingSuite.config.epochs < 1)
+            {
+                trainingPromise.SetProgress(1);
+                return trainingPromise;
+            }
+
             trainingThread = new Thread(() => {
-
-                int trainingDataBegin = 0;
-                int trainingDataEnd = trainingSuite.config.UseMinibatches() ? trainingSuite.config.miniBatchSize : trainingSuite.trainingData.Count;
-
-                while(true)
+                for (int currentEpoch = 0; currentEpoch < trainingSuite.config.epochs; currentEpoch++)
                 {
-                    List<List<NeuronData>> gradient = null;
-                    if(trainingSuite.config.numThreads <= 1)
-                        gradient = CalculateGradientSingleThread(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
-                    else
-                        gradient = CalculateGradientMultiThreaded(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
 
-                    //Apply gradient to network
-                    for (int i = 0; i < layers.Count; ++i)
+                    int trainingDataBegin = 0;
+                    int trainingDataEnd = trainingSuite.config.UseMinibatches() ? trainingSuite.config.miniBatchSize : trainingSuite.trainingData.Count;
+
+                    while (true)
                     {
-                        var layer = layers[i];
-                        for (int j = 0; j < layer.GetNeuronCount(); ++j)
+                        List<List<NeuronData>> gradient = null;
+                        if (trainingSuite.config.numThreads <= 1)
+                            gradient = CalculateGradientSingleThread(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
+                        else
+                            gradient = CalculateGradientMultiThreaded(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
+
+                        //Apply gradient to network
+                        for (int i = 0; i < layers.Count; ++i)
                         {
-                            layer.biases[j] -= gradient[i][j].bias * trainingSuite.config.learningRate;
-                            for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
+                            var layer = layers[i];
+                            for (int j = 0; j < layer.GetNeuronCount(); ++j)
                             {
-                                layer.weightMx[j, w] -= gradient[i][j].weights[w] * trainingSuite.config.learningRate;
+                                layer.biases[j] -= gradient[i][j].bias * trainingSuite.config.learningRate;
+                                for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
+                                {
+                                    layer.weightMx[j, w] -= gradient[i][j].weights[w] * trainingSuite.config.learningRate;
+                                }
                             }
                         }
-                    }
 
-                    if (trainingSuite.config.UseMinibatches())
-                    {
-                        if (trainingDataEnd >= trainingSuite.trainingData.Count)
+                        if (trainingSuite.config.UseMinibatches())
+                        {
+                            if (trainingDataEnd >= trainingSuite.trainingData.Count)
+                                break;
+
+                            trainingPromise.SetProgress(((float)trainingDataEnd + ((float)currentEpoch * (float)trainingSuite.trainingData.Count)) / ((float)trainingSuite.trainingData.Count * (float)trainingSuite.config.epochs));
+
+                            trainingDataBegin = trainingDataEnd;
+                            trainingDataEnd = Math.Min(trainingDataEnd + trainingSuite.config.miniBatchSize, trainingSuite.trainingData.Count);
+                        }
+                        else
+                        {
                             break;
-
-                        trainingPromise.SetProgress((float)trainingDataEnd / (float)trainingSuite.trainingData.Count);
-
-                        trainingDataBegin = trainingDataEnd;
-                        trainingDataEnd = Math.Min( trainingDataEnd + trainingSuite.config.miniBatchSize, trainingSuite.trainingData.Count);
-                    }
-                    else
-                    {
-                        break;
+                        }
                     }
                 }
                 trainingPromise.SetProgress(1);

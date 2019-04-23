@@ -89,6 +89,7 @@ namespace MademyTest
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 10;
             trainingSuite.config.numThreads = 1;
+            trainingSuite.config.epochs = 3;
 
             trainingPromise = solver.Train(mathLib, trainingSuite);
 
