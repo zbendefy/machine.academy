@@ -57,6 +57,7 @@ namespace NumberRecognize
                 {
                     trainingPromise = null;
                     progressDialog = null;
+                    trainingtimer.Stop();
                 }
             }
         }
@@ -65,8 +66,8 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(32);
-            layerConfig.Add(32);
+            layerConfig.Add(64);
+            layerConfig.Add(48);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig);
@@ -170,9 +171,11 @@ namespace NumberRecognize
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 100;
             trainingSuite.config.numThreads = 1;
-            trainingSuite.config.epochs = 10;
+            trainingSuite.config.learningRate = 0.015f;
+            trainingSuite.config.epochs = (int)numericUpDown1.Value;
 
             trainingPromise = network.Train(mathLib, trainingSuite);
+            trainingtimer.Start();
 
             progressDialog = new Form2();
             progressDialog.ShowDialog();
