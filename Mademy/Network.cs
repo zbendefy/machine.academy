@@ -212,7 +212,7 @@ namespace Mademy
         private void CalculateGradientThread(MathLib mathLib, TrainingConfig config, ref List<List<NeuronData>> gradientVector, List<Tuple<float[], float[]>> trainingData, int threadId, int trainingDataBegin, int trainingDataEnd)
         {
             var myMathLib = mathLib.Clone();
-            var intermediateResult = CreateGradientVector();
+            var intermediateResult = Utils.CreateGradientVector(this);
             int threadCount = config.GetThreadCount();
             for (int i = trainingDataBegin + threadId; i < trainingDataEnd; i+= threadCount)
             {
@@ -252,24 +252,6 @@ namespace Mademy
             }
         }
 
-        private List<List<NeuronData>> CreateGradientVector()
-        {
-            var ret = new List<List<NeuronData>>();
-            {
-                for (int i = 0; i < layers.Count; i++)
-                {
-                    var nlist = new List<NeuronData>();
-                    for (int j = 0; j < layers[i].GetNeuronCount(); j++)
-                    {
-                        var wlist = new float[layers[i].GetWeightsPerNeuron()];
-                        nlist.Add(new NeuronData(wlist, 0));
-                    }
-                    ret.Add(nlist);
-                }
-            }
-            return ret;
-        }
-
         private void AdjustGradientVectorWithToAverage(ref List<List<NeuronData>> gradientVector, float multiplier)
         {
             for (int i = 0; i < gradientVector.Count; i++)
@@ -288,7 +270,7 @@ namespace Mademy
         private List<List<NeuronData>> CalculateGradientSingleThread(MathLib mathLib, TrainingConfig config, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
         {
             //Backpropagation
-            var ret = CreateGradientVector();
+            var ret = Utils.CreateGradientVector(this);
 
             for (int i = trainingDataBegin; i < trainingDataEnd; i++)
             {
@@ -304,7 +286,7 @@ namespace Mademy
         private List<List<NeuronData>> CalculateGradientMultiThreaded(MathLib mathLib, TrainingConfig config, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
         {
             //Backpropagation
-            var ret = CreateGradientVector();
+            var ret = Utils.CreateGradientVector(this);
 
             Thread[] workerThreads = new Thread[config.GetThreadCount()];
 

@@ -37,6 +37,24 @@ namespace Mademy
             return diff * diff;
         }
 
+        public static List<List<NeuronData>> CreateGradientVector(Network network)
+        {
+            var ret = new List<List<NeuronData>>();
+            {
+                for (int i = 0; i < network.layers.Count; i++)
+                {
+                    var nlist = new List<NeuronData>();
+                    for (int j = 0; j < network.layers[i].GetNeuronCount(); j++)
+                    {
+                        var wlist = new float[network.layers[i].GetWeightsPerNeuron()];
+                        nlist.Add(new NeuronData(wlist, 0));
+                    }
+                    ret.Add(nlist);
+                }
+            }
+            return ret;
+        }
+
         public static float GetRandomWeight(int numberOfInputWeights)
         {
             return GetGaussianRandom(0, (float)Math.Sqrt( (double)numberOfInputWeights)); 
