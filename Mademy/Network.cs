@@ -15,36 +15,6 @@ namespace Mademy
     [Serializable]
     public class Network : ISerializable
     {
-        public struct TrainingConfig
-        {
-            public static readonly int DontSubdivideBatches = -1;
-            public static readonly int AutoDetectThreads = -1;
-            private static int CpuCount = 1;
-
-            public int miniBatchSize;
-            public float learningRate;
-            public int numThreads;
-
-            public static TrainingConfig CreateTrainingConfig()
-            {
-                var ret = new TrainingConfig();
-
-                CpuCount = Environment.ProcessorCount;
-
-                ret.miniBatchSize = 1000;
-                ret.learningRate = 0.01f;
-                ret.numThreads = AutoDetectThreads;
-                return ret;
-            }
-
-            public bool UseMinibatches() { return miniBatchSize != DontSubdivideBatches; }
-
-            internal int GetThreadCount()
-            {
-                return numThreads == AutoDetectThreads ? CpuCount : numThreads;
-            }
-        };
-
         public class TrainingPromise
         {
             private static readonly int maxProgress = 100;
@@ -100,7 +70,7 @@ namespace Mademy
         void AttachName(string _name) { name = _name;  }
         void AttachDescription(string _desc) { description = _desc;  }
         
-        public TrainingPromise Train(MathLib mathLib, List<Tuple<float[], float[]>> trainingData, TrainingConfig config)
+        public TrainingPromise Train(MathLib mathLib, TrainingSuite trainingSuite)
         {
             if (trainingPromise != null)
                 throw new Exception("Cannot perform operation while training is in progress!");
@@ -110,15 +80,15 @@ namespace Mademy
             trainingThread = new Thread(() => {
 
                 int trainingDataBegin = 0;
-                int trainingDataEnd = config.UseMinibatches() ? config.miniBatchSize : trainingData.Count;
+                int trainingDataEnd = trainingSuite.config.UseMinibatches() ? trainingSuite.config.miniBatchSize : trainingSuite.trainingData.Count;
 
                 while(true)
                 {
                     List<List<NeuronData>> gradient = null;
-                    if(config.numThreads <= 1)
-                        gradient = CalculateGradientSingleThread(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
+                    if(trainingSuite.config.numThreads <= 1)
+                        gradient = CalculateGradientSingleThread(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
                     else
-                        gradient = CalculateGradientMultiThreaded(mathLib, config, trainingData, trainingDataBegin, trainingDataEnd);
+                        gradient = CalculateGradientMultiThreaded(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
 
                     //Apply gradient to network
                     for (int i = 0; i < layers.Count; ++i)
@@ -126,23 +96,23 @@ namespace Mademy
                         var layer = layers[i];
                         for (int j = 0; j < layer.GetNeuronCount(); ++j)
                         {
-                            layer.biases[j] -= gradient[i][j].bias * config.learningRate;
+                            layer.biases[j] -= gradient[i][j].bias * trainingSuite.config.learningRate;
                             for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
                             {
-                                layer.weightMx[j, w] -= gradient[i][j].weights[w] * config.learningRate;
+                                layer.weightMx[j, w] -= gradient[i][j].weights[w] * trainingSuite.config.learningRate;
                             }
                         }
                     }
 
-                    if (config.UseMinibatches())
+                    if (trainingSuite.config.UseMinibatches())
                     {
-                        if (trainingDataEnd >= trainingData.Count)
+                        if (trainingDataEnd >= trainingSuite.trainingData.Count)
                             break;
 
-                        trainingPromise.SetProgress((float)trainingDataEnd / (float)trainingData.Count);
+                        trainingPromise.SetProgress((float)trainingDataEnd / (float)trainingSuite.trainingData.Count);
 
                         trainingDataBegin = trainingDataEnd;
-                        trainingDataEnd = Math.Min( trainingDataEnd + config.miniBatchSize, trainingData.Count);
+                        trainingDataEnd = Math.Min( trainingDataEnd + trainingSuite.config.miniBatchSize, trainingSuite.trainingData.Count);
                     }
                     else
                     {
@@ -209,14 +179,14 @@ namespace Mademy
             gamma_k_vector = newGammak;
         }
 
-        private void CalculateGradientThread(MathLib mathLib, TrainingConfig config, ref List<List<NeuronData>> gradientVector, List<Tuple<float[], float[]>> trainingData, int threadId, int trainingDataBegin, int trainingDataEnd)
+        private void CalculateGradientThread(MathLib mathLib, TrainingSuite suite, ref List<List<NeuronData>> gradientVector, int threadId, int trainingDataBegin, int trainingDataEnd)
         {
             var myMathLib = mathLib.Clone();
             var intermediateResult = Utils.CreateGradientVector(this);
-            int threadCount = config.GetThreadCount();
+            int threadCount = suite.config.GetThreadCount();
             for (int i = trainingDataBegin + threadId; i < trainingDataEnd; i+= threadCount)
             {
-                CalculateGradientForSingleTrainingExample(myMathLib, ref intermediateResult, trainingData[i].Item1, trainingData[i].Item2);
+                CalculateGradientForSingleTrainingExample(myMathLib, ref intermediateResult, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
             }
 
             lock (lockObj_gradientAccess)
@@ -267,14 +237,14 @@ namespace Mademy
             }
         }
 
-        private List<List<NeuronData>> CalculateGradientSingleThread(MathLib mathLib, TrainingConfig config, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        private List<List<NeuronData>> CalculateGradientSingleThread(MathLib mathLib, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
         {
             //Backpropagation
             var ret = Utils.CreateGradientVector(this);
 
             for (int i = trainingDataBegin; i < trainingDataEnd; i++)
             {
-                CalculateGradientForSingleTrainingExample(mathLib, ref ret, trainingData[i].Item1, trainingData[i].Item2);
+                CalculateGradientForSingleTrainingExample(mathLib, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
             }
 
             float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
@@ -283,18 +253,18 @@ namespace Mademy
             return ret;
         }
 
-        private List<List<NeuronData>> CalculateGradientMultiThreaded(MathLib mathLib, TrainingConfig config, List<Tuple<float[], float[]>> trainingData, int trainingDataBegin, int trainingDataEnd)
+        private List<List<NeuronData>> CalculateGradientMultiThreaded(MathLib mathLib, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
         {
             //Backpropagation
             var ret = Utils.CreateGradientVector(this);
 
-            Thread[] workerThreads = new Thread[config.GetThreadCount()];
+            Thread[] workerThreads = new Thread[suite.config.GetThreadCount()];
 
             for (int i = 0; i < workerThreads.Length; i++)
             {
                 int idx = i;
                 workerThreads[i] = new Thread(() => {
-                    CalculateGradientThread(mathLib, config, ref ret, trainingData, idx, trainingDataBegin, trainingDataEnd);
+                    CalculateGradientThread(mathLib, suite, ref ret, idx, trainingDataBegin, trainingDataEnd);
                 });
                 workerThreads[i].Start();
             }

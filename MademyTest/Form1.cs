@@ -70,10 +70,7 @@ namespace MademyTest
 
         private void button4_Click(object sender, EventArgs e)
         {
-            var config = Network.TrainingConfig.CreateTrainingConfig();
-            config.miniBatchSize = 10;
-            config.numThreads = 1;
-            List<Tuple<float[], float[]>> trainingData = new List<Tuple<float[], float[]>>();
+            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
             var rnd = new Random();
             for (int i = 0; i < 1000000; i++)
@@ -86,11 +83,14 @@ namespace MademyTest
                 input[jint] = 1.0f;
                 output[jint] = 1.0f;
 
-                trainingData.Add(new Tuple<float[], float[]>(input, output));
+                trainingData.Add( new TrainingSuite.TrainingData( input, output) ); 
             }
 
+            var trainingSuite = new TrainingSuite(trainingData);
+            trainingSuite.config.miniBatchSize = 10;
+            trainingSuite.config.numThreads = 1;
 
-            trainingPromise = solver.Train(mathLib, trainingData, config);
+            trainingPromise = solver.Train(mathLib, trainingSuite);
 
             progressBar1.Value = 0;
             label2.Text = "Training...";
