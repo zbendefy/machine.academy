@@ -73,7 +73,7 @@ namespace MademyTest
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
             var rnd = new Random();
-            for (int i = 0; i < 1000000; i++)
+            for (int i = 0; i < 100000; i++)
             {
                 float[] input = new float[] { 0,0,0,0,0 };
                 float[] output = new float[] { 0,0,0,0,0 };

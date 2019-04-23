@@ -41,6 +41,7 @@
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.saveFileDialog1 = new System.Windows.Forms.SaveFileDialog();
             this.numericUpDown1 = new System.Windows.Forms.NumericUpDown();
+            this.button7 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             this.SuspendLayout();
@@ -73,7 +74,7 @@
             // 
             this.button2.Location = new System.Drawing.Point(305, 268);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(161, 23);
+            this.button2.Size = new System.Drawing.Size(217, 23);
             this.button2.TabIndex = 2;
             this.button2.Text = "Load network from JSON";
             this.button2.UseVisualStyleBackColor = true;
@@ -91,9 +92,9 @@
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(472, 298);
+            this.button4.Location = new System.Drawing.Point(576, 298);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(105, 23);
+            this.button4.Size = new System.Drawing.Size(96, 23);
             this.button4.TabIndex = 4;
             this.button4.Text = "Train network";
             this.button4.UseVisualStyleBackColor = true;
@@ -122,7 +123,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(302, 244);
+            this.label1.Location = new System.Drawing.Point(393, 239);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(87, 13);
             this.label1.TabIndex = 7;
@@ -133,7 +134,7 @@
             this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.comboBox1.Location = new System.Drawing.Point(391, 241);
+            this.comboBox1.Location = new System.Drawing.Point(486, 236);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(245, 21);
             this.comboBox1.TabIndex = 8;
@@ -141,9 +142,9 @@
             // 
             // button6
             // 
-            this.button6.Location = new System.Drawing.Point(472, 268);
+            this.button6.Location = new System.Drawing.Point(528, 268);
             this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(164, 23);
+            this.button6.Size = new System.Drawing.Size(203, 23);
             this.button6.TabIndex = 9;
             this.button6.Text = "Save network to JSON";
             this.button6.UseVisualStyleBackColor = true;
@@ -155,7 +156,7 @@
             // 
             // numericUpDown1
             // 
-            this.numericUpDown1.Location = new System.Drawing.Point(583, 301);
+            this.numericUpDown1.Location = new System.Drawing.Point(678, 298);
             this.numericUpDown1.Maximum = new decimal(new int[] {
             10000,
             0,
@@ -175,11 +176,22 @@
             0,
             0});
             // 
+            // button7
+            // 
+            this.button7.Location = new System.Drawing.Point(472, 297);
+            this.button7.Name = "button7";
+            this.button7.Size = new System.Drawing.Size(98, 23);
+            this.button7.TabIndex = 11;
+            this.button7.Text = "Test network";
+            this.button7.UseVisualStyleBackColor = true;
+            this.button7.Click += new System.EventHandler(this.button7_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(648, 325);
+            this.ClientSize = new System.Drawing.Size(743, 325);
+            this.Controls.Add(this.button7);
             this.Controls.Add(this.numericUpDown1);
             this.Controls.Add(this.button6);
             this.Controls.Add(this.comboBox1);
@@ -218,6 +230,7 @@
         private System.Windows.Forms.OpenFileDialog openFileDialog1;
         private System.Windows.Forms.SaveFileDialog saveFileDialog1;
         private System.Windows.Forms.NumericUpDown numericUpDown1;
+        private System.Windows.Forms.Button button7;
     }
 }
 

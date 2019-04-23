@@ -86,6 +86,10 @@ namespace Mademy
             trainingThread = new Thread(() => {
                 for (int currentEpoch = 0; currentEpoch < trainingSuite.config.epochs; currentEpoch++)
                 {
+                    if (trainingSuite.config.shuffleTrainingData && currentEpoch > 0)
+                    {
+                        Utils.ShuffleList(ref trainingSuite.trainingData);
+                    }
 
                     int trainingDataBegin = 0;
                     int trainingDataEnd = trainingSuite.config.UseMinibatches() ? trainingSuite.config.miniBatchSize : trainingSuite.trainingData.Count;

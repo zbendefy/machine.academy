@@ -68,7 +68,6 @@ namespace NumberRecognize
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
             layerConfig.Add(32);
-            layerConfig.Add(32);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig);
@@ -119,38 +118,12 @@ namespace NumberRecognize
             }
         }
 
-        private void button4_Click(object sender, EventArgs e)
+        private void LoadTestDataFromFiles(List<TrainingSuite.TrainingData> trainingData, String labelFileName, String imgFileName)
         {
-            string imgFile = "";
-            string labelFile = "";
-
-            openFileDialog1.Filter = "Training data|*.*";
-            openFileDialog1.Title = "Open Training images file";
-            if (openFileDialog1.ShowDialog() == DialogResult.OK)
-            {
-                imgFile = openFileDialog1.FileName;
-            }
-            else
-            {
-                return;
-            }
-
-            openFileDialog1.Title = "Open Training labels file";
-            if (openFileDialog1.ShowDialog() == DialogResult.OK)
-            {
-                labelFile = openFileDialog1.FileName;
-            }
-            else
-            {
-                return;
-            }
-
-            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
-
-            var labelData = System.IO.File.ReadAllBytes(labelFile);
+            var labelData = System.IO.File.ReadAllBytes(labelFileName);
             int labelDataOffset = 8; //first 2x32 bits are not interesting for us.
 
-            var imageData = System.IO.File.ReadAllBytes(imgFile);
+            var imageData = System.IO.File.ReadAllBytes(imgFileName);
             int imageDataOffset = 16; //first 4x32 bits are not interesting for us.
             int imageSize = bitmap.Size.Width * bitmap.Size.Height;
 
@@ -176,6 +149,38 @@ namespace NumberRecognize
                 output[label] = 1.0f;
                 trainingData.Add(new TrainingSuite.TrainingData(input, output));
             }
+        }
+
+        private void button4_Click(object sender, EventArgs e)
+        {
+            string imgFile = "";
+            string labelFile = "";
+
+            openFileDialog1.Filter = "Image Training data (Image)|*.*";
+            openFileDialog1.Title = "Open Training images file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                imgFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            openFileDialog1.Filter = "Training data (Label)|*.*";
+            openFileDialog1.Title = "Open Training labels file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                labelFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
+
+            LoadTestDataFromFiles(trainingData, labelFile, imgFile);
 
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 100;
@@ -239,6 +244,21 @@ namespace NumberRecognize
         {
         }
 
+        private int ClassifyOutput(float[] output)
+        {
+            float largest = -1;
+            int resultIdx = -1;
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] > largest)
+                {
+                    largest = output[i];
+                    resultIdx = i;
+                }
+            }
+            return resultIdx;
+        }
+
         private void button5_Click(object sender, EventArgs e)
         {
             float[] input = new float[bitmap.Size.Width * bitmap.Size.Height];
@@ -254,16 +274,7 @@ namespace NumberRecognize
 
             var output = network.Compute(mathLib, input);
 
-            float largest = 0;
-            int resultIdx = 0;
-            for (int i = 0; i < output.Length; i++)
-            {
-                if (output[i] > largest)
-                {
-                    largest = output[i];
-                    resultIdx = i;
-                }
-            }
+            int resultIdx = ClassifyOutput(output);
 
             lblResult.Text = "Results:\nI think you drew a " + resultIdx + "\nOutput was:\n";
             lblResult.Text += string.Join("\n ", output);
@@ -272,6 +283,53 @@ namespace NumberRecognize
         private void panel1_Paint(object sender, PaintEventArgs e)
         {
 
+        }
+
+        private void button7_Click(object sender, EventArgs e)
+        {
+            string imgFile = "";
+            string labelFile = "";
+
+            openFileDialog1.Filter = "Test data (Image)|*.*";
+            openFileDialog1.Title = "Open Test images file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                imgFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            openFileDialog1.Filter = "Test data (Label)|*.*";
+            openFileDialog1.Title = "Open Test labels file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                labelFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
+
+            LoadTestDataFromFiles(trainingData, labelFile, imgFile);
+
+            int success = 0;
+            for (int i = 0; i < trainingData.Count; i++)
+            {
+                var output = network.Compute(mathLib, trainingData[i].input);
+
+                int resultIdx = ClassifyOutput(output);
+                int expectedIdx = ClassifyOutput(trainingData[i].desiredOutput);
+                if (resultIdx == expectedIdx)
+                    ++success;
+
+            }
+
+            float perc = ((float)success / (float)trainingData.Count) * 100.0f;
+            MessageBox.Show("Test completed with " + trainingData.Count + " examples. Successful were: " + success + " (" + perc + "%)", "Test complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }

@@ -37,6 +37,19 @@ namespace Mademy
             return diff * diff;
         }
 
+        public static void ShuffleList<T>(ref List<T> list)
+        {
+            int n = list.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rnd.Next(n + 1);
+                T value = list[k];
+                list[k] = list[n];
+                list[n] = value;
+            }
+        }
+
         public static List<List<NeuronData>> CreateGradientVector(Network network)
         {
             var ret = new List<List<NeuronData>>();

@@ -20,6 +20,7 @@ namespace CLMath
             public int numThreads;
             public int epochs;
             public NeuronFunction neuronFunction;
+            public bool shuffleTrainingData;
 
             public static TrainingConfig CreateTrainingConfig()
             {
@@ -32,6 +33,7 @@ namespace CLMath
                 ret.epochs = 1;
                 ret.numThreads = AutoDetectThreads;
                 ret.neuronFunction = NeuronFunction.Sigmoid;
+                ret.shuffleTrainingData = true;
                 return ret;
             }
 
@@ -43,7 +45,7 @@ namespace CLMath
             }
         };
 
-        public struct TrainingData
+        public class TrainingData
         {
             public float[] input;
             public float[] desiredOutput;
