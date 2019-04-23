@@ -17,6 +17,9 @@ namespace NumberRecognize
         private MathLib mathLib = null;
         private Network network = null;
         Bitmap bitmap;
+        private Network.TrainingPromise trainingPromise = null;
+        Timer trainingtimer = new Timer();
+        Form2 progressDialog = null;
 
         public Form1()
         {
@@ -27,6 +30,9 @@ namespace NumberRecognize
         {
             mathLib = new MathLib(null);
 
+            bitmap = new Bitmap(28, 28, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
+            pictureBox1.Image = bitmap;
+
             comboBox1.Items.Add("Use CPU calculation");
             comboBox1.SelectedIndex = 0;
             foreach (var device in ComputeDevice.GetDevices())
@@ -35,19 +41,33 @@ namespace NumberRecognize
                 comboBox1.Items.Add(item);
             }
 
+            trainingtimer.Interval = 300;
+            trainingtimer.Tick += Trainingtimer_Tick;
+
             InitRandomNetwork();
 
-            bitmap = new Bitmap(28, 28,System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
-            pictureBox1.Image = bitmap;
+        }
+
+        private void Trainingtimer_Tick(object sender, EventArgs e)
+        {
+            if (progressDialog != null && trainingPromise != null)
+            {
+                progressDialog.UpdateResult(trainingPromise.GetProgress(), trainingPromise.IsReady(), "Training...");
+                if (trainingPromise.IsReady())
+                {
+                    trainingPromise = null;
+                    progressDialog = null;
+                }
+            }
         }
 
         private void InitRandomNetwork()
         {
             List<int> layerConfig = new List<int>();
-            layerConfig.Add(5);
-            layerConfig.Add(8);
-            layerConfig.Add(8);
-            layerConfig.Add(5);
+            layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
+            layerConfig.Add(32);
+            layerConfig.Add(32);
+            layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig);
         }
@@ -99,7 +119,63 @@ namespace NumberRecognize
 
         private void button4_Click(object sender, EventArgs e)
         {
-            
+            string imgFile = "";
+            string labelFile = "";
+
+            openFileDialog1.Filter = "Training data|*.*";
+            openFileDialog1.Title = "Open Training images file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                imgFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            openFileDialog1.Title = "Open Training labels file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                labelFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
+
+            var labelData = System.IO.File.ReadAllBytes(labelFile);
+            int labelDataOffset = 8; //first 2x32 bits are not interesting for us.
+
+            var imageData = System.IO.File.ReadAllBytes(imgFile);
+            int imageDataOffset = 16; //first 4x32 bits are not interesting for us.
+
+            for (int i = labelDataOffset; i < labelData.Length; i++)
+            {
+                float[] input = new float[bitmap.Size.Width * bitmap.Size.Height];
+                float[] output = new float[10];
+                for (int j = 0; j < bitmap.Size.Height; j++)
+                {
+                    for (int k = 0; k < bitmap.Size.Width; k++)
+                    {
+                        int offsetInImage = j * bitmap.Size.Width + k;
+                        input[offsetInImage] = ((float)imageData[imageDataOffset + i + offsetInImage]) / 255.0f;
+                    }
+                }
+                output[labelData[i]] = 1.0f;
+                trainingData.Add(new TrainingSuite.TrainingData(input, output));
+            }
+
+            var trainingSuite = new TrainingSuite(trainingData);
+            trainingSuite.config.miniBatchSize = 100;
+            trainingSuite.config.numThreads = 1;
+            trainingSuite.config.epochs = 10;
+
+            trainingPromise = network.Train(mathLib, trainingSuite);
+
+            progressDialog = new Form2();
+            progressDialog.ShowDialog();
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -138,6 +214,41 @@ namespace NumberRecognize
 
         private void pictureBox1_MouseLeave(object sender, EventArgs e)
         {
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            float[] input = new float[bitmap.Size.Width * bitmap.Size.Height];
+
+            for (int i = 0; i < bitmap.Size.Height; i++)
+            {
+                for (int j = 0; j < bitmap.Size.Width; j++)
+                {
+                    var color = bitmap.GetPixel(j,i).ToArgb();
+                    input[i * bitmap.Size.Width + j] = color == -1 ? 1.0f : 0.0f;
+                }
+            }
+
+            var output = network.Compute(mathLib, input);
+
+            float largest = 0;
+            int resultIdx = 0;
+            for (int i = 0; i < output.Length; i++)
+            {
+                if (output[i] > largest)
+                {
+                    largest = output[i];
+                    resultIdx = i;
+                }
+            }
+
+            lblResult.Text = "Results:\nI think you drew a " + resultIdx + "\nOutput was:\n";
+            lblResult.Text += string.Join("\n ", output);
+        }
+
+        private void panel1_Paint(object sender, PaintEventArgs e)
+        {
+
         }
     }
 }

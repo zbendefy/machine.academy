@@ -138,9 +138,9 @@ namespace Mademy
             return trainingPromise;
         }
 
-        private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, List<float[]> zValues, float[] desiredOutput)
+        private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
         {
-            var prevActivations = activations[activations.Count - 2];
+            var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
             int lastLayerWeightCount = layers.Last().GetWeightsPerNeuron();
             int lastLayerNeuronCount = layers.Last().GetNeuronCount();
             for (int i = 0; i < lastLayerNeuronCount; i++)
@@ -222,7 +222,7 @@ namespace Mademy
 
             var lastLayerGradient = intermediateResults.Last();
             List<float> delta_k_holder = new List<float>();
-            CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, zValues, trainingDesiredOutput);
+            CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
 
             for (int i = layers.Count - 2; i >= 0; --i)
             {

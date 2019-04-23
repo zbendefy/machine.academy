@@ -69,9 +69,9 @@
             // 
             // button2
             // 
-            this.button2.Location = new System.Drawing.Point(305, 239);
+            this.button2.Location = new System.Drawing.Point(305, 268);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(205, 23);
+            this.button2.Size = new System.Drawing.Size(161, 23);
             this.button2.TabIndex = 2;
             this.button2.Text = "Load network from JSON";
             this.button2.UseVisualStyleBackColor = true;
@@ -79,9 +79,9 @@
             // 
             // button3
             // 
-            this.button3.Location = new System.Drawing.Point(305, 268);
+            this.button3.Location = new System.Drawing.Point(305, 297);
             this.button3.Name = "button3";
-            this.button3.Size = new System.Drawing.Size(205, 23);
+            this.button3.Size = new System.Drawing.Size(161, 23);
             this.button3.TabIndex = 3;
             this.button3.Text = "Init new random network";
             this.button3.UseVisualStyleBackColor = true;
@@ -89,9 +89,9 @@
             // 
             // button4
             // 
-            this.button4.Location = new System.Drawing.Point(305, 297);
+            this.button4.Location = new System.Drawing.Point(472, 298);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(205, 23);
+            this.button4.Size = new System.Drawing.Size(164, 23);
             this.button4.TabIndex = 4;
             this.button4.Text = "Train network";
             this.button4.UseVisualStyleBackColor = true;
@@ -99,25 +99,28 @@
             // 
             // button5
             // 
-            this.button5.Location = new System.Drawing.Point(207, 298);
+            this.button5.Location = new System.Drawing.Point(207, 297);
             this.button5.Name = "button5";
             this.button5.Size = new System.Drawing.Size(85, 23);
             this.button5.TabIndex = 5;
             this.button5.Text = "Recognize!";
             this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // lblResult
             // 
             this.lblResult.AutoSize = true;
-            this.lblResult.Location = new System.Drawing.Point(299, 307);
+            this.lblResult.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.lblResult.Location = new System.Drawing.Point(302, 12);
             this.lblResult.Name = "lblResult";
-            this.lblResult.Size = new System.Drawing.Size(0, 13);
+            this.lblResult.Size = new System.Drawing.Size(56, 16);
             this.lblResult.TabIndex = 6;
+            this.lblResult.Text = "Results:";
             // 
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(298, 12);
+            this.label1.Location = new System.Drawing.Point(302, 244);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(87, 13);
             this.label1.TabIndex = 7;
@@ -128,17 +131,17 @@
             this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.comboBox1.Location = new System.Drawing.Point(302, 28);
+            this.comboBox1.Location = new System.Drawing.Point(391, 241);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(208, 21);
+            this.comboBox1.Size = new System.Drawing.Size(245, 21);
             this.comboBox1.TabIndex = 8;
             this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
             // button6
             // 
-            this.button6.Location = new System.Drawing.Point(305, 210);
+            this.button6.Location = new System.Drawing.Point(472, 268);
             this.button6.Name = "button6";
-            this.button6.Size = new System.Drawing.Size(205, 23);
+            this.button6.Size = new System.Drawing.Size(164, 23);
             this.button6.TabIndex = 9;
             this.button6.Text = "Save network to JSON";
             this.button6.UseVisualStyleBackColor = true;
@@ -152,7 +155,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(519, 325);
+            this.ClientSize = new System.Drawing.Size(648, 325);
             this.Controls.Add(this.button6);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.label1);
