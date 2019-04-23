@@ -67,10 +67,13 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(32);
+            layerConfig.Add(300);
+            layerConfig.Add(100);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig);
+            network.AttachName("MNIST learning DNN");
+            network.AttachDescription("MNIST learning DNN using " + layerConfig.Count + " layers in structure: (" + string.Join(", ", layerConfig) + " )" );
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)

@@ -67,8 +67,8 @@ namespace Mademy
             layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
         }
 
-        void AttachName(string _name) { name = _name;  }
-        void AttachDescription(string _desc) { description = _desc;  }
+        public void AttachName(string _name) { name = _name;  }
+        public void AttachDescription(string _desc) { description = _desc;  }
         
         public TrainingPromise Train(MathLib mathLib, TrainingSuite trainingSuite)
         {
