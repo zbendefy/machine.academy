@@ -31,6 +31,7 @@ namespace NumberRecognize
             mathLib = new MathLib(null);
 
             bitmap = new Bitmap(28, 28, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
+            ClearBitmap();
             pictureBox1.Image = bitmap;
 
             comboBox1.Items.Add("Use CPU calculation");
@@ -66,8 +67,8 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(64);
-            layerConfig.Add(48);
+            layerConfig.Add(32);
+            layerConfig.Add(32);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig);
@@ -151,20 +152,28 @@ namespace NumberRecognize
 
             var imageData = System.IO.File.ReadAllBytes(imgFile);
             int imageDataOffset = 16; //first 4x32 bits are not interesting for us.
+            int imageSize = bitmap.Size.Width * bitmap.Size.Height;
 
             for (int i = labelDataOffset; i < labelData.Length; i++)
             {
-                float[] input = new float[bitmap.Size.Width * bitmap.Size.Height];
+                int trainingSampleId = i - labelDataOffset;
+                int label = labelData[i];
+                float[] input = new float[imageSize];
                 float[] output = new float[10];
                 for (int j = 0; j < bitmap.Size.Height; j++)
                 {
                     for (int k = 0; k < bitmap.Size.Width; k++)
                     {
                         int offsetInImage = j * bitmap.Size.Width + k;
-                        input[offsetInImage] = ((float)imageData[imageDataOffset + i + offsetInImage]) / 255.0f;
+                        byte pixelColor = imageData[imageDataOffset + trainingSampleId * imageSize + offsetInImage];
+                        input[offsetInImage] = ((float)pixelColor) / 255.0f;
+                        //bitmap.SetPixel(k, j, Color.FromArgb(255, 255- pixelColor, 255 - pixelColor, 255 - pixelColor));
                     }
                 }
-                output[labelData[i]] = 1.0f;
+                /*
+                pictureBox1.Refresh();
+                System.Threading.Thread.Sleep(100);*/
+                output[label] = 1.0f;
                 trainingData.Add(new TrainingSuite.TrainingData(input, output));
             }
 
@@ -181,37 +190,48 @@ namespace NumberRecognize
             progressDialog.ShowDialog();
         }
 
-        private void button1_Click(object sender, EventArgs e)
+        private void ClearBitmap()
         {
             for (int i = 0; i < bitmap.Size.Height; i++)
             {
                 for (int j = 0; j < bitmap.Size.Width; j++)
                 {
-                    bitmap.SetPixel(j, i, Color.Black);
+                    bitmap.SetPixel(j, i, Color.White);
                 }
             }
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            ClearBitmap();
             pictureBox1.Refresh();
         }
 
         private void pictureBox1_MouseDown(object sender, MouseEventArgs e)
         {
+            paintPixel(e);
         }
 
         private void pictureBox1_MouseUp(object sender, MouseEventArgs e)
         {
         }
 
+        private void paintPixel(MouseEventArgs e)
+        {
+            float relativePosX = (float)e.X / (float)pictureBox1.Width;
+            float relativePosY = (float)e.Y / (float)pictureBox1.Height;
+
+            int bitmapX = (int)Math.Max(0, Math.Min(Math.Floor(relativePosX * (float)(bitmap.Size.Width - 1)), bitmap.Size.Width - 1));
+            int bitmapY = (int)Math.Max(0, Math.Min(Math.Floor(relativePosY * (float)(bitmap.Size.Height - 1)), bitmap.Size.Height - 1));
+            bitmap.SetPixel(bitmapX, bitmapY, Color.Black);
+            pictureBox1.Refresh();
+        }
+
         private void pictureBox1_MouseMove(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
             {
-                float relativePosX = (float)e.X / (float)pictureBox1.Width;
-                float relativePosY = (float)e.Y / (float)pictureBox1.Height;
-
-                int bitmapX = (int)Math.Max(0,Math.Min( Math.Floor(relativePosX * (float)(bitmap.Size.Width - 1)), bitmap.Size.Width - 1));
-                int bitmapY = (int)Math.Max(0, Math.Min(Math.Floor(relativePosY * (float)(bitmap.Size.Height-1)), bitmap.Size.Height- 1));
-                bitmap.SetPixel(bitmapX, bitmapY, Color.White);
-                pictureBox1.Refresh();
+                paintPixel(e);
             }
         }
 
@@ -228,7 +248,7 @@ namespace NumberRecognize
                 for (int j = 0; j < bitmap.Size.Width; j++)
                 {
                     var color = bitmap.GetPixel(j,i).ToArgb();
-                    input[i * bitmap.Size.Width + j] = color == -1 ? 1.0f : 0.0f;
+                    input[i * bitmap.Size.Width + j] = color == -1 ? 0.0f : 1.0f;
                 }
             }
 
