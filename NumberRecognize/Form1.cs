@@ -67,8 +67,9 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(3);
-            layerConfig.Add(1);
+            layerConfig.Add(128);
+            layerConfig.Add(128);
+            layerConfig.Add(128);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig);

@@ -38,6 +38,7 @@ namespace NumberRecognize
         private void button1_Click(object sender, EventArgs e)
         {
             trainingPromise.StopAtNextEpoch();
+            lblStop.Text = "Stopping after current epoch ends";
         }
     }
 }

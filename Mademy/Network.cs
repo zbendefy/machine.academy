@@ -143,7 +143,7 @@ namespace Mademy
                         }
                     }
                 }
-                trainingPromise.SetProgress(1, trainingSuite.config.epochs);
+                trainingPromise.SetProgress(1, trainingPromise.GetEpochsDone());
                 trainingPromise = null;
             });
 
