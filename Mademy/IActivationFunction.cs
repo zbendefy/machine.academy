@@ -36,7 +36,7 @@ namespace Mademy
     {
         public override float Calculate(float x)
         {
-            return x / (1.0f + (float)Math.Pow(Math.E, -x));
+            return 1.0f / (1.0f + (float)Math.Exp(-x));
         }
 
         public override float CalculatePrime(float x)
