@@ -19,6 +19,7 @@ namespace Mademy
             public int numThreads;
             public int epochs;
             public bool shuffleTrainingData;
+            public IErrorFunction errorFunction;
 
             public static TrainingConfig CreateTrainingConfig()
             {
@@ -31,6 +32,7 @@ namespace Mademy
                 ret.epochs = 1;
                 ret.numThreads = AutoDetectThreads;
                 ret.shuffleTrainingData = true;
+                ret.errorFunction = new MeanSquaredError();
                 return ret;
             }
 

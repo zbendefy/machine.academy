@@ -165,7 +165,7 @@ namespace Mademy
             return trainingPromise;
         }
 
-        private void CalculateOutputLayerGradientSquareError(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
+        private void CalculateOutputLayerGradientSquareError(MathLib mathLib, IErrorFunction errorFunction, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
         {
             var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
             int lastLayerWeightCount = layers.Last().GetWeightsPerNeuron();
@@ -173,7 +173,7 @@ namespace Mademy
             for (int i = 0; i < lastLayerNeuronCount; i++)
             {
                 float outputValue = activations.Last()[i];
-                float gamma_k = (outputValue - desiredOutput[i]) * activationFunction.CalculatePrime(zValues.Last()[i]);
+                float gamma_k = errorFunction.CalculateDelta(zValues.Last()[i],outputValue, desiredOutput[i], activationFunction);
 
                 var gradientDataItem = gradientData[i];
                 //Assert(gradientData[i].weights.Length == prevActivations.Length);
@@ -215,7 +215,7 @@ namespace Mademy
             gamma_k_vector = newGammak;
         }
 
-        private void CalculateGradientForSingleTrainingExample(MathLib mathLib, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
+        private void CalculateGradientForSingleTrainingExample(MathLib mathLib, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
         {
             List<float[]> activations = new List<float[]>();
             List<float[]> zValues = new List<float[]>();
@@ -223,7 +223,7 @@ namespace Mademy
 
             var lastLayerGradient = intermediateResults.Last();
             List<float> delta_k_holder = new List<float>();
-            CalculateOutputLayerGradientSquareError(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
+            CalculateOutputLayerGradientSquareError(mathLib, errorFunction, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
 
             for (int i = layers.Count - 2; i >= 0; --i)
             {
@@ -254,7 +254,7 @@ namespace Mademy
 
             for (int i = trainingDataBegin; i < trainingDataEnd; i++)
             {
-                CalculateGradientForSingleTrainingExample(mathLib, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
+                CalculateGradientForSingleTrainingExample(mathLib, suite.config.errorFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
             }
 
             float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
