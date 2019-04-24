@@ -7,14 +7,17 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static Mademy.Network;
 
 namespace NumberRecognize
 {
     public partial class Form2 : Form
     {
-        public Form2()
+        TrainingPromise trainingPromise;
+        public Form2(TrainingPromise _trainingPromise)
         {
             InitializeComponent();
+            trainingPromise = _trainingPromise;
         }
 
         public void UpdateResult(float percentage, bool isFinished, string text)
@@ -30,6 +33,11 @@ namespace NumberRecognize
         private void Form2_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            trainingPromise.StopAtNextEpoch();
         }
     }
 }

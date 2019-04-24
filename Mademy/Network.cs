@@ -21,6 +21,9 @@ namespace Mademy
 
             private object lockObj = new object();
             private int progress = 0;
+            private int epochsDone = 0;
+
+            private bool stopAtNextEpoch = false;
 
             public bool IsReady()
             {
@@ -30,7 +33,7 @@ namespace Mademy
                 }
             }
 
-            public float GetProgress()
+            public float GetTotalProgress()
             {
                 lock (lockObj)
                 {
@@ -38,13 +41,19 @@ namespace Mademy
                 }
             }
 
-            internal void SetProgress(float _progress)
+            internal void SetProgress(float _progress, int _epochsDone)
             {
                 lock (lockObj)
                 {
+                    epochsDone = _epochsDone;
                     progress = (int)(_progress * 100.0f);
                 }
             }
+            public int GetEpochsDone() { return epochsDone; } //language guarantees atomic access
+
+            public void StopAtNextEpoch() { stopAtNextEpoch = true; }
+
+            internal bool IsStopAtNextEpoch() { return stopAtNextEpoch; }
         }
 
         internal string name;
@@ -79,13 +88,15 @@ namespace Mademy
 
             if (trainingSuite.config.epochs < 1)
             {
-                trainingPromise.SetProgress(1);
+                trainingPromise.SetProgress(1, 0);
                 return trainingPromise;
             }
 
             trainingThread = new Thread(() => {
                 for (int currentEpoch = 0; currentEpoch < trainingSuite.config.epochs; currentEpoch++)
                 {
+                    if (trainingPromise.IsStopAtNextEpoch())
+                        break;
                     if (trainingSuite.config.shuffleTrainingData && currentEpoch > 0)
                     {
                         Utils.ShuffleList(ref trainingSuite.trainingData);
@@ -121,7 +132,7 @@ namespace Mademy
                             if (trainingDataEnd >= trainingSuite.trainingData.Count)
                                 break;
 
-                            trainingPromise.SetProgress(((float)trainingDataEnd + ((float)currentEpoch * (float)trainingSuite.trainingData.Count)) / ((float)trainingSuite.trainingData.Count * (float)trainingSuite.config.epochs));
+                            trainingPromise.SetProgress(((float)trainingDataEnd + ((float)currentEpoch * (float)trainingSuite.trainingData.Count)) / ((float)trainingSuite.trainingData.Count * (float)trainingSuite.config.epochs), currentEpoch + 1);
 
                             trainingDataBegin = trainingDataEnd;
                             trainingDataEnd = Math.Min(trainingDataEnd + trainingSuite.config.miniBatchSize, trainingSuite.trainingData.Count);
@@ -132,7 +143,7 @@ namespace Mademy
                         }
                     }
                 }
-                trainingPromise.SetProgress(1);
+                trainingPromise.SetProgress(1, trainingSuite.config.epochs);
                 trainingPromise = null;
             });
 

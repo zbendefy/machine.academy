@@ -116,7 +116,7 @@ namespace MademyTest
         {
             if (trainingPromise != null)
             {
-                progressBar1.Value = (int)(trainingPromise.GetProgress() * 100.0f);
+                progressBar1.Value = (int)(trainingPromise.GetTotalProgress() * 100.0f);
                 if (trainingPromise.IsReady())
                 {
                     var period = DateTime.Now.Subtract(trainingBegin);
