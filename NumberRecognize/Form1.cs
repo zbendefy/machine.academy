@@ -1,5 +1,4 @@
-﻿using CLMath;
-using Mademy;
+﻿using Mademy;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -72,7 +71,7 @@ namespace NumberRecognize
             layerConfig.Add(128);
             layerConfig.Add(10);
 
-            network = Network.CreateNetworkInitRandom(layerConfig);
+            network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
             network.AttachName("MNIST learning DNN");
             network.AttachDescription("MNIST learning DNN using " + layerConfig.Count + " layers in structure: (" + string.Join(", ", layerConfig) + " )" );
         }

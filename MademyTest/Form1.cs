@@ -1,5 +1,4 @@
-﻿using CLMath;
-using Mademy;
+﻿using Mademy;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -31,7 +30,7 @@ namespace MademyTest
             layerConfig.Add(8);
             layerConfig.Add(8);
             layerConfig.Add(5);
-            solver = Network.CreateNetworkInitRandom(layerConfig);
+            solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
 
             mathLib = new MathLib( null );
 

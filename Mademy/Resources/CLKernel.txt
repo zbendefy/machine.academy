@@ -1,0 +1,34 @@
+
+float ActivationFunction(float x, int functionId)
+{
+	switch(functionId)
+	{
+		case 1:
+			return 1.0f/(1.0f + exp(-x));
+		case 0:
+		default:
+			return x;
+	}
+}
+
+
+__kernel void calcLayer(__global const float* weightMx, __global const float* biases, __global const float* prevActivation, __global const int* config, __global float* output) 
+{
+    const int rowCount = config[0]; //number of neurons
+    const int colCount = config[1]; //weights-per-neurons
+    const int activationFunctionId = config[2]; 
+
+    const int rowId = get_global_id(0);
+ 
+    if (rowId >= rowCount)
+        return;
+
+    float acc = 0;
+    for(int i = 0; i < colCount; ++i)
+        acc += weightMx[(rowId * colCount) + i] * prevActivation[i];
+    acc += biases[rowId];
+
+    acc = ActivationFunction(acc, activationFunctionId);
+
+    output[rowId] = acc;
+}

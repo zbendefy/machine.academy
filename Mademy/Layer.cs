@@ -1,10 +1,5 @@
-﻿using CLMath;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Runtime.Serialization;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Mademy
 {
@@ -42,12 +37,9 @@ namespace Mademy
             biases = (float[])info.GetValue("biases", typeof(float[]));
         }
 
-        public float[] Compute(MathLib mathLib, float[] input, bool applySigmoid = true)
+        public float[] Compute(MathLib mathLib, float[] input, IActivationFunction activationFunction)
         {
-            if (applySigmoid)
-                return mathLib.CalculateLayer(weightMx, biases, input, MathLib.SigmoidFunction.Sigmoid);
-            else
-                return mathLib.CalculateLayer(weightMx, biases, input, MathLib.SigmoidFunction.Passtrough);
+            return mathLib.CalculateLayer(weightMx, biases, input, activationFunction);
         }
 
     }

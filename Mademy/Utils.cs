@@ -6,36 +6,9 @@ using System.Threading.Tasks;
 
 namespace Mademy
 {
-    static class Utils
+    internal static class Utils
     {
         private static Random rnd = new Random();
-
-        public static float FastSigmoid(float x)
-        {
-            return x / (1.0f + Math.Abs(x));
-        }
-
-        public static float FastSigmoidD(float x)
-        {
-            float div = (1.0f + Math.Abs(x));
-            return 1 / (div*div);
-        }
-
-        public static float ReLU(float x)
-        {
-            return Math.Max(0, x);
-        }
-
-        public static float Sigmoid(float x)
-        {
-            return x / (1.0f + (float)Math.Pow(Math.E, -x));
-        }
-
-        public static float CalculateError(float output, float expectedOutput)
-        {
-            var diff = output - expectedOutput;
-            return diff * diff;
-        }
 
         public static void ShuffleList<T>(ref List<T> list)
         {

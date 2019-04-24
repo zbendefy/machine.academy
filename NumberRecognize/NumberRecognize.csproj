@@ -109,10 +109,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CLMath\CLMath.csproj">
-      <Project>{B9271ED7-2621-4186-ADF0-169EFB29BB90}</Project>
-      <Name>CLMath</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Mademy\Mademy.csproj">
       <Project>{88AD671C-2D39-4D63-8D8D-55D2C9E07738}</Project>
       <Name>Mademy</Name>

@@ -6,7 +6,6 @@ using System.Runtime.Serialization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using CLMath;
 using MathNet.Numerics.LinearAlgebra;
 using Newtonsoft.Json;
 
@@ -59,21 +58,37 @@ namespace Mademy
         internal string name;
         internal string description;
         internal List<Layer> layers;
+        internal string activationFunctionName = "";
 
+        internal IActivationFunction activationFunction;
         internal TrainingPromise trainingPromise = null;
         private Thread trainingThread = null;
         private Object lockObj_gradientAccess = new object();
 
-        Network(List<Layer> layers)
+        Network(List<Layer> layers, IActivationFunction activationFunction)
         {
             this.layers = layers;
+            this.activationFunction = activationFunction;
+            this.activationFunctionName = activationFunction.GetSerializedName();
         }
 
         Network(SerializationInfo info, StreamingContext context)
         {
             name = (string)info.GetValue("name", typeof(string));
             description = (string)info.GetValue("description", typeof(string));
+            activationFunctionName = (string)info.GetValue("activationFunctionName", typeof(string));
             layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
+
+            Type t = Type.GetType("Mademy."+activationFunctionName);
+            activationFunction = (IActivationFunction)Activator.CreateInstance(t);
+        }
+
+        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        {
+            info.AddValue("name", name, typeof(string));
+            info.AddValue("description", description, typeof(string));
+            info.AddValue("activationFunctionName", activationFunctionName, typeof(string));
+            info.AddValue("layers", layers, typeof(List<Layer>));
         }
 
         public void AttachName(string _name) { name = _name;  }
@@ -108,10 +123,7 @@ namespace Mademy
                     while (true)
                     {
                         List<List<NeuronData>> gradient = null;
-                        if (trainingSuite.config.numThreads <= 1)
-                            gradient = CalculateGradientSingleThread(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
-                        else
-                            gradient = CalculateGradientMultiThreaded(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
+                        gradient = CalculateGradientSingleThread(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
 
                         //Apply gradient to network
                         for (int i = 0; i < layers.Count; ++i)
@@ -153,7 +165,7 @@ namespace Mademy
             return trainingPromise;
         }
 
-        private void CalculateOutputLayerGradient(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
+        private void CalculateOutputLayerGradientSquareError(MathLib mathLib, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
         {
             var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
             int lastLayerWeightCount = layers.Last().GetWeightsPerNeuron();
@@ -161,7 +173,7 @@ namespace Mademy
             for (int i = 0; i < lastLayerNeuronCount; i++)
             {
                 float outputValue = activations.Last()[i];
-                float gamma_k = (outputValue - desiredOutput[i]) * MathLib.SigmoidPrime(zValues.Last()[i]);
+                float gamma_k = (outputValue - desiredOutput[i]) * activationFunction.CalculatePrime(zValues.Last()[i]);
 
                 var gradientDataItem = gradientData[i];
                 //Assert(gradientData[i].weights.Length == prevActivations.Length);
@@ -174,7 +186,7 @@ namespace Mademy
             }
         }
 
-        private void CalculateHiddenLayerGradient(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
+        private void CalculateHiddenLayerGradientSquareError(MathLib mathLib, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
         {
             List<float> newGammak = new List<float>();
             int layerWeightCount = layers[L].GetWeightsPerNeuron();
@@ -188,7 +200,7 @@ namespace Mademy
                 {
                     gamma_j += gamma_k_vector[k] * layers[L+1].weightMx[k, i];
                 }
-                gamma_j *= MathLib.SigmoidPrime(zValues[L][i]);
+                gamma_j *= activationFunction.CalculatePrime(zValues[L][i]);
                 newGammak.Add(gamma_j);
 
                 //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
@@ -203,32 +215,6 @@ namespace Mademy
             gamma_k_vector = newGammak;
         }
 
-        private void CalculateGradientThread(MathLib mathLib, TrainingSuite suite, ref List<List<NeuronData>> gradientVector, int threadId, int trainingDataBegin, int trainingDataEnd)
-        {
-            var myMathLib = mathLib.Clone();
-            var intermediateResult = Utils.CreateGradientVector(this);
-            int threadCount = suite.config.GetThreadCount();
-            for (int i = trainingDataBegin + threadId; i < trainingDataEnd; i+= threadCount)
-            {
-                CalculateGradientForSingleTrainingExample(myMathLib, ref intermediateResult, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
-            }
-
-            lock (lockObj_gradientAccess)
-            {
-                for (int i = 0; i < gradientVector.Count; i++)
-                {
-                    for (int j = 0; j < gradientVector[i].Count; j++)
-                    {
-                        for (int k = 0; k < gradientVector[i][j].weights.Length; k++)
-                        {
-                            gradientVector[i][j].weights[k] += intermediateResult[i][j].weights[k];
-                        }
-                        gradientVector[i][j].bias += intermediateResult[i][j].bias;
-                    }
-                }
-            }
-        }
-
         private void CalculateGradientForSingleTrainingExample(MathLib mathLib, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
         {
             List<float[]> activations = new List<float[]>();
@@ -237,12 +223,12 @@ namespace Mademy
 
             var lastLayerGradient = intermediateResults.Last();
             List<float> delta_k_holder = new List<float>();
-            CalculateOutputLayerGradient(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
+            CalculateOutputLayerGradientSquareError(mathLib, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
 
             for (int i = layers.Count - 2; i >= 0; --i)
             {
                 var layerGradient = intermediateResults[i];
-                CalculateHiddenLayerGradient(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingInput : activations[i - 1], zValues);
+                CalculateHiddenLayerGradientSquareError(mathLib, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingInput : activations[i - 1], zValues);
             }
         }
 
@@ -277,45 +263,20 @@ namespace Mademy
             return ret;
         }
 
-        private List<List<NeuronData>> CalculateGradientMultiThreaded(MathLib mathLib, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
-        {
-            //Backpropagation
-            var ret = Utils.CreateGradientVector(this);
-
-            Thread[] workerThreads = new Thread[suite.config.GetThreadCount()];
-
-            for (int i = 0; i < workerThreads.Length; i++)
-            {
-                int idx = i;
-                workerThreads[i] = new Thread(() => {
-                    CalculateGradientThread(mathLib, suite, ref ret, idx, trainingDataBegin, trainingDataEnd);
-                });
-                workerThreads[i].Start();
-            }
-
-            for (int i = 0; i < workerThreads.Length; i++)
-            {
-                workerThreads[i].Join();
-            }
-
-            float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
-            AdjustGradientVectorWithToAverage(ref ret, sizeDivisor);
-
-            return ret;
-        }
-
         private float[] Compute(MathLib mathLib, float[] input, ref List<float[]> activations, ref List<float[]> zValues)
         {
             var current = input;
+            bool applySigmoid = zValues == null;
+            PasstroughActivation passtroughActivation = applySigmoid ? null : new PasstroughActivation();
+
             foreach(var layer in layers)
             {
-                bool applySigmoid = zValues == null;
-                current = layer.Compute(mathLib, current, applySigmoid);
+                current = layer.Compute(mathLib, current, applySigmoid ? activationFunction : passtroughActivation);
                 if (zValues != null)
                 {
                     zValues.Add((float[])current.Clone());
                     for (int i = 0; i < current.Length; i++)
-                        current[i] = MathLib.Sigmoid(current[i]);
+                        current[i] = activationFunction.Calculate(current[i]);
                 }
                 if (activations != null)
                     activations.Add(current);
@@ -332,7 +293,7 @@ namespace Mademy
             return Compute(mathLib, input, ref doesntNeedActivations, ref doesntNeedZ);
         }
 
-        public static Network CreateNetwork(List< List< Tuple< List<float>, float> > > inputLayers)
+        public static Network CreateNetwork(List< List< Tuple< List<float>, float> > > inputLayers, IActivationFunction activationFunction)
         {
             List<Layer> layers = new List<Layer>();
             foreach (var layerData in inputLayers)
@@ -355,7 +316,7 @@ namespace Mademy
                 layers.Add( new Layer(weightMx, biases) ); 
             }
 
-            return new Network(layers);
+            return new Network(layers, activationFunction);
         }
 
         public string GetTrainingDataJSON()
@@ -371,7 +332,7 @@ namespace Mademy
             return JsonConvert.DeserializeObject<Network>(jsonData);
         }
 
-        public static Network CreateNetworkInitRandom(List<int> layerConfig)
+        public static Network CreateNetworkInitRandom(List<int> layerConfig, IActivationFunction activationFunction)
         {
             List<List<Tuple<List<float>, float>>> inputLayers = new List<List<Tuple<List<float>, float>>>();
 
@@ -392,14 +353,7 @@ namespace Mademy
                 inputLayers.Add(neuronList);
             }
 
-            return CreateNetwork(inputLayers);
-        }
-
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue("name", name, typeof(string));
-            info.AddValue("description", description, typeof(string));
-            info.AddValue("layers", layers, typeof(List<Layer>));
+            return CreateNetwork(inputLayers, activationFunction);
         }
     }
 }
