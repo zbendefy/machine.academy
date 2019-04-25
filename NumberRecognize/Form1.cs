@@ -66,7 +66,7 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(32);
+            layerConfig.Add(48);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -185,10 +185,11 @@ namespace NumberRecognize
 
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 100;
-            trainingSuite.config.learningRate = 0.025f;
+            trainingSuite.config.learningRate = 1.25f;
             trainingSuite.config.epochs = (int)numericUpDown1.Value;
             trainingSuite.config.costFunction = new CrossEntropy();
             trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
+            trainingSuite.config.regularizationLambda = 2.0f;
 
             trainingPromise = network.Train(mathLib, trainingSuite);
             trainingtimer.Start();
@@ -225,12 +226,17 @@ namespace NumberRecognize
 
         private void paintPixel(MouseEventArgs e)
         {
-            float relativePosX = (float)e.X / (float)pictureBox1.Width;
-            float relativePosY = (float)e.Y / (float)pictureBox1.Height;
+            var centerX = (int)Math.Floor(((float)e.X / (float)pictureBox1.Width) * (float)(bitmap.Size.Width - 1));
+            var centerY = (int)Math.Floor(((float)e.Y / (float)pictureBox1.Height) * (float)(bitmap.Size.Height- 1));
 
-            int bitmapX = (int)Math.Max(0, Math.Min(Math.Floor(relativePosX * (float)(bitmap.Size.Width - 1)), bitmap.Size.Width - 1));
-            int bitmapY = (int)Math.Max(0, Math.Min(Math.Floor(relativePosY * (float)(bitmap.Size.Height - 1)), bitmap.Size.Height - 1));
-            bitmap.SetPixel(bitmapX, bitmapY, Color.Black);
+            Action<int, int, int> applyColor = (x,y,c) => {
+                int xClamped = Math.Max(0, Math.Min(x, bitmap.Size.Width - 1));
+                int yClamped = Math.Max(0, Math.Min(y, bitmap.Size.Height - 1));
+                bitmap.SetPixel(xClamped, yClamped, Color.FromArgb(255,c,c,c) );
+            };
+
+            applyColor(centerX, centerY, 0);
+
             pictureBox1.Refresh();
         }
 
@@ -269,8 +275,8 @@ namespace NumberRecognize
             {
                 for (int j = 0; j < bitmap.Size.Width; j++)
                 {
-                    var color = bitmap.GetPixel(j,i).ToArgb();
-                    input[i * bitmap.Size.Width + j] = color == -1 ? 0.0f : 1.0f;
+                    var color = bitmap.GetPixel(j,i).GetBrightness();
+                    input[i * bitmap.Size.Width + j] = 1.0f - color; //in input 1.0f is black, 0.0f is white
                 }
             }
 
@@ -332,6 +338,11 @@ namespace NumberRecognize
 
             float perc = ((float)success / (float)trainingData.Count) * 100.0f;
             MessageBox.Show("Test completed with " + trainingData.Count + " examples. Successful were: " + success + " (" + perc + "%)", "Test complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
         }
     }
 }
