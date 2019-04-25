@@ -41,16 +41,6 @@ namespace Mademy
             return ret;
         }
 
-        public static float GetRandomWeight(int numberOfInputWeights)
-        {
-            return GetGaussianRandom(0, (float)Math.Sqrt( (double)numberOfInputWeights)); 
-        }
-
-        public static float GetRandomBias()
-        {
-            return GetGaussianRandom(0, 1);
-        }
-
         public static float GetGaussianRandom(float mean, float stdDev)
         {
             float u1 = 1.0f - (float)rnd.NextDouble(); //uniform(0,1] random doubles

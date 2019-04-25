@@ -8,7 +8,7 @@ namespace Mademy
 {
     public abstract class IErrorFunction
     {
-        public abstract float CalculateError(float output, float desiredOutput, IActivationFunction activationFunction);
+        public abstract float CalculateError(float output, float desiredOutput);
         public abstract float CalculateDelta(float z, float a, float desiredOutput, IActivationFunction activationFunction);
 
     }
@@ -20,7 +20,7 @@ namespace Mademy
             return (a - desiredOutput) * activationFunction.CalculatePrime(z);
         }
 
-        public override float CalculateError(float output, float desiredOutput, IActivationFunction activationFunction)
+        public override float CalculateError(float output, float desiredOutput)
         {
             float v = output - desiredOutput;
             return 0.5f * v*v;
@@ -34,7 +34,7 @@ namespace Mademy
             return a - desiredOutput;
         }
 
-        public override float CalculateError(float output, float desiredOutput, IActivationFunction activationFunction)
+        public override float CalculateError(float output, float desiredOutput)
         {
             return -desiredOutput * (float)Math.Log(output) - (1.0f-desiredOutput)*(float)Math.Log(1-output);
         }

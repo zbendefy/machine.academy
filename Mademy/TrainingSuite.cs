@@ -11,37 +11,32 @@ namespace Mademy
         public struct TrainingConfig
         {
             public static readonly int DontSubdivideBatches = -1;
-            public static readonly int AutoDetectThreads = -1;
-            private static int CpuCount = 1;
+
+            public enum Regularization { None, L1, L2 }
 
             public int miniBatchSize;
             public float learningRate;
-            public int numThreads;
             public int epochs;
             public bool shuffleTrainingData;
-            public IErrorFunction errorFunction;
+            public IErrorFunction costFunction;
+            public Regularization regularization;
+            public float regularizationLambda;
 
             public static TrainingConfig CreateTrainingConfig()
             {
                 var ret = new TrainingConfig();
 
-                CpuCount = Environment.ProcessorCount;
-
                 ret.miniBatchSize = 1000;
                 ret.learningRate = 0.01f;
                 ret.epochs = 1;
-                ret.numThreads = AutoDetectThreads;
                 ret.shuffleTrainingData = true;
-                ret.errorFunction = new MeanSquaredError();
+                ret.costFunction = new MeanSquaredError();
+                ret.regularization = Regularization.None;
+                ret.regularizationLambda = 0.001f;
                 return ret;
             }
 
             public bool UseMinibatches() { return miniBatchSize != DontSubdivideBatches; }
-
-            internal int GetThreadCount()
-            {
-                return numThreads == AutoDetectThreads ? CpuCount : numThreads;
-            }
         };
 
         public class TrainingData

@@ -73,6 +73,7 @@
   <ItemGroup>
     <Compile Include="IActivationFunction.cs" />
     <Compile Include="IErrorFunction.cs" />
+    <Compile Include="IWeightInitializer.cs" />
     <Compile Include="Layer.cs" />
     <Compile Include="MathLib.cs" />
     <Compile Include="Network.cs" />

@@ -112,7 +112,8 @@ namespace Mademy
                 {
                     if (trainingPromise.IsStopAtNextEpoch())
                         break;
-                    if (trainingSuite.config.shuffleTrainingData && currentEpoch > 0)
+
+                    if (trainingSuite.config.shuffleTrainingData )
                     {
                         Utils.ShuffleList(ref trainingSuite.trainingData);
                     }
@@ -125,6 +126,17 @@ namespace Mademy
                         List<List<NeuronData>> gradient = null;
                         gradient = CalculateGradientSingleThread(mathLib, trainingSuite, trainingDataBegin, trainingDataEnd);
 
+                        float regularizationTerm1 = 1.0f;
+                        float regularizationTerm2Base = 0.0f;
+                        if (trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L2)
+                        {
+                            regularizationTerm1 = 1.0f - trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count);
+                        }
+                        else if (trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L1)
+                        {
+                            regularizationTerm2Base = -((trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count)));
+                        }
+
                         //Apply gradient to network
                         for (int i = 0; i < layers.Count; ++i)
                         {
@@ -134,7 +146,8 @@ namespace Mademy
                                 layer.biases[j] -= gradient[i][j].bias * trainingSuite.config.learningRate;
                                 for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
                                 {
-                                    layer.weightMx[j, w] -= gradient[i][j].weights[w] * trainingSuite.config.learningRate;
+                                    float regularizationTerm2 = regularizationTerm2Base * (float)Math.Sign(layer.weightMx[j, w]);
+                                    layer.weightMx[j, w] = regularizationTerm1 * layer.weightMx[j, w] - regularizationTerm2 - gradient[i][j].weights[w] * trainingSuite.config.learningRate;
                                 }
                             }
                         }
@@ -254,7 +267,7 @@ namespace Mademy
 
             for (int i = trainingDataBegin; i < trainingDataEnd; i++)
             {
-                CalculateGradientForSingleTrainingExample(mathLib, suite.config.errorFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
+                CalculateGradientForSingleTrainingExample(mathLib, suite.config.costFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
             }
 
             float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
@@ -332,7 +345,7 @@ namespace Mademy
             return JsonConvert.DeserializeObject<Network>(jsonData);
         }
 
-        public static Network CreateNetworkInitRandom(List<int> layerConfig, IActivationFunction activationFunction)
+        public static Network CreateNetworkInitRandom(List<int> layerConfig, IActivationFunction activationFunction, IWeightInitializer weightInitializer)
         {
             List<List<Tuple<List<float>, float>>> inputLayers = new List<List<Tuple<List<float>, float>>>();
 
@@ -346,9 +359,9 @@ namespace Mademy
                     List<float> weights = new List<float>();
                     for (int j = 0; j < prevLayerSize; ++j)
                     {
-                        weights.Add(Utils.GetRandomWeight(prevLayerSize));
+                        weights.Add(weightInitializer.GetRandomWeight(prevLayerSize));
                     }
-                    neuronList.Add(new Tuple<List<float>, float>(weights, Utils.GetRandomBias()));
+                    neuronList.Add(new Tuple<List<float>, float>(weights, weightInitializer.GetRandomBias()));
                 }
                 inputLayers.Add(neuronList);
             }

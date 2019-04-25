@@ -66,14 +66,12 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(128);
-            layerConfig.Add(128);
-            layerConfig.Add(128);
+            layerConfig.Add(32);
             layerConfig.Add(10);
 
-            network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
+            network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
             network.AttachName("MNIST learning DNN");
-            network.AttachDescription("MNIST learning DNN using " + layerConfig.Count + " layers in structure: (" + string.Join(", ", layerConfig) + " )" );
+            network.AttachDescription("MNIST learning DNN using " + layerConfig.Count + " layers in structure: (" + string.Join(", ", layerConfig) + " ). Creation date: " + DateTime.Now.ToString() );
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -187,9 +185,10 @@ namespace NumberRecognize
 
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 100;
-            trainingSuite.config.numThreads = 1;
-            trainingSuite.config.learningRate = 0.015f;
+            trainingSuite.config.learningRate = 0.025f;
             trainingSuite.config.epochs = (int)numericUpDown1.Value;
+            trainingSuite.config.costFunction = new CrossEntropy();
+            trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
 
             trainingPromise = network.Train(mathLib, trainingSuite);
             trainingtimer.Start();

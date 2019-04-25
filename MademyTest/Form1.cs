@@ -30,7 +30,7 @@ namespace MademyTest
             layerConfig.Add(8);
             layerConfig.Add(8);
             layerConfig.Add(5);
-            solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
+            solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
 
             mathLib = new MathLib( null );
 
@@ -72,7 +72,7 @@ namespace MademyTest
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
             var rnd = new Random();
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10000; i++)
             {
                 float[] input = new float[] { 0,0,0,0,0 };
                 float[] output = new float[] { 0,0,0,0,0 };
@@ -87,8 +87,10 @@ namespace MademyTest
 
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 10;
-            trainingSuite.config.numThreads = 1;
             trainingSuite.config.epochs = 3;
+
+            trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
+            trainingSuite.config.costFunction = new MeanSquaredError();
 
             trainingPromise = solver.Train(mathLib, trainingSuite);
 
