@@ -66,7 +66,7 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(48);
+            layerConfig.Add(8);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -343,6 +343,38 @@ namespace NumberRecognize
         private void pictureBox1_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void button8_Click(object sender, EventArgs e)
+        {
+            string imgFile = "";
+
+            openFileDialog1.Filter = "Image Training data (Image)|*.*";
+            openFileDialog1.Title = "Open Training images file";
+            if (openFileDialog1.ShowDialog() == DialogResult.OK)
+            {
+                imgFile = openFileDialog1.FileName;
+            }
+            else
+            {
+                return;
+            }
+
+            byte[] content = System.IO.File.ReadAllBytes(imgFile);
+
+            int imgid = (int)numericUpDown2.Value;
+            int imageDataOffset = 16; //first 4x32 bits are not interesting for us.
+            int imageSize = bitmap.Size.Width * bitmap.Size.Height;
+
+            for (int i = 0; i < bitmap.Size.Height; i++)
+            {
+                for (int j = 0; j < bitmap.Size.Width; j++)
+                {
+                    int c = 255 - content[imageDataOffset + imageSize * imgid + i * bitmap.Size.Width + j];
+                    bitmap.SetPixel(j, i, Color.FromArgb(255, c, c, c));
+                }
+            }
+            pictureBox1.Refresh();
         }
     }
 }
