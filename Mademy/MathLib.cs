@@ -56,14 +56,22 @@ namespace Mademy
 
         ~MathLib() { CleanupCLResources(); }
 
+        internal void FlushWorkingCache()
+        {
+            foreach (var item in freeMemoryAllocations)
+                item.Release();
+            freeMemoryAllocations.Clear();
 
+            foreach (var item in usedMemoryAllocations)
+                item.Release();
+            usedMemoryAllocations.Clear();
+        }
 
         private void CleanupCLResources()
         {
             if (hasClInitialized)
             {
-                foreach (var item in freeMemoryAllocations)
-                    item.Release();
+                FlushWorkingCache();
 
                 foreach (var item in kernels)
                 {
@@ -163,11 +171,8 @@ namespace Mademy
             }
         }
 
-        public float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
+        internal float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
         {
-            if (weightMx.GetLength(1) != prevActivations.GetLength(0))
-                throw new Exception("Invalid input");
-
             if (!hasClInitialized) //CPU fallback
             {
                 float[] ret = new float[weightMx.GetLength(0)];
@@ -231,6 +236,97 @@ namespace Mademy
 
             return output;
         }
-        
+
+        private void CalculateGradientForSingleTrainingExample( Network network, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
+        {
+            List<float[]> activations = new List<float[]>();
+            List<float[]> zValues = new List<float[]>();
+            network.Compute(this, trainingInput, ref activations, ref zValues, false); //dont flush working cache
+
+            var lastLayerGradient = intermediateResults.Last();
+            List<float> delta_k_holder = new List<float>();
+            CalculateOutputLayerGradient(network, errorFunction, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
+
+            for (int i = network.layers.Count - 2; i >= 0; --i)
+            {
+                var layerGradient = intermediateResults[i];
+                CalculateHiddenLayerGradient(network, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingInput : activations[i - 1], zValues);
+            }
+        }
+
+        private void CalculateOutputLayerGradient(Network network, IErrorFunction errorFunction, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
+        {
+            var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
+            int lastLayerWeightCount = network.layers.Last().GetWeightsPerNeuron();
+            int lastLayerNeuronCount = network.layers.Last().GetNeuronCount();
+            for (int i = 0; i < lastLayerNeuronCount; i++)
+            {
+                float outputValue = activations.Last()[i];
+                float gamma_k = errorFunction.CalculateDelta(zValues.Last()[i], outputValue, desiredOutput[i], network.activationFunction);
+
+                var gradientDataItem = gradientData[i];
+                //Assert(gradientData[i].weights.Length == prevActivations.Length);
+                for (int j = 0; j < lastLayerWeightCount; j++)
+                {
+                    gradientDataItem.weights[j] += gamma_k * (prevActivations[j]);
+                }
+                gradientDataItem.bias += gamma_k;
+                gamma_k_vector.Add(gamma_k);
+            }
+        }
+        private void CalculateHiddenLayerGradient(Network network, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
+        {
+            List<float> newGammak = new List<float>();
+            int layerWeightCount = network.layers[L].GetWeightsPerNeuron();
+            int layerNeuronCount = network.layers[L].GetNeuronCount();
+
+            for (int i = 0; i < layerNeuronCount; i++)
+            {
+                float gamma_j = 0;
+                //Assert(gamma_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
+                for (int k = 0; k < gamma_k_vector.Count; k++)
+                {
+                    gamma_j += gamma_k_vector[k] * network.layers[L + 1].weightMx[k, i];
+                }
+                gamma_j *= network.activationFunction.CalculatePrime(zValues[L][i]);
+                newGammak.Add(gamma_j);
+
+                //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
+                var gradientDataItem = gradientData[i];
+                for (int j = 0; j < layerWeightCount; j++)
+                {
+                    gradientDataItem.weights[j] += gamma_j * (prevLayerActivations[j]);
+                }
+                gradientDataItem.bias += gamma_j;
+            }
+
+            gamma_k_vector = newGammak;
+        }
+
+        /// <summary>
+        /// Runs backpropagation
+        /// </summary>
+        /// <param name="network"></param>
+        /// <param name="suite"></param>
+        /// <param name="trainingDataBegin"></param>
+        /// <param name="trainingDataEnd"></param>
+        /// <returns></returns>
+        internal List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
+        {
+            //Backpropagation
+            var ret = Utils.CreateGradientVector(network);
+
+            if (!hasClInitialized || true) //CPU fallback
+            {
+                for (int i = trainingDataBegin; i < trainingDataEnd; i++)
+                {
+                    CalculateGradientForSingleTrainingExample(network, suite.config.costFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
+                }
+            }
+
+
+            return ret;
+        }
+
     }
 }

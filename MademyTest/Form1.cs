@@ -90,7 +90,7 @@ namespace MademyTest
             trainingSuite.config.epochs = 3;
 
             trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
-            trainingSuite.config.costFunction = new MeanSquaredError();
+            trainingSuite.config.costFunction = new CrossEntropy();
 
             trainingPromise = solver.Train(mathLib, trainingSuite);
 

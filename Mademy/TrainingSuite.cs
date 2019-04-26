@@ -30,9 +30,9 @@ namespace Mademy
                 ret.learningRate = 0.01f;
                 ret.epochs = 1;
                 ret.shuffleTrainingData = true;
-                ret.costFunction = new MeanSquaredError();
-                ret.regularization = Regularization.None;
-                ret.regularizationLambda = 0.001f;
+                ret.costFunction = new CrossEntropy();
+                ret.regularization = Regularization.L2;
+                ret.regularizationLambda = 0.01f;
                 return ret;
             }
 
