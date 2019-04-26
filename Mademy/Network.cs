@@ -92,6 +92,7 @@ namespace Mademy
         }
 
         public void AttachName(string _name) { name = _name;  }
+
         public void AttachDescription(string _desc) { description = _desc;  }
         
         public TrainingPromise Train(MathLib mathLib, TrainingSuite trainingSuite)
@@ -123,10 +124,12 @@ namespace Mademy
 
                     while (true)
                     {
+                        //Calculate the accumulated gradient. Accumulated means, that the gradient has to be divided by the number of samples in the minibatch.
                         List<List<NeuronData>> accumulatedGradient = null;
                         accumulatedGradient = mathLib.CalculateAccumulatedGradientForMinibatch(this, trainingSuite, trainingDataBegin, trainingDataEnd);
                         float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
 
+                        //Calculate regularization terms based on the training configuration
                         float regularizationTerm1 = 1.0f;
                         float regularizationTerm2Base = 0.0f;
                         if (trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L2)
@@ -138,7 +141,7 @@ namespace Mademy
                             regularizationTerm2Base = -((trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count)));
                         }
 
-                        //Apply gradient to network
+                        //Apply accumulated gradient to network (Gradient descent)
                         for (int i = 0; i < layers.Count; ++i)
                         {
                             var layer = layers[i];
@@ -153,6 +156,7 @@ namespace Mademy
                             }
                         }
 
+                        //Set up the next minibatch, or quit the loop if we're done.
                         if (trainingSuite.config.UseMinibatches())
                         {
                             if (trainingDataEnd >= trainingSuite.trainingData.Count)
@@ -169,9 +173,10 @@ namespace Mademy
                         }
                     }
                 }
-                mathLib.FlushWorkingCache();
 
-                trainingPromise.SetProgress(1, trainingPromise.GetEpochsDone());
+                mathLib.FlushWorkingCache(); //Release any cache that the mathLib has built up.
+
+                trainingPromise.SetProgress(1, trainingPromise.GetEpochsDone()); //Report that the training is finished
                 trainingPromise = null;
             });
 
@@ -222,6 +227,14 @@ namespace Mademy
             {
                 int neuronCountInLayer = layerData.Count;
                 int weightsPerNeuron = layerData[0].Item1.Count;
+
+                if ( layers.Count > 0)
+                {
+                    if (weightsPerNeuron != layers.Last().biases.Length)
+                        throw new Exception("Invalid layer config! Layer #" + layers.Count + " doesnt have the number of biases required by the previous layer!");
+                    if (weightsPerNeuron != layers.Last().weightMx.GetLength(0))
+                        throw new Exception("Invalid layer config! Layer #" + layers.Count + " doesnt have the number of weights required by the previous layer!");
+                }
 
                 float[,] weightMx = new float[neuronCountInLayer, weightsPerNeuron];
                 float[] biases = new float[neuronCountInLayer];

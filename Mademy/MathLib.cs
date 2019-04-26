@@ -323,7 +323,8 @@ namespace Mademy
                     CalculateGradientForSingleTrainingExample(network, suite.config.costFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
                 }
             }
-
+            
+            //TODO run whole minibatch on the OpenCL device
 
             return ret;
         }
