@@ -14,6 +14,9 @@ namespace Mademy
     {
         private ComputeFramework computeFramework = null;
         private static readonly string calcLayerKernel = "calcLayer";
+        private static readonly string forwardPass = "trainingForwardPass";
+        private static readonly string backwardPassOutputlayer = "trainingOutputLayer";
+        private static readonly string backwardPassHiddenlayer = "trainingHiddenLayer";
 
         public MathLib(ComputeDevice clDevice = null)
         {
@@ -200,6 +203,8 @@ namespace Mademy
             {
                 List<int> networkConfigParamsList = new List<int>();
                 networkConfigParamsList.Add(network.layers.Count); //Layer count
+                networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
+                networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
                 networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
                 for (int i = 0; i < network.layers.Count; i++)
                 {
@@ -214,7 +219,7 @@ namespace Mademy
             int inputActivationCount = network.layers.First().GetWeightsPerNeuron();
             float[] inputParameters = new float[trainingSamples * inputActivationCount];
             for (int i = trainingDataBegin; i < trainingDataEnd; ++i)
-                Buffer.BlockCopy(suite.trainingData[i].input, 0, inputParameters, i * inputActivationCount, inputActivationCount);
+                Buffer.BlockCopy(suite.trainingData[i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount);
             MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(MemFlags.ReadOnly, inputParameters);
 
             int totalActivationAndZValueCount = 0; //Add 
@@ -234,13 +239,27 @@ namespace Mademy
                 foreach (var layer in network.layers)
                 {
                     Buffer.BlockCopy(layer.weightMx, 0, weightsAndBiases, offset, layer.weightMx.Length);
-                    offset += layer.weightMx.Length;
+                    offset += layer.weightMx.Length * 4;
                     Buffer.BlockCopy(layer.biases, 0, weightsAndBiases, offset, layer.biases.Length);
-                    offset += layer.biases.Length;
+                    offset += layer.biases.Length * 4;
                 }
             }
             MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(MemFlags.ReadOnly, weightsAndBiases);
 
+
+            for (int i = 0; i < network.layers.Count; i++)
+            {
+                // todo: run forward pass
+            }
+
+            // init gradient vector memory allocation (writeonly?)
+
+            // todo: run output layer pass
+
+            for (int i = network.layers.Count - 2; i >= 0; --i)
+            {
+                // todo: hidden layer pass
+            }
 
             return ret;
         }

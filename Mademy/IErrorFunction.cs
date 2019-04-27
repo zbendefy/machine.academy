@@ -10,7 +10,7 @@ namespace Mademy
     {
         public abstract float CalculateError(float output, float desiredOutput);
         public abstract float CalculateDelta(float z, float a, float desiredOutput, IActivationFunction activationFunction);
-
+        public abstract int GetOpenCLFunctionID();
     }
 
     public class MeanSquaredError : IErrorFunction
@@ -25,6 +25,11 @@ namespace Mademy
             float v = output - desiredOutput;
             return 0.5f * v*v;
         }
+
+        public override int GetOpenCLFunctionID()
+        {
+            return 0;
+        }
     }
 
     public class CrossEntropy : IErrorFunction
@@ -37,6 +42,11 @@ namespace Mademy
         public override float CalculateError(float output, float desiredOutput)
         {
             return -desiredOutput * (float)Math.Log(output) - (1.0f-desiredOutput)*(float)Math.Log(1-output);
+        }
+
+        public override int GetOpenCLFunctionID()
+        {
+            return 1;
         }
     }
 }
