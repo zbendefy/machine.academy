@@ -142,16 +142,17 @@ namespace Mademy
                         }
 
                         //Apply accumulated gradient to network (Gradient descent)
+                        float sizeDivisorAndLearningRate = sizeDivisor * trainingSuite.config.learningRate;
                         for (int i = 0; i < layers.Count; ++i)
                         {
                             var layer = layers[i];
                             for (int j = 0; j < layer.GetNeuronCount(); ++j)
                             {
-                                layer.biases[j] -= accumulatedGradient[i][j].bias * sizeDivisor * trainingSuite.config.learningRate;
+                                layer.biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
                                 for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
                                 {
                                     float regularizationTerm2 = regularizationTerm2Base * (float)Math.Sign(layer.weightMx[j, w]);
-                                    layer.weightMx[j, w] = regularizationTerm1 * layer.weightMx[j, w] - regularizationTerm2 - accumulatedGradient[i][j].weights[w] * sizeDivisor * trainingSuite.config.learningRate;
+                                    layer.weightMx[j, w] = regularizationTerm1 * layer.weightMx[j, w] - regularizationTerm2 - accumulatedGradient[i][j].weights[w] * sizeDivisorAndLearningRate;
                                 }
                             }
                         }

@@ -49,7 +49,6 @@ namespace Mademy
 
             int matrixRows = weightMx.GetLength(0);
 
-            ErrorCode err;
             MemoryAllocation mem_param_weightMx, mem_param_bias, mem_param_prevActivation, mem_param_config, mem_param_output;
             unsafe
             {
@@ -191,8 +190,46 @@ namespace Mademy
                     CalculateGradientForSingleTrainingExample(network, suite.config.costFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
                 }
             }
-            
+
             //TODO run whole minibatch on the OpenCL device
+            int trainingSamples = trainingDataEnd - trainingDataBegin;
+
+
+            int[] networkConfigParams = null;
+            {
+                List<int> networkConfigParamsList = new List<int>();
+                networkConfigParamsList.Add(network.layers.Count); //Layer count
+                networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
+                for (int i = 0; i < network.layers.Count; i++)
+                    networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
+                networkConfigParams = networkConfigParamsList.ToArray();
+            }
+            MemoryAllocation mem_NetworkConfigParams = computeFramework.GetMemoryFor( MemFlags.ReadOnly, networkConfigParams );
+
+            int inputActivationCount = network.layers.First().GetWeightsPerNeuron();
+            float[] inputParameters = new float[trainingSamples * inputActivationCount];
+            for (int i = trainingDataBegin; i < trainingDataEnd; ++i)
+                Buffer.BlockCopy(suite.trainingData[i].input, 0, inputParameters, i * inputActivationCount, inputActivationCount);
+            MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(MemFlags.ReadOnly, inputParameters);
+
+            int totalActivationAndZValueCount = 0; //Add 
+            foreach (var item in network.layers)
+            {
+                totalActivationAndZValueCount += item.GetNeuronCount() * 2;
+            }
+            totalActivationAndZValueCount *= trainingSamples;
+            ///Contains the whole network's activation values, and Z values for each training sample
+            ///Memory layout is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
+            MemoryAllocation activationsAndZValues = computeFramework.GetMemoryFor(totalActivationAndZValueCount * 4, MemFlags.ReadWrite, IntPtr.Zero);
+
+            float[] weightsAndBiases = null;
+            {
+                List<float> weightsAndBiasList = new List<float>();
+                //TODO: fill
+                weightsAndBiases = weightsAndBiasList.ToArray();
+            }
+            MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(MemFlags.ReadOnly, weightsAndBiases);
+
 
             return ret;
         }

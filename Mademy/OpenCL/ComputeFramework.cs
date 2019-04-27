@@ -88,6 +88,34 @@ namespace Mademy.OpenCL
 
         public bool IsInitialized() { return hasClInitialized; }
 
+        public void UploadToMemory(MemoryAllocation mem, int offset, int size, IntPtr data, bool IsBlocking)
+        {
+            Event e;
+            Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(size), data, 0, null, out e);
+        }
+
+        public MemoryAllocation GetMemoryFor(MemFlags flags, int[] data)
+        {
+            unsafe
+            {
+                fixed (int* dataPtr = data)
+                {
+                    return GetMemoryFor(data.Length * 4, flags, new IntPtr( dataPtr));
+                }
+            }
+        }
+
+        public MemoryAllocation GetMemoryFor(MemFlags flags, float[] data)
+        {
+            unsafe
+            {
+                fixed (float* dataPtr = data)
+                {
+                    return GetMemoryFor(data.Length * 4, flags, new IntPtr(dataPtr));
+                }
+            }
+        }
+
         public MemoryAllocation GetMemoryFor(int requiredSizeInBytes, MemFlags flags, IntPtr data)
         {
             if (!IsInitialized())
