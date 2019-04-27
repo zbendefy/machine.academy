@@ -196,12 +196,17 @@ namespace Mademy
 
 
             int[] networkConfigParams = null;
+            int totalWeightAndBiasCount = 0;
             {
                 List<int> networkConfigParamsList = new List<int>();
                 networkConfigParamsList.Add(network.layers.Count); //Layer count
                 networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
                 for (int i = 0; i < network.layers.Count; i++)
+                {
                     networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
+                    totalWeightAndBiasCount += network.layers[i].biases.Length;
+                    totalWeightAndBiasCount += network.layers[i].weightMx.Length;
+                }
                 networkConfigParams = networkConfigParamsList.ToArray();
             }
             MemoryAllocation mem_NetworkConfigParams = computeFramework.GetMemoryFor( MemFlags.ReadOnly, networkConfigParams );
@@ -222,11 +227,17 @@ namespace Mademy
             ///Memory layout is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
             MemoryAllocation activationsAndZValues = computeFramework.GetMemoryFor(totalActivationAndZValueCount * 4, MemFlags.ReadWrite, IntPtr.Zero);
 
-            float[] weightsAndBiases = null;
+
+            float[] weightsAndBiases = new float[totalWeightAndBiasCount];
             {
-                List<float> weightsAndBiasList = new List<float>();
-                //TODO: fill
-                weightsAndBiases = weightsAndBiasList.ToArray();
+                int offset = 0;
+                foreach (var layer in network.layers)
+                {
+                    Buffer.BlockCopy(layer.weightMx, 0, weightsAndBiases, offset, layer.weightMx.Length);
+                    offset += layer.weightMx.Length;
+                    Buffer.BlockCopy(layer.biases, 0, weightsAndBiases, offset, layer.biases.Length);
+                    offset += layer.biases.Length;
+                }
             }
             MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(MemFlags.ReadOnly, weightsAndBiases);
 
