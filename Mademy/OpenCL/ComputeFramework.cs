@@ -104,6 +104,30 @@ namespace Mademy.OpenCL
             Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(size), data, 0, null, out e);
         }
 
+        public void UploadToMemory(MemoryAllocation mem, int offset, int[] data, bool IsBlocking)
+        {
+            Event e;
+            unsafe
+            {
+                fixed (int* dataPtr = data)
+                {
+                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(data.Length * 4), new IntPtr(dataPtr), 0, null, out e);
+                }
+            }
+        }
+
+        public void UploadToMemory(MemoryAllocation mem, int offset, float[] data, bool IsBlocking)
+        {
+            Event e;
+            unsafe
+            {
+                fixed (float* dataPtr = data)
+                {
+                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(data.Length * 4), new IntPtr(dataPtr), 0, null, out e);
+                }
+            }
+        }
+
         public MemoryAllocation GetMemoryFor(MemFlags flags, int[] data)
         {
             unsafe
