@@ -15,11 +15,17 @@ namespace Mademy.OpenCL
             public int bufferSizeInBytes;
             public MemFlags flags;
 
+
             public MemoryAllocation(IMem buffer, int size, MemFlags flags)
             {
                 this.buffer = buffer;
                 this.bufferSizeInBytes = size;
                 this.flags = flags;
+            }
+
+            ~MemoryAllocation()
+            {
+                Release();
             }
 
             public static MemoryAllocation CreateMemoryAllocation(Context clContext, int byteSize, MemFlags flags, IntPtr data)
@@ -31,7 +37,11 @@ namespace Mademy.OpenCL
 
             internal void Release()
             {
-                Cl.ReleaseMemObject(buffer);
+                if (buffer != null)
+                {
+                    Cl.ReleaseMemObject(buffer);
+                    buffer = null;
+                }
             }
         }
 

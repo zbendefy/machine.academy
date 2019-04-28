@@ -118,7 +118,7 @@ namespace Mademy
             }
         }
 
-        private void CalculateOutputLayerGradient(Network network, IErrorFunction errorFunction, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
+        private void CalculateOutputLayerGradient(Network network, IErrorFunction errorFunction, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
         {
             var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
             int lastLayerWeightCount = network.layers.Last().GetWeightsPerNeuron();
@@ -126,19 +126,19 @@ namespace Mademy
             for (int i = 0; i < lastLayerNeuronCount; i++)
             {
                 float outputValue = activations.Last()[i];
-                float gamma_k = errorFunction.CalculateDelta(zValues.Last()[i], outputValue, desiredOutput[i], network.activationFunction);
+                float delta_k = errorFunction.CalculateDelta(zValues.Last()[i], outputValue, desiredOutput[i], network.activationFunction);
 
                 var gradientDataItem = gradientData[i];
                 //Assert(gradientData[i].weights.Length == prevActivations.Length);
                 for (int j = 0; j < lastLayerWeightCount; j++)
                 {
-                    gradientDataItem.weights[j] += gamma_k * (prevActivations[j]);
+                    gradientDataItem.weights[j] += delta_k * (prevActivations[j]);
                 }
-                gradientDataItem.bias += gamma_k;
-                gamma_k_vector.Add(gamma_k);
+                gradientDataItem.bias += delta_k;
+                delta_k_vector.Add(delta_k);
             }
         }
-        private void CalculateHiddenLayerGradient(Network network, int L, ref List<NeuronData> gradientData, ref List<float> gamma_k_vector, float[] prevLayerActivations, List<float[]> zValues)
+        private void CalculateHiddenLayerGradient(Network network, int L, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, float[] prevLayerActivations, List<float[]> zValues)
         {
             List<float> newGammak = new List<float>();
             int layerWeightCount = network.layers[L].GetWeightsPerNeuron();
@@ -147,10 +147,10 @@ namespace Mademy
             for (int i = 0; i < layerNeuronCount; i++)
             {
                 float gamma_j = 0;
-                //Assert(gamma_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
-                for (int k = 0; k < gamma_k_vector.Count; k++)
+                //Assert(delta_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
+                for (int k = 0; k < delta_k_vector.Count; k++)
                 {
-                    gamma_j += gamma_k_vector[k] * network.layers[L + 1].weightMx[k, i];
+                    gamma_j += delta_k_vector[k] * network.layers[L + 1].weightMx[k, i];
                 }
                 gamma_j *= network.activationFunction.CalculatePrime(zValues[L][i]);
                 newGammak.Add(gamma_j);
@@ -164,7 +164,7 @@ namespace Mademy
                 gradientDataItem.bias += gamma_j;
             }
 
-            gamma_k_vector = newGammak;
+            delta_k_vector = newGammak;
         }
 
         internal void FlushWorkingCache()
@@ -200,6 +200,7 @@ namespace Mademy
 
             int[] networkConfigParams = null;
             int totalWeightAndBiasCount = 0;
+            int widestLayerNeuronCount = 0;
             {
                 List<int> networkConfigParamsList = new List<int>();
                 networkConfigParamsList.Add(network.layers.Count); //Layer count
@@ -211,6 +212,7 @@ namespace Mademy
                     networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
                     totalWeightAndBiasCount += network.layers[i].biases.Length;
                     totalWeightAndBiasCount += network.layers[i].weightMx.Length;
+                    widestLayerNeuronCount = Math.Max(network.layers[i].GetNeuronCount(), widestLayerNeuronCount);
                 }
                 networkConfigParams = networkConfigParamsList.ToArray();
             }
@@ -246,11 +248,13 @@ namespace Mademy
             }
             MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(MemFlags.ReadOnly, weightsAndBiases);
 
+            MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(widestLayerNeuronCount * network.layers.Count * 4, MemFlags.ReadWrite, IntPtr.Zero );
 
             for (int i = 0; i < network.layers.Count; i++)
             {
                 // todo: run forward pass
             }
+
 
             // init gradient vector memory allocation (writeonly?)
 
