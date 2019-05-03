@@ -214,7 +214,7 @@ namespace Mademy.OpenCL
         public void EnqueueKernel(string kernelName, IntPtr[] globalWorkSize, IntPtr[] localWorkSize)
         {
             Event ev;
-            Cl.EnqueueNDRangeKernel(commandQueue, kernels[kernelName], 1, null, globalWorkSize, localWorkSize, 0, null, out ev);
+            Cl.EnqueueNDRangeKernel(commandQueue, kernels[kernelName], (uint)globalWorkSize.Length, null, globalWorkSize, localWorkSize, 0, null, out ev);
         }
 
         private void InitCL(String[] kernelSource, String[] kernelNames, string compileArguments)

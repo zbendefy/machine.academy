@@ -33,7 +33,7 @@ __kernel void calcSingleLayer(__global const float* weightMx, __global const flo
     output[rowId] = acc;
 }
 
-int GetWeightAndBiasOffset(int layerCount, const int* layerSizes)
+int GetWeightAndBiasOffset(int layerCount, __global const int* layerSizes)
 {
     int offset = 0;
     for(int i = 0; i < layerCount; ++i){
@@ -42,7 +42,7 @@ int GetWeightAndBiasOffset(int layerCount, const int* layerSizes)
     return offset;
 }
 
-int GetActivationOffset(int trainingSample, int layerCount, const int* layerSizes)
+int GetActivationLayerOffset(int layerCount, __global const int* layerSizes)
 {
     int offset = 0;
     for(int i = 0; i < layerCount; ++i){
@@ -51,38 +51,42 @@ int GetActivationOffset(int trainingSample, int layerCount, const int* layerSize
     return offset;
 }
 
-__kernel void trainingForwardPass(__global const int* configParams, __global float* activationsAndZValues, __global const float* inputValues, __global const float* weightsAndBiases) 
+__kernel void trainingForwardPass(__global const int* config, __global float* activationsAndZValues, __global const float* inputValues, __global const float* weightsAndBiases) 
 {
     const int layerId = config[0]; //The layer's index to be calculated
     const int layerCount = config[1]; //number of layers in the network
     const int numTrainingSamples = config[2]; //number of layers in the network
     const int activationFunctionId = config[3]; //which activation function to use
-    const int neuronsInLayer = config[6 + layerId]; //number of neurons in the current layer
-    const int weightsPerNeuron = config[5 + layerId]; //number of weights per neurons on the current layer
-    const int* layerNeuronCountBegin = config+5;
+    const int totalActivationCount = config[5]; //How many activations are there in total in the network
+    const int neuronsInLayer = config[7 + layerId]; //number of neurons in the current layer
+    const int weightsPerNeuron = config[6 + layerId]; //number of weights per neurons on the current layer
+    __global const int* layerNeuronCountBegin = config+6;
 
-    const int rowId = get_global_id(0);
+    const int neuronId = get_global_id(0);
     const int trainingSample = get_global_id(1);
 
-    if (trainingSample >= numTrainingSamples || rowId)
+    if (trainingSample >= numTrainingSamples || neuronId >= neuronsInLayer)
     {
         return;
     }
 
-    const int weightAndBiasOffset = GetWeightAndBiasOffsetc(layerId, layerNeuronCountBegin);
-    const int activationOffset = GetActivationOffset(trainingSample, layerId, layerNeuronCountBegin);
-    const int zValueOffset = GetZValueOffset(layerId, layerNeuronCountBegin, layerCount);
+    const int activationTableOffset = totalActivationCount * trainingSample;
 
-    const float* prevActivations = layerId == 0 ? inputValues : (activationsAndZValues + activationOffset );
+    const int weightOffset = GetWeightAndBiasOffset(layerId, layerNeuronCountBegin);
+    const int biasOffset = weightOffset + neuronsInLayer * weightsPerNeuron;
+    const int activationOffset = activationTableOffset + GetActivationLayerOffset(layerId, layerNeuronCountBegin);
+    const int zValueOffset = activationOffset + (numTrainingSamples * totalActivationCount); //shift by table size
+    const int prevActivationListOffset = (activationTableOffset + GetActivationLayerOffset(layerId - 1, layerNeuronCountBegin));
+
+    __global const float* prevActivations = layerId == 0 ? (inputValues + weightsPerNeuron * trainingSample) : (activationsAndZValues + prevActivationListOffset );
 
     float acc = 0;
-    for(int i = 0; i < colCount; ++i)
-        acc += weightsAndBiases[weightAndBiasOffset + (rowId * colCount) + i] * prevActivations[i];
-    acc += weightAndBiasOffset[rowId];
+    for(int i = 0; i < neuronsInLayer; ++i)
+        acc += weightsAndBiases[weightOffset + (neuronId * neuronsInLayer) + i] * prevActivations[i];
+    acc += weightsAndBiases[biasOffset + neuronId];
 
-    activationsAndZValues[zValueOffset+rowId] = acc;
-    acc = ActivationFunction(acc, activationFunctionId);
-    activationsAndZValues[activationOffset+rowId] = acc;
+    activationsAndZValues[zValueOffset+neuronId] = acc;
+    activationsAndZValues[activationOffset+neuronId] = ActivationFunction(acc, activationFunctionId);
 }
 
 __kernel void trainingOutputLayer(__global const int* configParams, __global const float* activationsAndZValues, __global float* delta_k_vector, __global float* gradient) 

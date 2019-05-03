@@ -21,7 +21,7 @@ namespace Mademy
         public MathLib(ComputeDevice clDevice = null)
         {
             if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel } , "-cl-finite-math-only -Werror");
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassHiddenlayer, backwardPassOutputlayer } , "-cl-finite-math-only -Werror");
         }
 
         /// <summary>
@@ -106,8 +106,6 @@ namespace Mademy
                     computeFramework.ReadBuffer(mem_param_output, true, IntPtr.Zero, new IntPtr(matrixRows * 4), new IntPtr(outputPtr));
                 }
             }
-
-            computeFramework.UnuseMemoryAllocations();
 
             return output;
         }
@@ -197,12 +195,13 @@ namespace Mademy
             //Backpropagation
             var ret = Utils.CreateGradientVector(network);
 
-            if (!HasComputeFramework() || true) //CPU fallback
+            if (!HasComputeFramework()) //CPU fallback
             {
                 for (int i = trainingDataBegin; i < trainingDataEnd; i++)
                 {
                     CalculateGradientForSingleTrainingExample(network, suite.config.costFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
                 }
+                return ret;
             }
 
             //TODO run whole minibatch on the OpenCL device
@@ -212,14 +211,21 @@ namespace Mademy
             int[] networkConfigParams = null;
             int totalWeightAndBiasCount = 0;
             int widestLayerNeuronCount = 0;
+            int totalActivationCount = 0; //Add 
             {
+                foreach (var item in network.layers)
+                {
+                    totalActivationCount += item.GetNeuronCount();
+                }
+
                 List<int> networkConfigParamsList = new List<int>();
-                networkConfigParamsList.Add(0); //layer index to be processed
-                networkConfigParamsList.Add(network.layers.Count); //Layer count
-                networkConfigParamsList.Add(trainingSamples); //Layer count
-                networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
-                networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
-                networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
+                /*0*/networkConfigParamsList.Add(0); //layer index to be processed
+                /*1*/networkConfigParamsList.Add(network.layers.Count); //Layer count
+                /*2*/networkConfigParamsList.Add(trainingSamples); //Layer count
+                /*3*/networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
+                /*4*/networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
+                /*5*/networkConfigParamsList.Add(totalActivationCount); //totalActivationCount
+                /*6*/networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
                 for (int i = 0; i < network.layers.Count; i++)
                 {
                     networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
@@ -233,20 +239,14 @@ namespace Mademy
 
             int inputActivationCount = network.layers.First().GetWeightsPerNeuron();
             float[] inputParameters = new float[trainingSamples * inputActivationCount];
-            for (int i = trainingDataBegin; i < trainingDataEnd; ++i)
-                Buffer.BlockCopy(suite.trainingData[i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount);
-            MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(MemFlags.ReadOnly, inputParameters);
+            for (int i = 0; i < trainingSamples; ++i)
+                Buffer.BlockCopy(suite.trainingData[i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount * 4);
+            MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, inputParameters);
 
-            int totalActivationCount = 0; //Add 
-            foreach (var item in network.layers)
-            {
-                totalActivationCount += item.GetNeuronCount();
-            }
-            totalActivationCount *= trainingSamples;
             ///Contains the whole network's activation values, and Z values for each training sample
             ///Memory layout for one layer is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
             ///After that, the next layer's same values are there
-            MemoryAllocation mem_activationsAndZValues = computeFramework.GetMemoryFor(totalActivationCount * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero);
+            MemoryAllocation mem_activationsAndZValues = computeFramework.GetMemoryFor(totalActivationCount * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero);
 
 
             float[] weightsAndBiases = new float[totalWeightAndBiasCount];
@@ -254,9 +254,9 @@ namespace Mademy
                 int offset = 0;
                 foreach (var layer in network.layers)
                 {
-                    Buffer.BlockCopy(layer.weightMx, 0, weightsAndBiases, offset, layer.weightMx.Length);
+                    Buffer.BlockCopy(layer.weightMx, 0, weightsAndBiases, offset, layer.weightMx.Length * 4);
                     offset += layer.weightMx.Length * 4;
-                    Buffer.BlockCopy(layer.biases, 0, weightsAndBiases, offset, layer.biases.Length);
+                    Buffer.BlockCopy(layer.biases, 0, weightsAndBiases, offset, layer.biases.Length * 4);
                     offset += layer.biases.Length * 4;
                 }
             }
@@ -272,7 +272,8 @@ namespace Mademy
             computeFramework.SetKernelArg(forwardPass, 3, mem_weightsAndBiases);
 
             var localWorkGroupSize = new IntPtr[] { new IntPtr(8), new IntPtr(8) };
-            var globalWorkSize = new IntPtr[] { new IntPtr(ExtendGlobalWorkSize(inputActivationCount, localWorkGroupSize[0].ToInt32())), new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[0].ToInt32())) };
+            var globalWorkSize = new IntPtr[] { new IntPtr(ExtendGlobalWorkSize(inputActivationCount, localWorkGroupSize[0].ToInt32()))
+                , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
 
             for (int i = 0; i < network.layers.Count; i++)
             {
@@ -283,6 +284,42 @@ namespace Mademy
                 }
                 computeFramework.EnqueueKernel(forwardPass, globalWorkSize, localWorkGroupSize);
                 // todo: run forward pass
+            }
+
+            {
+                //DEBUG CODE, DELETE it
+                float[] alma = new float[mem_activationsAndZValues.bufferSizeInBytes / 4];
+                unsafe
+                {
+                    fixed (float* outputPtr = alma)
+                    {
+                        computeFramework.ReadBuffer(mem_activationsAndZValues, true, IntPtr.Zero, new IntPtr(mem_activationsAndZValues.bufferSizeInBytes), new IntPtr(outputPtr));
+                    }
+                }
+                Console.WriteLine("sajt");
+
+                float[] testdata = new float[300];
+                var tempcomp = computeFramework;
+                computeFramework = null;
+
+                int j = 0;
+                    List<float[]> preVAc = new List<float[]>();
+                for (int l = 0; l < network.layers.Count; l++)
+                {
+                    for (int i = trainingDataBegin; i < trainingDataEnd; i++)
+                    {
+                        float[] result = CalculateLayer(network.layers[l].weightMx, network.layers[l].biases, l == 0 ? suite.trainingData[i].input : preVAc[i], network.activationFunction);
+                        for (int k = 0; k < result.Length; k++)
+                        {
+                            testdata[j] = result[k];
+                            j++;
+                        }
+                        preVAc.Add(result);
+                    }
+                    j += 50;
+                }
+                computeFramework = tempcomp;
+                //debug code end
             }
 
             var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4, MemFlags.WriteOnly, IntPtr.Zero);
