@@ -27,7 +27,7 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
-            //layerConfig.Add(7);
+            layerConfig.Add(7);
             layerConfig.Add(5);
             solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
 

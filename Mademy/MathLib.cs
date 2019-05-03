@@ -272,16 +272,22 @@ namespace Mademy
             computeFramework.SetKernelArg(forwardPass, 3, mem_weightsAndBiases);
 
             var localWorkGroupSize = new IntPtr[] { new IntPtr(8), new IntPtr(8) };
-            var globalWorkSize = new IntPtr[] { new IntPtr(ExtendGlobalWorkSize(inputActivationCount, localWorkGroupSize[0].ToInt32()))
+            var globalWorkSize = new IntPtr[] { new IntPtr(0)
                 , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
 
             for (int i = 0; i < network.layers.Count; i++)
             {
-                if (i != 0)
+                if (i == 0)
+                {
+                    globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(inputActivationCount, localWorkGroupSize[0].ToInt32()));
+                }
+                else
                 {
                     layerIdUpdateSubbuffer[0] = i;
                     computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, layerIdUpdateSubbuffer, true); //Update layer index to be processed by the kernel
+                    globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i-1].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
                 }
+
                 computeFramework.EnqueueKernel(forwardPass, globalWorkSize, localWorkGroupSize);
                 // todo: run forward pass
             }

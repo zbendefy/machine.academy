@@ -240,9 +240,9 @@ namespace Mademy
                 float[,] weightMx = new float[neuronCountInLayer, weightsPerNeuron];
                 float[] biases = new float[neuronCountInLayer];
 
-                for (int i = 0; i < neuronCountInLayer; i++)
+                for (int i = 0; i < neuronCountInLayer; ++i)
                 {
-                    for (int j = 0; j < weightsPerNeuron; j++)
+                    for (int j = 0; j < weightsPerNeuron; ++j)
                     {
                         weightMx[i, j] = layerData[i].Item1[j];
                     }
