@@ -244,7 +244,8 @@ namespace Mademy
             }
             totalActivationCount *= trainingSamples;
             ///Contains the whole network's activation values, and Z values for each training sample
-            ///Memory layout is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
+            ///Memory layout for one layer is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
+            ///After that, the next layer's same values are there
             MemoryAllocation mem_activationsAndZValues = computeFramework.GetMemoryFor(totalActivationCount * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero);
 
 
