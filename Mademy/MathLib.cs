@@ -154,11 +154,11 @@ namespace Mademy
             int layerWeightCount = network.layers[L].GetWeightsPerNeuron();
             int layerNeuronCount = network.layers[L].GetNeuronCount();
 
-            for (int i = 0; i < layerNeuronCount; i++)
+            for (int i = 0; i < layerNeuronCount; ++i)
             {
                 float deltak = 0;
                 //Assert(delta_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
-                for (int k = 0; k < delta_k_vector.Count; k++)
+                for (int k = 0; k < delta_k_vector.Count; ++k)
                 {
                     deltak += delta_k_vector[k] * network.layers[L + 1].weightMx[k, i];
                 }
@@ -167,7 +167,7 @@ namespace Mademy
 
                 //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
                 var gradientDataItem = gradientData[i];
-                for (int j = 0; j < layerWeightCount; j++)
+                for (int j = 0; j < layerWeightCount; ++j)
                 {
                     gradientDataItem.weights[j] += deltak * (prevLayerActivations[j]);
                 }
@@ -392,7 +392,9 @@ namespace Mademy
                         }
                         ++gradIdx;
                     }
-                    neuron.bias = outputGradient[gradIdx];
+
+                    for (int t = 0; t < trainingSamples; ++t)
+                        neuron.bias += outputGradient[gradIdx + gradArrayStride * t];
                     ++gradIdx;
                 }
             }
