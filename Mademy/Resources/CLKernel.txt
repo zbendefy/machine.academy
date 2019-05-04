@@ -176,12 +176,13 @@ __kernel void trainingBackwardPass(__global const int* config,
         delta_k = 0;
         const int weightOffset = GetWeightAndBiasOffset(layerId + 1, layerNeuronCountBegin);
         for(int i = 0; i < neuronsInLayer; ++i)
-            delta_k += delta_k_vector[delta_k_read_offset + i] * weightsAndBiases[weightOffset + (neuronId * neuronsInLayer/*=weightsPerNeuron in next layer*/)  + i];
+            delta_k += delta_k_vector[delta_k_read_offset + i] * weightsAndBiases[weightOffset + (neuronId * neuronsInLayer/*=weightsPerNeuron of the next layer*/)  + i];
         delta_k *= ActivationFunctionPrime(activationFunctionId, zValue);
     }
 
-    const int gradientBaseOffset = trainingSample * totalWeightAndBiasCount + GetWeightAndBiasOffset(layerId, layerNeuronCountBegin);
+    const int gradientBaseOffset = trainingSample * totalWeightAndBiasCount + GetWeightAndBiasOffset(layerId, layerNeuronCountBegin) + neuronId * (weightsPerNeuron + 1);
     for(int i = 0; i < weightsPerNeuron; ++i)
         gradient[gradientBaseOffset + i] = delta_k * prevActivations[i];
+    gradient[gradientBaseOffset + weightsPerNeuron] = delta_k;
     delta_k_vector[delta_k_write_offset + neuronId] = delta_k;
 }
