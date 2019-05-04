@@ -339,6 +339,8 @@ namespace Mademy
             }*/
 
             #region backward pass
+            //Memory layout is:
+            //[weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
             var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4 * trainingSamples, MemFlags.WriteOnly, IntPtr.Zero);
 
             float[] desiredOutputs = new float[network.layers.Last().GetNeuronCount() * trainingSamples];
@@ -393,6 +395,15 @@ namespace Mademy
                     neuron.bias = outputGradient[gradIdx];
                     ++gradIdx;
                 }
+            }
+
+
+            {
+                //DEBUG CODE, DELETE it
+                var tempcomp = computeFramework;
+                computeFramework = null;
+                var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
+                computeFramework = tempcomp;
             }
 
             return ret;

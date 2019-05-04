@@ -11,6 +11,21 @@ float ActivationFunction(int functionId, float x)
 	}
 }
 
+float ActivationFunctionPrime(int functionId, float x)
+{
+	switch(functionId)
+	{
+		case 1: //Sigmoid
+        {
+			const float sigm = 1.0f/(1.0f + exp(-x));
+            return sigm * (1.0f - sigm);
+        }
+		case 0: //Passtrough
+		default:
+			return 0;
+	}
+}
+
 float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, float a, float desiredOutput)
 {
 	switch(costFunctionId)
@@ -162,7 +177,7 @@ __kernel void trainingBackwardPass(__global const int* config,
         const int weightOffset = GetWeightAndBiasOffset(layerId + 1, layerNeuronCountBegin);
         for(int i = 0; i < neuronsInLayer; ++i)
             delta_k += delta_k_vector[delta_k_read_offset + i] * weightsAndBiases[weightOffset + (neuronId * neuronsInLayer/*=weightsPerNeuron in next layer*/)  + i];
-        delta_k *= ActivationFunction(activationFunctionId, zValue);
+        delta_k *= ActivationFunctionPrime(activationFunctionId, zValue);
     }
 
     const int gradientBaseOffset = trainingSample * totalWeightAndBiasCount + GetWeightAndBiasOffset(layerId, layerNeuronCountBegin);
