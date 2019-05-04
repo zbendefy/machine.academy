@@ -15,13 +15,12 @@ namespace Mademy
         private ComputeFramework computeFramework = null;
         private static readonly string calcLayerKernel = "calcSingleLayer";
         private static readonly string forwardPass = "trainingForwardPass";
-        private static readonly string backwardPassOutputlayer = "trainingOutputLayer";
-        private static readonly string backwardPassHiddenlayer = "trainingHiddenLayer";
+        private static readonly string backwardPassKernel = "trainingBackwardPass";
 
         public MathLib(ComputeDevice clDevice = null)
         {
             if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassHiddenlayer, backwardPassOutputlayer } , "-cl-finite-math-only -Werror");
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-finite-math-only -Werror");
         }
 
         /// <summary>
@@ -107,6 +106,8 @@ namespace Mademy
                 }
             }
 
+            computeFramework.UnuseMemoryAllocations();
+
             return output;
         }
 
@@ -141,7 +142,7 @@ namespace Mademy
                 //Assert(gradientData[i].weights.Length == prevActivations.Length);
                 for (int j = 0; j < lastLayerWeightCount; j++)
                 {
-                    gradientDataItem.weights[j] += delta_k * (prevActivations[j]);
+                    gradientDataItem.weights[j] += delta_k * prevActivations[j];
                 }
                 gradientDataItem.bias += delta_k;
                 delta_k_vector.Add(delta_k);
@@ -155,22 +156,22 @@ namespace Mademy
 
             for (int i = 0; i < layerNeuronCount; i++)
             {
-                float gamma_j = 0;
+                float deltak = 0;
                 //Assert(delta_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
                 for (int k = 0; k < delta_k_vector.Count; k++)
                 {
-                    gamma_j += delta_k_vector[k] * network.layers[L + 1].weightMx[k, i];
+                    deltak += delta_k_vector[k] * network.layers[L + 1].weightMx[k, i];
                 }
-                gamma_j *= network.activationFunction.CalculatePrime(zValues[L][i]);
-                newGammak.Add(gamma_j);
+                deltak *= network.activationFunction.CalculatePrime(zValues[L][i]);
+                newGammak.Add(deltak);
 
                 //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
                 var gradientDataItem = gradientData[i];
                 for (int j = 0; j < layerWeightCount; j++)
                 {
-                    gradientDataItem.weights[j] += gamma_j * (prevLayerActivations[j]);
+                    gradientDataItem.weights[j] += deltak * (prevLayerActivations[j]);
                 }
-                gradientDataItem.bias += gamma_j;
+                gradientDataItem.bias += deltak;
             }
 
             delta_k_vector = newGammak;
@@ -225,7 +226,9 @@ namespace Mademy
                 /*3*/networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
                 /*4*/networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
                 /*5*/networkConfigParamsList.Add(totalActivationCount); //totalActivationCount
-                /*6*/networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
+                /*6*/networkConfigParamsList.Add(0); //totalWeightsAndBiases
+                /*7*/networkConfigParamsList.Add(0); //widestLayerNeuronCount
+                /*8*/networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
                 for (int i = 0; i < network.layers.Count; i++)
                 {
                     networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
@@ -233,6 +236,10 @@ namespace Mademy
                     totalWeightAndBiasCount += network.layers[i].weightMx.Length;
                     widestLayerNeuronCount = Math.Max(network.layers[i].GetNeuronCount(), widestLayerNeuronCount);
                 }
+
+                networkConfigParamsList[6] = totalWeightAndBiasCount;
+                networkConfigParamsList[7] = widestLayerNeuronCount;
+
                 networkConfigParams = networkConfigParamsList.ToArray();
             }
             MemoryAllocation mem_NetworkConfigParams = computeFramework.GetMemoryFor( MemFlags.ReadOnly | MemFlags.CopyHostPtr, networkConfigParams );
@@ -262,10 +269,11 @@ namespace Mademy
             }
             MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, weightsAndBiases);
 
-            MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(widestLayerNeuronCount * network.layers.Count * 4, MemFlags.ReadWrite, IntPtr.Zero );
+            //delta_k_vector is double buffered (hence the * 2). In a pass, the previous delta_k values are read, and the next ones are written
+            //Memory layout is: [delta_k_vector buffer1 of trainingSample0][delta_k_vector buffer2 of trainingSample0] [delta_k_vector buffer1 of trainingSample1][delta_k_vector buffer2 of trainingSample1] ...
+            MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(widestLayerNeuronCount * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero );
 
             int[] layerIdUpdateSubbuffer = new int[] { 0 };
-
             computeFramework.SetKernelArg(forwardPass, 0, mem_NetworkConfigParams);
             computeFramework.SetKernelArg(forwardPass, 1, mem_activationsAndZValues);
             computeFramework.SetKernelArg(forwardPass, 2, mem_InputActivations);
@@ -275,6 +283,7 @@ namespace Mademy
             var globalWorkSize = new IntPtr[] { new IntPtr(0)
                 , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
 
+            #region Forward pass
             for (int i = 0; i < network.layers.Count; i++)
             {
                 if (i == 0)
@@ -291,8 +300,9 @@ namespace Mademy
                 computeFramework.EnqueueKernel(forwardPass, globalWorkSize, localWorkGroupSize);
                 // todo: run forward pass
             }
+            #endregion
 
-            {
+            /*{
                 //DEBUG CODE, DELETE it
                 float[] alma = new float[mem_activationsAndZValues.bufferSizeInBytes / 4];
                 unsafe
@@ -326,24 +336,62 @@ namespace Mademy
                 }
                 computeFramework = tempcomp;
                 //debug code end
-            }
+            }*/
 
-            var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4, MemFlags.WriteOnly, IntPtr.Zero);
+            #region backward pass
+            var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4 * trainingSamples, MemFlags.WriteOnly, IntPtr.Zero);
 
-            // todo: run output layer pass
-            computeFramework.EnqueueKernel(backwardPassOutputlayer, globalWorkSize, localWorkGroupSize);
+            float[] desiredOutputs = new float[network.layers.Last().GetNeuronCount() * trainingSamples];
+            int desiredOutputByteSizePerTrainigSample = network.layers.Last().GetNeuronCount() * 4;
+            for (int i = 0; i < trainingSamples; i++)
+                Buffer.BlockCopy(suite.trainingData[i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
+            var mem_desired_outputs = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, desiredOutputs);
 
-            for (int i = network.layers.Count - 2; i >= 0; --i)
+            computeFramework.SetKernelArg(backwardPassKernel, 0, mem_NetworkConfigParams);
+            computeFramework.SetKernelArg(backwardPassKernel, 1, mem_activationsAndZValues);
+            computeFramework.SetKernelArg(backwardPassKernel, 2, mem_delta_k_vector);
+            computeFramework.SetKernelArg(backwardPassKernel, 3, mem_param_gradient);
+            computeFramework.SetKernelArg(backwardPassKernel, 4, mem_desired_outputs);
+            computeFramework.SetKernelArg(backwardPassKernel, 5, mem_InputActivations);
+            computeFramework.SetKernelArg(backwardPassKernel, 6, mem_weightsAndBiases);
+
+            //Run backward pass for all hidden layers
+            for (int i = network.layers.Count - 1; i >= 0; --i)
             {
-                computeFramework.EnqueueKernel(backwardPassHiddenlayer, globalWorkSize, localWorkGroupSize);
+                globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
+                layerIdUpdateSubbuffer[0] = i;
+                computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, layerIdUpdateSubbuffer, true); //Update layer index to be processed by the kernel
+                computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
             }
+            #endregion
 
-            float[] outputGradient = new float[totalWeightAndBiasCount];
+            float[] outputGradient = new float[mem_param_gradient.bufferSizeInBytes / 4];
             unsafe
             {
                 fixed (float* outputPtr = outputGradient)
                 {
-                    computeFramework.ReadBuffer(mem_param_gradient, true, new IntPtr(0), new IntPtr(totalWeightAndBiasCount * 4), new IntPtr(outputPtr));
+                    computeFramework.ReadBuffer(mem_param_gradient, true, new IntPtr(0), new IntPtr(mem_param_gradient.bufferSizeInBytes), new IntPtr(outputPtr));
+                }
+            }
+
+            computeFramework.UnuseMemoryAllocations();
+
+            int gradIdx = 0;
+            int gradArrayStride = totalWeightAndBiasCount;
+            foreach (var layer in ret)
+            {
+                foreach (var neuron in layer)
+                {
+                    for (int i = 0; i < neuron.weights.Length; ++i)
+                    {
+                        for (int t = 0; t < trainingSamples; ++t)
+                        {
+                            neuron.weights[i] += outputGradient[gradIdx + gradArrayStride * t];
+                        }
+                        ++gradIdx;
+                    }
+                    neuron.bias = outputGradient[gradIdx];
+                    ++gradIdx;
                 }
             }
 
