@@ -27,8 +27,10 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
+            layerConfig.Add(128);
             layerConfig.Add(5);
-            layerConfig.Add(10);
+
+
             solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
 
             mathLib = new MathLib( null );
@@ -74,7 +76,7 @@ namespace MademyTest
             for (int i = 0; i < 10000; i++)
             {
                 float[] input = new float[5];
-                float[] output = new float[10] ;
+                float[] output = new float[5] ;
 
                 float j = (float)rnd.NextDouble() * 5;
                 int jint = Math.Min(4, (int)Math.Floor(j));

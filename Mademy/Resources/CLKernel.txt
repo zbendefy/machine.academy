@@ -91,8 +91,8 @@ __kernel void trainingForwardPass(__global const int* config,
     const int numTrainingSamples = config[2]; //number of layers in the network
     const int activationFunctionId = config[3]; //which activation function to use
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
-    const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
     const int weightsPerNeuron = config[8 + layerId]; //number of weights per neurons on the current layer
+    const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
     __global const int* layerNeuronCountBegin = config+8;
 
     const int neuronId = get_global_id(0);
@@ -138,8 +138,8 @@ __kernel void trainingBackwardPass(__global const int* config,
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
     const int totalWeightAndBiasCount = config[6]; //How many weights and biases are in the network in all layers
     const int widestLayerNeuronCount = config[7]; //Table size of delta_k vector
-    const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
     const int weightsPerNeuron = config[8 + layerId]; //number of weights per neurons on the current layer
+    const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
     __global const int* layerNeuronCountBegin = config+8;
 
     const int neuronId = get_global_id(0);
@@ -175,7 +175,8 @@ __kernel void trainingBackwardPass(__global const int* config,
     {
         delta_k = 0;
         const int weightOffset = GetWeightAndBiasOffset(layerId + 1, layerNeuronCountBegin) + neuronId;
-        for(int i = 0; i < neuronsInLayer; ++i)
+        const int nextLayerNeuronCount = config[10 + layerId];
+        for(int i = 0; i < nextLayerNeuronCount; ++i)
             delta_k += delta_k_vector[delta_k_read_offset + i] * weightsAndBiases[weightOffset + (i * neuronsInLayer/*=weightsPerNeuron of the next layer*/)];
         delta_k *= ActivationFunctionPrime(activationFunctionId, zValue);
     }

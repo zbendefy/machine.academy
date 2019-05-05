@@ -20,7 +20,7 @@ namespace Mademy
         public MathLib(ComputeDevice clDevice = null)
         {
             if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-finite-math-only -Werror");
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-finite-math-only");
         }
 
         /// <summary>
@@ -205,9 +205,7 @@ namespace Mademy
                 return ret;
             }
 
-            //TODO run whole minibatch on the OpenCL device
             int trainingSamples = trainingDataEnd - trainingDataBegin;
-
 
             int[] networkConfigParams = null;
             int totalWeightAndBiasCount = 0;
@@ -247,7 +245,7 @@ namespace Mademy
             int inputActivationCount = network.layers.First().GetWeightsPerNeuron();
             float[] inputParameters = new float[trainingSamples * inputActivationCount];
             for (int i = 0; i < trainingSamples; ++i)
-                Buffer.BlockCopy(suite.trainingData[i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount * 4);
+                Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount * 4);
             MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, inputParameters);
 
             ///Contains the whole network's activation values, and Z values for each training sample
@@ -298,24 +296,6 @@ namespace Mademy
             }
             #endregion
 
-            {
-                //DEBUG CODE, DELETE it
-                float[] alma = new float[mem_activationsAndZValues.bufferSizeInBytes / 4];
-                unsafe
-                {
-                    fixed (float* outputPtr = alma)
-                    {
-                        computeFramework.ReadBuffer(mem_activationsAndZValues, true, IntPtr.Zero, new IntPtr(mem_activationsAndZValues.bufferSizeInBytes), new IntPtr(outputPtr));
-                    }
-                }
-
-                var tempcomp = computeFramework;
-                computeFramework = null;
-                var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
-                computeFramework = tempcomp;
-                Console.WriteLine("sajt");
-            }
-
             #region backward pass
             //Memory layout is:
             //[weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
@@ -324,7 +304,7 @@ namespace Mademy
             float[] desiredOutputs = new float[network.layers.Last().GetNeuronCount() * trainingSamples];
             int desiredOutputByteSizePerTrainigSample = network.layers.Last().GetNeuronCount() * 4;
             for (int i = 0; i < trainingSamples; i++)
-                Buffer.BlockCopy(suite.trainingData[i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
+                Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
             var mem_desired_outputs = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, desiredOutputs);
 
             computeFramework.SetKernelArg(backwardPassKernel, 0, mem_NetworkConfigParams);
@@ -377,30 +357,33 @@ namespace Mademy
                 }
             }
 
+            float error = _Debug_CalculateErrorOfOpenCLGradient(network, suite, trainingDataBegin, trainingDataEnd, ret);
 
-            {
-                //DEBUG CODE, DELETE it
-                var tempcomp = computeFramework;
-                computeFramework = null;
-                var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
-                computeFramework = tempcomp;
-                double error = 0;
-                for (int i = 0; i < retCPU.Count; i++)
-                {
-                    for (int j = 0; j < retCPU[i].Count; j++)
-                    {
-                        for (int k = 0; k < retCPU[i][j].weights.Length; k++)
-                        {
-                            error += retCPU[i][j].weights[k] - ret[i][j].weights[k];
-                        }
-                        error += retCPU[i][j].bias - ret[i][j].bias;
-                    }
-                }
-                Console.WriteLine(""+error);
-            }
 
             return ret;
         }
 
+
+        private float _Debug_CalculateErrorOfOpenCLGradient(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd, List<List<NeuronData>> openclResults)
+        {
+            var tempcomp = computeFramework;
+            computeFramework = null;
+            var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
+            computeFramework = tempcomp;
+            double error = 0;
+            for (int i = 0; i < retCPU.Count; i++)
+            {
+                for (int j = 0; j < retCPU[i].Count; j++)
+                {
+                    for (int k = 0; k < retCPU[i][j].weights.Length; k++)
+                    {
+                        error += retCPU[i][j].weights[k] - openclResults[i][j].weights[k];
+                    }
+                    error += retCPU[i][j].bias - openclResults[i][j].bias;
+                }
+            }
+
+            return (float)error;
+        }
     }
 }
