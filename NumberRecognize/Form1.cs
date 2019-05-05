@@ -27,6 +27,9 @@ namespace NumberRecognize
 
         private void Form1_Load(object sender, EventArgs e)
         {
+            comboRegularization.SelectedIndex = 2;
+            comboCostFunction.SelectedIndex = 1;
+
             mathLib = new MathLib(null);
 
             bitmap = new Bitmap(28, 28, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
@@ -66,7 +69,7 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(8);
+            layerConfig.Add(128);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -184,12 +187,23 @@ namespace NumberRecognize
             LoadTestDataFromFiles(trainingData, labelFile, imgFile);
 
             var trainingSuite = new TrainingSuite(trainingData);
-            trainingSuite.config.miniBatchSize = 100;
-            trainingSuite.config.learningRate = 1.25f;
-            trainingSuite.config.epochs = (int)numericUpDown1.Value;
-            trainingSuite.config.costFunction = new CrossEntropy();
-            trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
-            trainingSuite.config.regularizationLambda = 2.0f;
+            trainingSuite.config.miniBatchSize = (int)numMiniBatchSize.Value;
+            trainingSuite.config.learningRate = (float)numLearningRate.Value;
+            trainingSuite.config.regularizationLambda = (float)numLambda.Value;
+
+            if (comboRegularization.SelectedIndex == 0)
+                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
+            else if (comboRegularization.SelectedIndex == 0)
+                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L1;
+            else if (comboRegularization.SelectedIndex == 0)
+                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
+
+            if (comboCostFunction.SelectedIndex == 0)
+                trainingSuite.config.costFunction = new MeanSquaredError();
+            else if (comboCostFunction.SelectedIndex == 1)
+                trainingSuite.config.costFunction = new CrossEntropy();
+
+            trainingSuite.config.epochs = (int)numEpoch.Value;
 
             trainingPromise = network.Train(mathLib, trainingSuite);
             trainingtimer.Start();
