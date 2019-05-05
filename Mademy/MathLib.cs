@@ -286,23 +286,19 @@ namespace Mademy
             #region Forward pass
             for (int i = 0; i < network.layers.Count; i++)
             {
-                if (i == 0)
-                {
-                    globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(inputActivationCount, localWorkGroupSize[0].ToInt32()));
-                }
-                else
+                if (i > 0)
                 {
                     layerIdUpdateSubbuffer[0] = i;
                     computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, layerIdUpdateSubbuffer, true); //Update layer index to be processed by the kernel
-                    globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i-1].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
                 }
 
+                globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
                 computeFramework.EnqueueKernel(forwardPass, globalWorkSize, localWorkGroupSize);
                 // todo: run forward pass
             }
             #endregion
 
-            /*{
+            {
                 //DEBUG CODE, DELETE it
                 float[] alma = new float[mem_activationsAndZValues.bufferSizeInBytes / 4];
                 unsafe
@@ -312,31 +308,13 @@ namespace Mademy
                         computeFramework.ReadBuffer(mem_activationsAndZValues, true, IntPtr.Zero, new IntPtr(mem_activationsAndZValues.bufferSizeInBytes), new IntPtr(outputPtr));
                     }
                 }
-                Console.WriteLine("sajt");
 
-                float[] testdata = new float[300];
                 var tempcomp = computeFramework;
                 computeFramework = null;
-
-                int j = 0;
-                    List<float[]> preVAc = new List<float[]>();
-                for (int l = 0; l < network.layers.Count; l++)
-                {
-                    for (int i = trainingDataBegin; i < trainingDataEnd; i++)
-                    {
-                        float[] result = CalculateLayer(network.layers[l].weightMx, network.layers[l].biases, l == 0 ? suite.trainingData[i].input : preVAc[i], network.activationFunction);
-                        for (int k = 0; k < result.Length; k++)
-                        {
-                            testdata[j] = result[k];
-                            j++;
-                        }
-                        preVAc.Add(result);
-                    }
-                    j += 50;
-                }
+                var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
                 computeFramework = tempcomp;
-                //debug code end
-            }*/
+                Console.WriteLine("sajt");
+            }
 
             #region backward pass
             //Memory layout is:
@@ -406,6 +384,19 @@ namespace Mademy
                 computeFramework = null;
                 var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
                 computeFramework = tempcomp;
+                double error = 0;
+                for (int i = 0; i < retCPU.Count; i++)
+                {
+                    for (int j = 0; j < retCPU[i].Count; j++)
+                    {
+                        for (int k = 0; k < retCPU[i][j].weights.Length; k++)
+                        {
+                            error += retCPU[i][j].weights[k] - ret[i][j].weights[k];
+                        }
+                        error += retCPU[i][j].bias - ret[i][j].bias;
+                    }
+                }
+                Console.WriteLine(""+error);
             }
 
             return ret;
