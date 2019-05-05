@@ -271,7 +271,6 @@ namespace Mademy
             //Memory layout is: [delta_k_vector buffer1 of trainingSample0][delta_k_vector buffer2 of trainingSample0] [delta_k_vector buffer1 of trainingSample1][delta_k_vector buffer2 of trainingSample1] ...
             MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(widestLayerNeuronCount * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero );
 
-            int[] layerIdUpdateSubbuffer = new int[] { 0 };
             computeFramework.SetKernelArg(forwardPass, 0, mem_NetworkConfigParams);
             computeFramework.SetKernelArg(forwardPass, 1, mem_activationsAndZValues);
             computeFramework.SetKernelArg(forwardPass, 2, mem_InputActivations);
@@ -286,8 +285,7 @@ namespace Mademy
             {
                 if (i > 0)
                 {
-                    layerIdUpdateSubbuffer[0] = i;
-                    computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, layerIdUpdateSubbuffer, true); //Update layer index to be processed by the kernel
+                    computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, new int[] { i }, false); //Update layer index to be processed by the kernel
                 }
 
                 globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
@@ -297,15 +295,16 @@ namespace Mademy
             #endregion
 
             #region backward pass
-            //Memory layout is:
-            //[weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
-            var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4 * trainingSamples, MemFlags.WriteOnly, IntPtr.Zero);
 
             float[] desiredOutputs = new float[network.layers.Last().GetNeuronCount() * trainingSamples];
             int desiredOutputByteSizePerTrainigSample = network.layers.Last().GetNeuronCount() * 4;
             for (int i = 0; i < trainingSamples; i++)
                 Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
             var mem_desired_outputs = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, desiredOutputs);
+
+            //Memory layout is:
+            //[weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
+            var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4 * trainingSamples, MemFlags.WriteOnly, IntPtr.Zero);
 
             computeFramework.SetKernelArg(backwardPassKernel, 0, mem_NetworkConfigParams);
             computeFramework.SetKernelArg(backwardPassKernel, 1, mem_activationsAndZValues);
@@ -319,8 +318,7 @@ namespace Mademy
             for (int i = network.layers.Count - 1; i >= 0; --i)
             {
                 globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
-                layerIdUpdateSubbuffer[0] = i;
-                computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, layerIdUpdateSubbuffer, true); //Update layer index to be processed by the kernel
+                computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, new int[] { i }, false); //Update layer index to be processed by the kernel
                 computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
             }
             #endregion
@@ -356,9 +354,6 @@ namespace Mademy
                     ++gradIdx;
                 }
             }
-
-            float error = _Debug_CalculateErrorOfOpenCLGradient(network, suite, trainingDataBegin, trainingDataEnd, ret);
-
 
             return ret;
         }

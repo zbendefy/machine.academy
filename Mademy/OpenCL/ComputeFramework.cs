@@ -211,6 +211,11 @@ namespace Mademy.OpenCL
             Cl.EnqueueReadBuffer(commandQueue, mem.buffer, isBlocking ? Bool.True : Bool.False, offset, lengthInBytes, output, 0, null, out ev);
         }
 
+        public void BlockUntilAllTasksDone()
+        {
+            Cl.Finish(commandQueue);
+        }
+
         public void EnqueueKernel(string kernelName, IntPtr[] globalWorkSize, IntPtr[] localWorkSize)
         {
             Event ev;
