@@ -174,6 +174,8 @@ namespace Mademy.OpenCL
             if (!IsInitialized())
                 return null;
 
+            var accessFlags = flags & (MemFlags.ReadOnly | MemFlags.WriteOnly | MemFlags.ReadWrite);
+
             MemoryAllocation candidate = null;
             int bestMatchingSize = int.MaxValue;
             int itemToSwap = -1;
@@ -181,7 +183,7 @@ namespace Mademy.OpenCL
             for (int i = 0; i < freeMemoryAllocations.Count; i++)
             {
                 var item = freeMemoryAllocations[i];
-                if (item.flags == flags && item.bufferSizeInBytes >= requiredSizeInBytes && item.bufferSizeInBytes < bestMatchingSize) //Select the smallest sufficient memory allocation from our allocations
+                if (item.flags == accessFlags && item.bufferSizeInBytes >= requiredSizeInBytes && item.bufferSizeInBytes < bestMatchingSize) //Select the smallest sufficient memory allocation from our allocations
                 {
                     bestMatchingSize = item.bufferSizeInBytes;
                     candidate = item;
@@ -193,18 +195,19 @@ namespace Mademy.OpenCL
 
             if (candidate == null)
             {
-                candidate = CreateMemoryAllocation(clContext, requiredSizeInBytes, flags, data);
+                candidate = CreateMemoryAllocation(clContext, requiredSizeInBytes, accessFlags, IntPtr.Zero);
                 usedMemoryAllocations.Add(candidate);
             }
             else
             {
                 freeMemoryAllocations.RemoveAt(itemToSwap);
                 usedMemoryAllocations.Add(candidate);
-                if (flags.HasFlag(MemFlags.CopyHostPtr))
-                {
-                    Event e;
-                    Cl.EnqueueWriteBuffer(commandQueue, candidate.buffer, Bool.False, IntPtr.Zero, new IntPtr(requiredSizeInBytes), data, 0, null, out e);
-                }
+            }
+
+            if (flags.HasFlag(MemFlags.CopyHostPtr))
+            {
+                Event e;
+                Cl.EnqueueWriteBuffer(commandQueue, candidate.buffer, Bool.False, IntPtr.Zero, new IntPtr(requiredSizeInBytes), data, 0, null, out e);
             }
 
             return candidate;

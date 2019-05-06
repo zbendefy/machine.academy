@@ -28,8 +28,8 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
-            layerConfig.Add(14);
-            layerConfig.Add(27);
+            layerConfig.Add(512);
+            layerConfig.Add(512);
             layerConfig.Add(5);
 
             solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -89,7 +89,7 @@ namespace MademyTest
             }
 
             var trainingSuite = new TrainingSuite(trainingData);
-            trainingSuite.config.miniBatchSize = 10;
+            trainingSuite.config.miniBatchSize = 100;
             trainingSuite.config.epochs = 2;
             trainingSuite.config.shuffleTrainingData = false;
 

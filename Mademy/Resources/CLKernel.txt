@@ -129,8 +129,9 @@ __kernel void trainingForwardPass(__global const int* config,
          (activationsAndZValues + (activationTableOffset + GetActivationLayerOffset(layerId - 1, layerNeuronCountBegin)) );
 
     float acc = 0;
-    for(int i = 0; i < weightsPerNeuron; ++i)
+    for(int i = 0; i < weightsPerNeuron; ++i){
         acc += weightsAndBiases[weightOffset + (neuronId * weightsPerNeuron) + i] * prevActivations[i];
+    }
     acc += weightsAndBiases[biasOffset + neuronId];
 
     activationsAndZValues[zValueOffset+neuronId] = acc;
@@ -198,6 +199,7 @@ __kernel void trainingBackwardPass(__global const int* config,
     }
 
     const int gradientBaseOffset = GetWeightAndBiasOffset(layerId, layerNeuronCountBegin) + neuronId * (weightsPerNeuron + 1);
+
     for(int i = 0; i < weightsPerNeuron; ++i)
         atomicAdd_g_f(gradient + gradientBaseOffset + i, delta_k * prevActivations[i]);
     atomicAdd_g_f(gradient + gradientBaseOffset + weightsPerNeuron, delta_k );
