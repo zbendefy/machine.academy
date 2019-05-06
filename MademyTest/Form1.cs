@@ -17,6 +17,7 @@ namespace MademyTest
         MathLib mathLib = null;
         Network.TrainingPromise trainingPromise = null;
         DateTime trainingBegin;
+        List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
         public Form1()
         {
@@ -27,9 +28,9 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
-            layerConfig.Add(128);
+            layerConfig.Add(14);
+            layerConfig.Add(27);
             layerConfig.Add(5);
-
 
             solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
 
@@ -70,25 +71,27 @@ namespace MademyTest
 
         private void button4_Click(object sender, EventArgs e)
         {
-            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
-
-            var rnd = new Random();
-            for (int i = 0; i < 10000; i++)
+            if (trainingData.Count == 0)
             {
-                float[] input = new float[5];
-                float[] output = new float[5] ;
+                var rnd = new Random();
+                for (int i = 0; i < 10000; i++)
+                {
+                    float[] input = new float[5];
+                    float[] output = new float[5];
 
-                float j = (float)rnd.NextDouble() * 5;
-                int jint = Math.Min(4, (int)Math.Floor(j));
-                input[jint] = 1.0f;
-                output[jint] = 1.0f;
+                    float j = (float)rnd.NextDouble() * 5;
+                    int jint = Math.Min(4, (int)Math.Floor(j));
+                    input[jint] = 1.0f;
+                    output[jint] = 1.0f;
 
-                trainingData.Add( new TrainingSuite.TrainingData( input, output) ); 
+                    trainingData.Add(new TrainingSuite.TrainingData(input, output));
+                }
             }
 
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = 10;
-            trainingSuite.config.epochs = 3;
+            trainingSuite.config.epochs = 2;
+            trainingSuite.config.shuffleTrainingData = false;
 
             trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
             trainingSuite.config.costFunction = new CrossEntropy();

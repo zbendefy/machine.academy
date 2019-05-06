@@ -28,13 +28,6 @@ namespace Mademy.OpenCL
                 Release();
             }
 
-            public static MemoryAllocation CreateMemoryAllocation(Context clContext, int byteSize, MemFlags flags, IntPtr data)
-            {
-                ErrorCode err;
-                var buffer = Cl.CreateBuffer(clContext, flags, new IntPtr(byteSize), data, out err);
-                return new MemoryAllocation(buffer, byteSize, flags);
-            }
-
             internal void Release()
             {
                 if (buffer != null)
@@ -65,12 +58,36 @@ namespace Mademy.OpenCL
 
         ~ComputeFramework() { CleanupCLResources(); }
 
+        public MemoryAllocation CreateMemoryAllocation(Context clContext, int byteSize, MemFlags flags, IntPtr data)
+        {
+            ErrorCode err;
+            var buffer = Cl.CreateBuffer(clContext, flags, new IntPtr(byteSize), data, out err);
+            if (err != ErrorCode.Success)
+            {
+                OnLowDeviceMemory();
+                buffer = Cl.CreateBuffer(clContext, flags, new IntPtr(byteSize), data, out err);
+                if (err != ErrorCode.Success)
+                {
+                    throw new Exception("Failed to allocate device memory. Error code: " + err.ToString());
+                }
+            }
+            return new MemoryAllocation(buffer, byteSize, flags);
+        }
+
+        private void OnLowDeviceMemory()
+        {
+            foreach (var item in freeMemoryAllocations)
+                item.Release();
+            freeMemoryAllocations.Clear();
+        }
+
         public void FlushWorkingCache()
         {
             foreach (var item in freeMemoryAllocations)
                 item.Release();
             freeMemoryAllocations.Clear();
 
+            //usedMemoryAllocations should be empty, but delete its content just to be safe
             foreach (var item in usedMemoryAllocations)
                 item.Release();
             usedMemoryAllocations.Clear();
@@ -174,7 +191,7 @@ namespace Mademy.OpenCL
 
             if (candidate == null)
             {
-                candidate = MemoryAllocation.CreateMemoryAllocation(clContext, requiredSizeInBytes, flags, data);
+                candidate = CreateMemoryAllocation(clContext, requiredSizeInBytes, flags, data);
                 usedMemoryAllocations.Add(candidate);
             }
             else

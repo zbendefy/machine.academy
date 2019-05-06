@@ -68,8 +68,10 @@ namespace NumberRecognize
         private void InitRandomNetwork()
         {
             List<int> layerConfig = new List<int>();
-            layerConfig.Add(bitmap.Size.Width* bitmap.Size.Height);
-            layerConfig.Add(128);
+            layerConfig.Add(bitmap.Size.Width * bitmap.Size.Height);
+            layerConfig.Add(512);
+            layerConfig.Add(512);
+            layerConfig.Add(512);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
