@@ -190,6 +190,7 @@ namespace NumberRecognize
             trainingSuite.config.miniBatchSize = (int)numMiniBatchSize.Value;
             trainingSuite.config.learningRate = (float)numLearningRate.Value;
             trainingSuite.config.regularizationLambda = (float)numLambda.Value;
+            trainingSuite.config.shuffleTrainingData= checkShuffle.Checked;
 
             if (comboRegularization.SelectedIndex == 0)
                 trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;

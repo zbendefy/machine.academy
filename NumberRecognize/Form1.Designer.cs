@@ -45,27 +45,27 @@
             this.button8 = new System.Windows.Forms.Button();
             this.numericUpDown2 = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
-            this.label2 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
-            this.numMiniBatchSize = new System.Windows.Forms.NumericUpDown();
-            this.numLearningRate = new System.Windows.Forms.NumericUpDown();
-            this.label5 = new System.Windows.Forms.Label();
-            this.label6 = new System.Windows.Forms.Label();
-            this.numLambda = new System.Windows.Forms.NumericUpDown();
-            this.comboRegularization = new System.Windows.Forms.ComboBox();
-            this.label7 = new System.Windows.Forms.Label();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
-            this.label8 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.comboCostFunction = new System.Windows.Forms.ComboBox();
+            this.label8 = new System.Windows.Forms.Label();
+            this.checkShuffle = new System.Windows.Forms.CheckBox();
+            this.label7 = new System.Windows.Forms.Label();
+            this.comboRegularization = new System.Windows.Forms.ComboBox();
+            this.numLambda = new System.Windows.Forms.NumericUpDown();
+            this.label6 = new System.Windows.Forms.Label();
+            this.numLearningRate = new System.Windows.Forms.NumericUpDown();
+            this.label5 = new System.Windows.Forms.Label();
+            this.numMiniBatchSize = new System.Windows.Forms.NumericUpDown();
+            this.label4 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numEpoch)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
             this.panel1.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numMiniBatchSize)).BeginInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numLearningRate)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numLambda)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numLearningRate)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMiniBatchSize)).BeginInit();
             this.SuspendLayout();
             // 
             // pictureBox1
@@ -241,7 +241,7 @@
             this.panel1.Controls.Add(this.label9);
             this.panel1.Controls.Add(this.comboCostFunction);
             this.panel1.Controls.Add(this.label8);
-            this.panel1.Controls.Add(this.checkBox1);
+            this.panel1.Controls.Add(this.checkShuffle);
             this.panel1.Controls.Add(this.label7);
             this.panel1.Controls.Add(this.comboRegularization);
             this.panel1.Controls.Add(this.numLambda);
@@ -258,168 +258,6 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(223, 309);
             this.panel1.TabIndex = 14;
-            // 
-            // label2
-            // 
-            this.label2.AutoSize = true;
-            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label2.Location = new System.Drawing.Point(12, 11);
-            this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(129, 16);
-            this.label2.TabIndex = 15;
-            this.label2.Text = "Training parameters";
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label3.Location = new System.Drawing.Point(12, 42);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(43, 13);
-            this.label3.TabIndex = 16;
-            this.label3.Text = "Epochs";
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label4.Location = new System.Drawing.Point(12, 68);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(77, 13);
-            this.label4.TabIndex = 17;
-            this.label4.Text = "Mini batch size";
-            // 
-            // numMiniBatchSize
-            // 
-            this.numMiniBatchSize.Location = new System.Drawing.Point(129, 66);
-            this.numMiniBatchSize.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.numMiniBatchSize.Minimum = new decimal(new int[] {
-            1,
-            0,
-            0,
-            0});
-            this.numMiniBatchSize.Name = "numMiniBatchSize";
-            this.numMiniBatchSize.Size = new System.Drawing.Size(82, 20);
-            this.numMiniBatchSize.TabIndex = 18;
-            this.numMiniBatchSize.Value = new decimal(new int[] {
-            100,
-            0,
-            0,
-            0});
-            // 
-            // numLearningRate
-            // 
-            this.numLearningRate.DecimalPlaces = 6;
-            this.numLearningRate.Increment = new decimal(new int[] {
-            1,
-            0,
-            0,
-            131072});
-            this.numLearningRate.Location = new System.Drawing.Point(129, 92);
-            this.numLearningRate.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.numLearningRate.Name = "numLearningRate";
-            this.numLearningRate.Size = new System.Drawing.Size(82, 20);
-            this.numLearningRate.TabIndex = 20;
-            this.numLearningRate.Value = new decimal(new int[] {
-            125,
-            0,
-            0,
-            131072});
-            // 
-            // label5
-            // 
-            this.label5.AutoSize = true;
-            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label5.Location = new System.Drawing.Point(12, 94);
-            this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(69, 13);
-            this.label5.TabIndex = 19;
-            this.label5.Text = "Learning rate";
-            // 
-            // label6
-            // 
-            this.label6.AutoSize = true;
-            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label6.Location = new System.Drawing.Point(12, 147);
-            this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(111, 13);
-            this.label6.TabIndex = 21;
-            this.label6.Text = "Regularization lambda";
-            // 
-            // numLambda
-            // 
-            this.numLambda.DecimalPlaces = 6;
-            this.numLambda.Increment = new decimal(new int[] {
-            1,
-            0,
-            0,
-            131072});
-            this.numLambda.Location = new System.Drawing.Point(129, 145);
-            this.numLambda.Maximum = new decimal(new int[] {
-            10000,
-            0,
-            0,
-            0});
-            this.numLambda.Name = "numLambda";
-            this.numLambda.Size = new System.Drawing.Size(82, 20);
-            this.numLambda.TabIndex = 22;
-            this.numLambda.Value = new decimal(new int[] {
-            2,
-            0,
-            0,
-            0});
-            // 
-            // comboRegularization
-            // 
-            this.comboRegularization.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.comboRegularization.FormattingEnabled = true;
-            this.comboRegularization.Items.AddRange(new object[] {
-            "None",
-            "L1",
-            "L2"});
-            this.comboRegularization.Location = new System.Drawing.Point(129, 118);
-            this.comboRegularization.Name = "comboRegularization";
-            this.comboRegularization.Size = new System.Drawing.Size(82, 21);
-            this.comboRegularization.TabIndex = 23;
-            // 
-            // label7
-            // 
-            this.label7.AutoSize = true;
-            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label7.Location = new System.Drawing.Point(12, 121);
-            this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(74, 13);
-            this.label7.TabIndex = 24;
-            this.label7.Text = "Regularization";
-            // 
-            // checkBox1
-            // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Checked = true;
-            this.checkBox1.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkBox1.Location = new System.Drawing.Point(196, 171);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(15, 14);
-            this.checkBox1.TabIndex = 25;
-            this.checkBox1.UseVisualStyleBackColor = true;
-            // 
-            // label8
-            // 
-            this.label8.AutoSize = true;
-            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label8.Location = new System.Drawing.Point(12, 171);
-            this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(88, 13);
-            this.label8.TabIndex = 26;
-            this.label8.Text = "Shuffle minibatch";
             // 
             // label9
             // 
@@ -442,6 +280,168 @@
             this.comboCostFunction.Name = "comboCostFunction";
             this.comboCostFunction.Size = new System.Drawing.Size(82, 21);
             this.comboCostFunction.TabIndex = 27;
+            // 
+            // label8
+            // 
+            this.label8.AutoSize = true;
+            this.label8.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label8.Location = new System.Drawing.Point(12, 171);
+            this.label8.Name = "label8";
+            this.label8.Size = new System.Drawing.Size(88, 13);
+            this.label8.TabIndex = 26;
+            this.label8.Text = "Shuffle minibatch";
+            // 
+            // checkShuffle
+            // 
+            this.checkShuffle.AutoSize = true;
+            this.checkShuffle.Checked = true;
+            this.checkShuffle.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.checkShuffle.Location = new System.Drawing.Point(196, 171);
+            this.checkShuffle.Name = "checkShuffle";
+            this.checkShuffle.Size = new System.Drawing.Size(15, 14);
+            this.checkShuffle.TabIndex = 25;
+            this.checkShuffle.UseVisualStyleBackColor = true;
+            // 
+            // label7
+            // 
+            this.label7.AutoSize = true;
+            this.label7.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label7.Location = new System.Drawing.Point(12, 121);
+            this.label7.Name = "label7";
+            this.label7.Size = new System.Drawing.Size(74, 13);
+            this.label7.TabIndex = 24;
+            this.label7.Text = "Regularization";
+            // 
+            // comboRegularization
+            // 
+            this.comboRegularization.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboRegularization.FormattingEnabled = true;
+            this.comboRegularization.Items.AddRange(new object[] {
+            "None",
+            "L1",
+            "L2"});
+            this.comboRegularization.Location = new System.Drawing.Point(129, 118);
+            this.comboRegularization.Name = "comboRegularization";
+            this.comboRegularization.Size = new System.Drawing.Size(82, 21);
+            this.comboRegularization.TabIndex = 23;
+            // 
+            // numLambda
+            // 
+            this.numLambda.DecimalPlaces = 6;
+            this.numLambda.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            131072});
+            this.numLambda.Location = new System.Drawing.Point(129, 145);
+            this.numLambda.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.numLambda.Name = "numLambda";
+            this.numLambda.Size = new System.Drawing.Size(82, 20);
+            this.numLambda.TabIndex = 22;
+            this.numLambda.Value = new decimal(new int[] {
+            5,
+            0,
+            0,
+            65536});
+            // 
+            // label6
+            // 
+            this.label6.AutoSize = true;
+            this.label6.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label6.Location = new System.Drawing.Point(12, 147);
+            this.label6.Name = "label6";
+            this.label6.Size = new System.Drawing.Size(111, 13);
+            this.label6.TabIndex = 21;
+            this.label6.Text = "Regularization lambda";
+            // 
+            // numLearningRate
+            // 
+            this.numLearningRate.DecimalPlaces = 6;
+            this.numLearningRate.Increment = new decimal(new int[] {
+            1,
+            0,
+            0,
+            131072});
+            this.numLearningRate.Location = new System.Drawing.Point(129, 92);
+            this.numLearningRate.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.numLearningRate.Name = "numLearningRate";
+            this.numLearningRate.Size = new System.Drawing.Size(82, 20);
+            this.numLearningRate.TabIndex = 20;
+            this.numLearningRate.Value = new decimal(new int[] {
+            1,
+            0,
+            0,
+            65536});
+            // 
+            // label5
+            // 
+            this.label5.AutoSize = true;
+            this.label5.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label5.Location = new System.Drawing.Point(12, 94);
+            this.label5.Name = "label5";
+            this.label5.Size = new System.Drawing.Size(69, 13);
+            this.label5.TabIndex = 19;
+            this.label5.Text = "Learning rate";
+            // 
+            // numMiniBatchSize
+            // 
+            this.numMiniBatchSize.Location = new System.Drawing.Point(129, 66);
+            this.numMiniBatchSize.Maximum = new decimal(new int[] {
+            10000,
+            0,
+            0,
+            0});
+            this.numMiniBatchSize.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numMiniBatchSize.Name = "numMiniBatchSize";
+            this.numMiniBatchSize.Size = new System.Drawing.Size(82, 20);
+            this.numMiniBatchSize.TabIndex = 18;
+            this.numMiniBatchSize.Value = new decimal(new int[] {
+            2000,
+            0,
+            0,
+            0});
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label4.Location = new System.Drawing.Point(12, 68);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(77, 13);
+            this.label4.TabIndex = 17;
+            this.label4.Text = "Mini batch size";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label3.Location = new System.Drawing.Point(12, 42);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(43, 13);
+            this.label3.TabIndex = 16;
+            this.label3.Text = "Epochs";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.Location = new System.Drawing.Point(12, 11);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(129, 16);
+            this.label2.TabIndex = 15;
+            this.label2.Text = "Training parameters";
             // 
             // Form1
             // 
@@ -471,9 +471,9 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).EndInit();
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
-            ((System.ComponentModel.ISupportInitialize)(this.numMiniBatchSize)).EndInit();
-            ((System.ComponentModel.ISupportInitialize)(this.numLearningRate)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numLambda)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numLearningRate)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numMiniBatchSize)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -509,7 +509,7 @@
         private System.Windows.Forms.ComboBox comboRegularization;
         private System.Windows.Forms.NumericUpDown numLambda;
         private System.Windows.Forms.Label label8;
-        private System.Windows.Forms.CheckBox checkBox1;
+        private System.Windows.Forms.CheckBox checkShuffle;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.ComboBox comboCostFunction;
     }
