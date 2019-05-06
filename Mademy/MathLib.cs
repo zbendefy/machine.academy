@@ -347,7 +347,9 @@ namespace Mademy
                 }
             }
 
-            //float error = _Debug_CalculateErrorOfOpenCLGradient(network, suite, trainingDataBegin, trainingDataEnd, ret);
+            /*float error = _Debug_CalculateErrorOfOpenCLGradient(network, suite, trainingDataBegin, trainingDataEnd, ret);
+            if (error > 0.001)
+                return null; */
 
             return ret;
         }
@@ -360,6 +362,7 @@ namespace Mademy
             var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
             computeFramework = tempcomp;
             double error = 0;
+            double divisor = 0;
             for (int i = 0; i < retCPU.Count; i++)
             {
                 for (int j = 0; j < retCPU[i].Count; j++)
@@ -369,10 +372,11 @@ namespace Mademy
                         error += retCPU[i][j].weights[k] - openclResults[i][j].weights[k];
                     }
                     error += retCPU[i][j].bias - openclResults[i][j].bias;
+                    divisor += retCPU[i][j].weights.Length + 1;
                 }
             }
 
-            return (float)error;
+            return (float)(error/divisor);
         }
     }
 }
