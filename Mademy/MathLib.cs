@@ -209,7 +209,7 @@ namespace Mademy
 
             int[] networkConfigParams = null;
             int totalWeightAndBiasCount = 0;
-            int widestLayerNeuronCount = 0;
+            int delta_k_vectorSize = 0;
             int totalActivationCount = 0; //Add 
             {
                 foreach (var item in network.layers)
@@ -232,11 +232,12 @@ namespace Mademy
                     networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
                     totalWeightAndBiasCount += network.layers[i].biases.Length;
                     totalWeightAndBiasCount += network.layers[i].weightMx.Length;
-                    widestLayerNeuronCount = Math.Max(network.layers[i].GetNeuronCount(), widestLayerNeuronCount);
+                    if (i > 0) //The first layer will not write the delta_k vector, so it shouldn't contribute to its size.
+                        delta_k_vectorSize = Math.Max(network.layers[i].GetNeuronCount(), delta_k_vectorSize);
                 }
 
                 networkConfigParamsList[6] = totalWeightAndBiasCount;
-                networkConfigParamsList[7] = widestLayerNeuronCount;
+                networkConfigParamsList[7] = delta_k_vectorSize;
 
                 networkConfigParams = networkConfigParamsList.ToArray();
             }
@@ -269,7 +270,7 @@ namespace Mademy
 
             //delta_k_vector is double buffered (hence the * 2). In a pass, the previous delta_k values are read, and the next ones are written
             //Memory layout is: [delta_k_vector buffer1 of trainingSample0][delta_k_vector buffer2 of trainingSample0] [delta_k_vector buffer1 of trainingSample1][delta_k_vector buffer2 of trainingSample1] ...
-            MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(widestLayerNeuronCount * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero );
+            MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(delta_k_vectorSize * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero );
 
             computeFramework.SetKernelArg(forwardPass, 0, mem_NetworkConfigParams);
             computeFramework.SetKernelArg(forwardPass, 1, mem_activationsAndZValues);

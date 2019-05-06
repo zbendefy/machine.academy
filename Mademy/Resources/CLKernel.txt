@@ -63,20 +63,20 @@ __kernel void calcSingleLayer(__global const float* weightMx,
     output[rowId] = acc;
 }
 
-int GetWeightAndBiasOffset(int layerCount, __global const int* layerSizes)
+int GetWeightAndBiasOffset(int layerId, __global const int* layerSizes)
 {
     int offset = 0;
-    for(int i = 0; i < layerCount; ++i){
+    for(int i = 0; i < layerId; ++i){
         offset += layerSizes[i] * layerSizes[i+1] + layerSizes[i+1]; //prevWeights * neuroncCount (weights) + neuronCount (biases)
     }
     return offset;
 }
 
-int GetActivationLayerOffset(int layerCount, __global const int* layerSizes)
+int GetActivationLayerOffset(int layerId, __global const int* layerSizes)
 {
     int offset = 0;
-    for(int i = 0; i < layerCount; ++i){
-        offset += layerSizes[i+1]; //neuron count
+    for(int i = 0; i < layerId; ++i){
+        offset += layerSizes[i+1]; //neuron count of layer
     }
     return offset;
 }
@@ -87,7 +87,7 @@ __kernel void trainingForwardPass(__global const int* config,
                                   __global const float* weightsAndBiases) 
 {
     const int layerId = config[0]; //The layer's index to be calculated
-    const int layerCount = config[1]; //number of layers in the network
+    //const int layerCount = config[1]; //number of layers in the network
     const int numTrainingSamples = config[2]; //number of layers in the network
     const int activationFunctionId = config[3]; //which activation function to use
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
@@ -137,7 +137,7 @@ __kernel void trainingBackwardPass(__global const int* config,
     const int costFunctionId = config[4]; //which cost function to use
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
     const int totalWeightAndBiasCount = config[6]; //How many weights and biases are in the network in all layers
-    const int widestLayerNeuronCount = config[7]; //Table size of delta_k vector
+    const int deltaKVectorStride = config[7]; //Table size of delta_k vector
     const int weightsPerNeuron = config[8 + layerId]; //number of weights per neurons on the current layer
     const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
     __global const int* layerNeuronCountBegin = config+8;
@@ -150,8 +150,8 @@ __kernel void trainingBackwardPass(__global const int* config,
         return;
     }
     
-    const int delta_k_read_offset = widestLayerNeuronCount * 2 * trainingSample + ((layerId % 2) * widestLayerNeuronCount);
-    const int delta_k_write_offset = widestLayerNeuronCount * 2 * trainingSample + (((layerId+1) % 2) * widestLayerNeuronCount);
+    const int delta_k_read_offset = deltaKVectorStride * 2 * trainingSample + ((layerId % 2) * deltaKVectorStride);
+    const int delta_k_write_offset = deltaKVectorStride * 2 * trainingSample + (((layerId+1) % 2) * deltaKVectorStride);
 
     const int activationTableOffset = totalActivationCount * trainingSample;
     const int activationOffset = activationTableOffset + GetActivationLayerOffset(layerId, layerNeuronCountBegin);
@@ -162,17 +162,18 @@ __kernel void trainingBackwardPass(__global const int* config,
          
     const float zValue = activationsAndZValues[zValueOffset + neuronId];
 
-    const bool IsOutputLayer = layerId == (layerCount - 1);
     float delta_k;
     
-    if ( IsOutputLayer )
+    if ( layerId == (layerCount - 1) )
     {
+        //Output layer
         const float activation = activationsAndZValues[activationOffset + neuronId];
         const float desiredOutput = desiredOutputs[trainingSample * neuronsInLayer + neuronId];
         delta_k = CostFunctionDelta(costFunctionId, activationFunctionId, zValue, activation, desiredOutput);
     }
     else 
     {
+        //Hidden layer
         delta_k = 0;
         const int weightOffset = GetWeightAndBiasOffset(layerId + 1, layerNeuronCountBegin) + neuronId;
         const int nextLayerNeuronCount = config[10 + layerId];
@@ -185,5 +186,7 @@ __kernel void trainingBackwardPass(__global const int* config,
     for(int i = 0; i < weightsPerNeuron; ++i)
         gradient[gradientBaseOffset + i] = delta_k * prevActivations[i]; //Note: this is a global read-write, but it only happens once per value in one pass
     gradient[gradientBaseOffset + weightsPerNeuron] = delta_k;
-    delta_k_vector[delta_k_write_offset + neuronId] = delta_k;
+
+    if ( layerId != 0 )
+        delta_k_vector[delta_k_write_offset + neuronId] = delta_k;
 }
