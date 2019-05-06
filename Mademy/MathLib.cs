@@ -305,7 +305,8 @@ namespace Mademy
 
             //Memory layout is:
             //[weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
-            var mem_param_gradient = computeFramework.GetMemoryFor(totalWeightAndBiasCount * 4 * trainingSamples, MemFlags.WriteOnly, IntPtr.Zero);
+            float[] outputGradient = new float[totalWeightAndBiasCount];
+            var mem_param_gradient = computeFramework.GetMemoryFor(MemFlags.ReadWrite | MemFlags.CopyHostPtr, outputGradient);
 
             computeFramework.SetKernelArg(backwardPassKernel, 0, mem_NetworkConfigParams);
             computeFramework.SetKernelArg(backwardPassKernel, 1, mem_activationsAndZValues);
@@ -324,7 +325,6 @@ namespace Mademy
             }
             #endregion
 
-            float[] outputGradient = new float[mem_param_gradient.bufferSizeInBytes / 4];
             unsafe
             {
                 fixed (float* outputPtr = outputGradient)
@@ -336,25 +336,18 @@ namespace Mademy
             computeFramework.UnuseMemoryAllocations();
 
             int gradIdx = 0;
-            int gradArrayStride = totalWeightAndBiasCount;
             foreach (var layer in ret)
             {
                 foreach (var neuron in layer)
                 {
-                    for (int i = 0; i < neuron.weights.Length; ++i)
-                    {
-                        for (int t = 0; t < trainingSamples; ++t)
-                        {
-                            neuron.weights[i] += outputGradient[gradIdx + gradArrayStride * t];
-                        }
-                        ++gradIdx;
-                    }
-
-                    for (int t = 0; t < trainingSamples; ++t)
-                        neuron.bias += outputGradient[gradIdx + gradArrayStride * t];
+                    Buffer.BlockCopy(outputGradient, gradIdx * 4, neuron.weights, 0, neuron.weights.Length * 4);
+                    gradIdx += neuron.weights.Length;
+                    neuron.bias = outputGradient[gradIdx];
                     ++gradIdx;
                 }
             }
+
+            //float error = _Debug_CalculateErrorOfOpenCLGradient(network, suite, trainingDataBegin, trainingDataEnd, ret);
 
             return ret;
         }

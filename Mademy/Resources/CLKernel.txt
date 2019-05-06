@@ -63,6 +63,21 @@ __kernel void calcSingleLayer(__global const float* weightMx,
     output[rowId] = acc;
 }
 
+//from: https://streamhpc.com/blog/2016-02-09/atomic-operations-for-floats-in-opencl-improved/
+void atomicAdd_g_f(volatile __global float *addr, float val)
+{
+    union {
+        unsigned int u32;
+        float        f32;
+    } next, expected, current;
+    current.f32    = *addr;
+    do {
+        expected.f32 = current.f32;
+        next.f32     = expected.f32 + val;
+        current.u32  = atomic_cmpxchg( (volatile __global unsigned int *)addr, expected.u32, next.u32);
+    } while( current.u32 != expected.u32 );
+}
+
 int GetWeightAndBiasOffset(int layerId, __global const int* layerSizes)
 {
     int offset = 0;
@@ -182,10 +197,10 @@ __kernel void trainingBackwardPass(__global const int* config,
         delta_k *= ActivationFunctionPrime(activationFunctionId, zValue);
     }
 
-    const int gradientBaseOffset = trainingSample * totalWeightAndBiasCount + GetWeightAndBiasOffset(layerId, layerNeuronCountBegin) + neuronId * (weightsPerNeuron + 1);
+    const int gradientBaseOffset = GetWeightAndBiasOffset(layerId, layerNeuronCountBegin) + neuronId * (weightsPerNeuron + 1);
     for(int i = 0; i < weightsPerNeuron; ++i)
-        gradient[gradientBaseOffset + i] = delta_k * prevActivations[i]; //Note: this is a global read-write, but it only happens once per value in one pass
-    gradient[gradientBaseOffset + weightsPerNeuron] = delta_k;
+        atomicAdd_g_f(gradient + gradientBaseOffset + i, delta_k * prevActivations[i]);
+    atomicAdd_g_f(gradient + gradientBaseOffset + weightsPerNeuron, delta_k );
 
     if ( layerId != 0 )
         delta_k_vector[delta_k_write_offset + neuronId] = delta_k;
