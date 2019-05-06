@@ -14,13 +14,14 @@ namespace Mademy.OpenCL
             public IMem buffer;
             public int bufferSizeInBytes;
             public MemFlags flags;
-
+            public static int allocatedMemory = 0;
 
             public MemoryAllocation(IMem buffer, int size, MemFlags flags)
             {
                 this.buffer = buffer;
                 this.bufferSizeInBytes = size;
                 this.flags = flags;
+                allocatedMemory += bufferSizeInBytes;
             }
 
             ~MemoryAllocation()
@@ -32,6 +33,7 @@ namespace Mademy.OpenCL
             {
                 if (buffer != null)
                 {
+                    allocatedMemory -= bufferSizeInBytes;
                     Cl.ReleaseMemObject(buffer);
                     buffer = null;
                 }
@@ -275,5 +277,6 @@ namespace Mademy.OpenCL
             }
         }
 
+        public int GetUsedMemory() { return MemoryAllocation.allocatedMemory; }
     }
 }
