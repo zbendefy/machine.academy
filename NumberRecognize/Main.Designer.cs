@@ -1,6 +1,6 @@
 ﻿namespace NumberRecognize
 {
-    partial class Form1
+    partial class Main
     {
         /// <summary>
         /// Required designer variable.
@@ -343,10 +343,10 @@
             this.numLambda.Size = new System.Drawing.Size(82, 20);
             this.numLambda.TabIndex = 22;
             this.numLambda.Value = new decimal(new int[] {
-            5,
+            1,
             0,
             0,
-            65536});
+            0});
             // 
             // label6
             // 
@@ -376,10 +376,10 @@
             this.numLearningRate.Size = new System.Drawing.Size(82, 20);
             this.numLearningRate.TabIndex = 20;
             this.numLearningRate.Value = new decimal(new int[] {
-            1,
+            25,
             0,
             0,
-            65536});
+            131072});
             // 
             // label5
             // 
@@ -408,7 +408,7 @@
             this.numMiniBatchSize.Size = new System.Drawing.Size(82, 20);
             this.numMiniBatchSize.TabIndex = 18;
             this.numMiniBatchSize.Value = new decimal(new int[] {
-            2000,
+            250,
             0,
             0,
             0});
@@ -443,7 +443,7 @@
             this.label2.TabIndex = 15;
             this.label2.Text = "Training parameters";
             // 
-            // Form1
+            // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -463,7 +463,7 @@
             this.Controls.Add(this.pictureBox1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.MinimizeBox = false;
-            this.Name = "Form1";
+            this.Name = "Main";
             this.Text = "Number recognize using Neural Network";
             this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();

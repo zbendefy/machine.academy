@@ -11,10 +11,10 @@ using static Mademy.Network;
 
 namespace NumberRecognize
 {
-    public partial class Form2 : Form
+    public partial class TrainingWindow : Form
     {
         TrainingPromise trainingPromise;
-        public Form2(TrainingPromise _trainingPromise)
+        public TrainingWindow(TrainingPromise _trainingPromise)
         {
             InitializeComponent();
             trainingPromise = _trainingPromise;

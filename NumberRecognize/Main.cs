@@ -11,16 +11,16 @@ using System.Windows.Forms;
 
 namespace NumberRecognize
 {
-    public partial class Form1 : Form
+    public partial class Main : Form
     {
         private MathLib mathLib = null;
         private Network network = null;
         Bitmap bitmap;
         private Network.TrainingPromise trainingPromise = null;
         Timer trainingtimer = new Timer();
-        Form2 progressDialog = null;
+        TrainingWindow progressDialog = null;
 
-        public Form1()
+        public Main()
         {
             InitializeComponent();
         }
@@ -69,9 +69,8 @@ namespace NumberRecognize
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(bitmap.Size.Width * bitmap.Size.Height);
-            layerConfig.Add(512);
-            layerConfig.Add(512);
-            layerConfig.Add(512);
+            layerConfig.Add(256);
+            layerConfig.Add(256);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -124,7 +123,7 @@ namespace NumberRecognize
             }
         }
 
-        private void LoadTestDataFromFiles(List<TrainingSuite.TrainingData> trainingData, String labelFileName, String imgFileName)
+        private void LoadTestDataFromFiles(List<TrainingSuite.TrainingData> trainingData, String labelFileName, String imgFileName, Action<int> progressHandler = null)
         {
             var labelData = System.IO.File.ReadAllBytes(labelFileName);
             int labelDataOffset = 8; //first 2x32 bits are not interesting for us.
@@ -149,6 +148,15 @@ namespace NumberRecognize
                         //bitmap.SetPixel(k, j, Color.FromArgb(255, 255- pixelColor, 255 - pixelColor, 255 - pixelColor));
                     }
                 }
+
+                if ( progressHandler != null)
+                {
+                    if (i % 200 == 0)
+                    {
+                        progressHandler(((i - labelDataOffset)*100) / (labelData.Length-labelDataOffset)); 
+                    }
+                }
+
                 /*
                 pictureBox1.Refresh();
                 System.Threading.Thread.Sleep(100);*/
@@ -184,9 +192,20 @@ namespace NumberRecognize
                 return;
             }
 
+            LoadingWindow wnd = new LoadingWindow();
+            wnd.Text = "Loading training data";
+
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
-            LoadTestDataFromFiles(trainingData, labelFile, imgFile);
+            System.Threading.Thread thread = new System.Threading.Thread(()=> {
+                LoadTestDataFromFiles(trainingData, labelFile, imgFile, (x)=> { wnd.SetProgress(x); });
+                wnd.Finish();
+            });
+
+            thread.Start();
+
+            if (wnd.ShowDialog() != DialogResult.OK)
+                return;
 
             var trainingSuite = new TrainingSuite(trainingData);
             trainingSuite.config.miniBatchSize = (int)numMiniBatchSize.Value;
@@ -211,7 +230,7 @@ namespace NumberRecognize
             trainingPromise = network.Train(mathLib, trainingSuite);
             trainingtimer.Start();
 
-            progressDialog = new Form2(trainingPromise);
+            progressDialog = new TrainingWindow(trainingPromise);
             progressDialog.ShowDialog();
         }
 
@@ -339,21 +358,41 @@ namespace NumberRecognize
 
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
-            LoadTestDataFromFiles(trainingData, labelFile, imgFile);
-
+            LoadingWindow wnd = new LoadingWindow();
+            wnd.Text = "Testing network";
             int success = 0;
-            for (int i = 0; i < trainingData.Count; i++)
-            {
-                var output = network.Compute(mathLib, trainingData[i].input);
 
-                int resultIdx = ClassifyOutput(output);
-                int expectedIdx = ClassifyOutput(trainingData[i].desiredOutput);
-                if (resultIdx == expectedIdx)
-                    ++success;
+            var thread = new System.Threading.Thread(() => {
 
-            }
+                wnd.SetText("Opening training file...");
+                LoadTestDataFromFiles(trainingData, labelFile, imgFile, (x)=> { wnd.SetProgress(x/10); });
+
+                wnd.SetProgress(10);
+
+                wnd.SetText("Testing...");
+                for (int i = 0; i < trainingData.Count; i++)
+                {
+                    var output = network.Compute(mathLib, trainingData[i].input);
+
+                    int resultIdx = ClassifyOutput(output);
+                    int expectedIdx = ClassifyOutput(trainingData[i].desiredOutput);
+                    if (resultIdx == expectedIdx)
+                        ++success;
+
+                    if (i % 200 == 0)
+                        wnd.SetProgress(10 + ((i*90) / trainingData.Count));
+                }
+
+                wnd.Finish();
+            });
+
+            thread.Start();
+
+            if (wnd.ShowDialog() != DialogResult.OK)
+                return;
 
             float perc = ((float)success / (float)trainingData.Count) * 100.0f;
+
             MessageBox.Show("Test completed with " + trainingData.Count + " examples. Successful were: " + success + " (" + perc + "%)", "Test complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

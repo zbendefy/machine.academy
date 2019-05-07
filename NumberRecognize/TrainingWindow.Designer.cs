@@ -1,6 +1,6 @@
 ﻿namespace NumberRecognize
 {
-    partial class Form2
+    partial class TrainingWindow
     {
         /// <summary>
         /// Required designer variable.
