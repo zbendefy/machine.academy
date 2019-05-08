@@ -20,7 +20,7 @@ namespace Mademy
         public MathLib(ComputeDevice clDevice = null)
         {
             if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-finite-math-only");
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-finite-math-only -cl-mad-enable");
         }
 
         /// <summary>
@@ -109,6 +109,12 @@ namespace Mademy
             computeFramework.UnuseMemoryAllocations();
 
             return output;
+        }
+
+        public void CleanupResources()
+        {
+            if (computeFramework != null)
+                computeFramework.CleanupCLResources();
         }
 
         private void CalculateGradientForSingleTrainingExample( Network network, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
@@ -324,6 +330,8 @@ namespace Mademy
                 computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
             }
             #endregion
+
+            computeFramework.FlushCommandBuffer();
 
             unsafe
             {

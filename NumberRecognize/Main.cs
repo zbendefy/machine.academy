@@ -80,6 +80,9 @@ namespace NumberRecognize
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (mathLib != null)
+                mathLib.CleanupResources();
+
             if (comboBox1.SelectedIndex == 0)
                 mathLib = new MathLib();
             else
@@ -431,6 +434,12 @@ namespace NumberRecognize
                 }
             }
             pictureBox1.Refresh();
+        }
+
+        private void Main_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (mathLib != null)
+                mathLib.CleanupResources();
         }
     }
 }

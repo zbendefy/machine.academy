@@ -121,6 +121,7 @@ namespace Mademy.OpenCL
         {
             Event e;
             Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(size), data, 0, null, out e);
+            Cl.ReleaseEvent(e);
         }
 
         public void UploadToMemory(MemoryAllocation mem, int offset, int[] data, bool IsBlocking)
@@ -133,6 +134,7 @@ namespace Mademy.OpenCL
                     Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(data.Length * 4), new IntPtr(dataPtr), 0, null, out e);
                 }
             }
+            Cl.ReleaseEvent(e);
         }
 
         public void UploadToMemory(MemoryAllocation mem, int offset, float[] data, bool IsBlocking)
@@ -145,6 +147,7 @@ namespace Mademy.OpenCL
                     Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(data.Length * 4), new IntPtr(dataPtr), 0, null, out e);
                 }
             }
+            Cl.ReleaseEvent(e);
         }
 
         public MemoryAllocation GetMemoryFor(MemFlags flags, int[] data)
@@ -208,6 +211,7 @@ namespace Mademy.OpenCL
             {
                 Event e;
                 Cl.EnqueueWriteBuffer(commandQueue, candidate.buffer, Bool.False, IntPtr.Zero, new IntPtr(requiredSizeInBytes), data, 0, null, out e);
+                Cl.ReleaseEvent(e);
             }
 
             return candidate;
@@ -231,6 +235,7 @@ namespace Mademy.OpenCL
         {
             Event ev;
             Cl.EnqueueReadBuffer(commandQueue, mem.buffer, isBlocking ? Bool.True : Bool.False, offset, lengthInBytes, output, 0, null, out ev);
+            Cl.ReleaseEvent(ev);
         }
 
         public void BlockUntilAllTasksDone()
@@ -242,6 +247,7 @@ namespace Mademy.OpenCL
         {
             Event ev;
             Cl.EnqueueNDRangeKernel(commandQueue, kernels[kernelName], (uint)globalWorkSize.Length, null, globalWorkSize, localWorkSize, 0, null, out ev);
+            Cl.ReleaseEvent(ev);
         }
 
         private void InitCL(String[] kernelSource, String[] kernelNames, string compileArguments)
@@ -281,5 +287,10 @@ namespace Mademy.OpenCL
         }
 
         public int GetUsedMemory() { return MemoryAllocation.allocatedMemory; }
+
+        internal void FlushCommandBuffer()
+        {
+            Cl.Flush(commandQueue);
+        }
     }
 }

@@ -106,6 +106,9 @@ namespace MademyTest
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (mathLib != null)
+                mathLib.CleanupResources();
+
             if (comboBox1.SelectedIndex == 0)
                 mathLib = new MathLib();
             else
@@ -137,6 +140,12 @@ namespace MademyTest
                 timer1.Stop();
             }
                
+        }
+
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (mathLib != null)
+                mathLib.CleanupResources();
         }
     }
 }
