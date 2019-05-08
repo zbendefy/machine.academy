@@ -16,9 +16,13 @@ namespace NumberRecognize
         private MathLib mathLib = null;
         private Network network = null;
         Bitmap bitmap;
+        Bitmap bitmapDownscaled;
         private Network.TrainingPromise trainingPromise = null;
         Timer trainingtimer = new Timer();
         TrainingWindow progressDialog = null;
+
+        private int targetWidth = 28, targetHeight = 28;
+        private int downScaleWidth = 20, downScaleHeight = 20;
 
         public Main()
         {
@@ -32,7 +36,8 @@ namespace NumberRecognize
 
             mathLib = new MathLib(null);
 
-            bitmap = new Bitmap(28, 28, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
+            bitmap = new Bitmap(targetWidth, targetHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
+            bitmapDownscaled = new Bitmap(downScaleWidth, downScaleHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
             ClearBitmap();
             pictureBox1.Image = bitmap;
 
@@ -68,9 +73,8 @@ namespace NumberRecognize
         private void InitRandomNetwork()
         {
             List<int> layerConfig = new List<int>();
-            layerConfig.Add(bitmap.Size.Width * bitmap.Size.Height);
-            layerConfig.Add(256);
-            layerConfig.Add(256);
+            layerConfig.Add(targetWidth * targetHeight);
+            layerConfig.Add(64);
             layerConfig.Add(10);
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -133,7 +137,7 @@ namespace NumberRecognize
 
             var imageData = System.IO.File.ReadAllBytes(imgFileName);
             int imageDataOffset = 16; //first 4x32 bits are not interesting for us.
-            int imageSize = bitmap.Size.Width * bitmap.Size.Height;
+            int imageSize = targetWidth * targetHeight;
 
             for (int i = labelDataOffset; i < labelData.Length; i++)
             {
@@ -141,11 +145,11 @@ namespace NumberRecognize
                 int label = labelData[i];
                 float[] input = new float[imageSize];
                 float[] output = new float[10];
-                for (int j = 0; j < bitmap.Size.Height; j++)
+                for (int j = 0; j < targetHeight; j++)
                 {
-                    for (int k = 0; k < bitmap.Size.Width; k++)
+                    for (int k = 0; k < targetWidth; k++)
                     {
-                        int offsetInImage = j * bitmap.Size.Width + k;
+                        int offsetInImage = j * targetWidth + k;
                         byte pixelColor = imageData[imageDataOffset + trainingSampleId * imageSize + offsetInImage];
                         input[offsetInImage] = ((float)pixelColor) / 255.0f;
                         //bitmap.SetPixel(k, j, Color.FromArgb(255, 255- pixelColor, 255 - pixelColor, 255 - pixelColor));
@@ -239,11 +243,19 @@ namespace NumberRecognize
 
         private void ClearBitmap()
         {
-            for (int i = 0; i < bitmap.Size.Height; i++)
+            for (int i = 0; i < targetHeight; i++)
             {
-                for (int j = 0; j < bitmap.Size.Width; j++)
+                for (int j = 0; j < targetWidth; j++)
                 {
                     bitmap.SetPixel(j, i, Color.White);
+                }
+            }
+
+            for (int i = 0; i < downScaleHeight; i++)
+            {
+                for (int j = 0; j < downScaleWidth; j++)
+                {
+                    bitmapDownscaled.SetPixel(j, i, Color.White);
                 }
             }
         }
@@ -265,16 +277,58 @@ namespace NumberRecognize
 
         private void paintPixel(MouseEventArgs e)
         {
-            var centerX = (int)Math.Floor(((float)e.X / (float)pictureBox1.Width) * (float)(bitmap.Size.Width - 1));
-            var centerY = (int)Math.Floor(((float)e.Y / (float)pictureBox1.Height) * (float)(bitmap.Size.Height- 1));
+            var centerX = (int)Math.Floor(((float)e.X / (float)pictureBox1.Width) * (float)(bitmapDownscaled.Size.Width - 1));
+            var centerY = (int)Math.Floor(((float)e.Y / (float)pictureBox1.Height) * (float)(bitmapDownscaled.Size.Height- 1));
 
             Action<int, int, int> applyColor = (x,y,c) => {
-                int xClamped = Math.Max(0, Math.Min(x, bitmap.Size.Width - 1));
-                int yClamped = Math.Max(0, Math.Min(y, bitmap.Size.Height - 1));
-                bitmap.SetPixel(xClamped, yClamped, Color.FromArgb(255,c,c,c) );
+                int xClamped = Math.Max(0, Math.Min(x, bitmapDownscaled.Size.Width - 1));
+                int yClamped = Math.Max(0, Math.Min(y, bitmapDownscaled.Size.Height - 1));
+                bitmapDownscaled.SetPixel(xClamped, yClamped, Color.FromArgb(255,c,c,c) );
             };
 
             applyColor(centerX, centerY, 0);
+
+            //upscale
+            for (int i = 0; i < targetHeight; i++)
+            {
+                for (int j = 0; j < targetWidth; j++)
+                {
+                    float xRatio = (float)j / (float)(targetWidth - 1);
+                    float yRatio = (float)i / (float)(targetHeight - 1);
+
+                    float ds_x = xRatio * (float)downScaleWidth;
+                    float ds_y = yRatio * (float)downScaleHeight;
+
+                    float xBias = ds_x - (float)Math.Floor(ds_x);
+                    float yBias = ds_y - (float)Math.Floor(ds_y);
+
+                    int ds_x_int = (int)ds_x;
+                    int ds_y_int = (int)ds_y;
+
+                    bool isAtXBorder = ds_x_int >= downScaleWidth - 1;
+                    bool isAtYBorder = ds_y_int >= downScaleHeight - 1;
+
+                    float v = 1;
+                    float vx = 1;
+                    float vy = 1;
+                    float vxy = 1;
+
+                    if (!isAtXBorder && !isAtYBorder)
+                    {
+                        v = bitmapDownscaled.GetPixel(ds_x_int, ds_y_int).GetBrightness();
+                        vx = bitmapDownscaled.GetPixel(ds_x_int + 1, ds_y_int).GetBrightness();
+                        vy = bitmapDownscaled.GetPixel(ds_x_int, ds_y_int + 1).GetBrightness();
+                        vxy = bitmapDownscaled.GetPixel(ds_x_int + 1, ds_y_int + 1).GetBrightness();
+                    }
+
+                    float b1 = vx * xBias + (1.0f - xBias) * v;
+                    float b2 = vxy * xBias + (1.0f - xBias) * vy;
+                    float b3 = b2 * yBias + (1.0f - yBias) * b1;
+
+                    int c = (int)(b3 * 255.0f);
+                    bitmap.SetPixel(j, i, Color.FromArgb(255, c, c, c));
+                }
+            }
 
             pictureBox1.Refresh();
         }
@@ -308,14 +362,14 @@ namespace NumberRecognize
 
         private void button5_Click(object sender, EventArgs e)
         {
-            float[] input = new float[bitmap.Size.Width * bitmap.Size.Height];
+            float[] input = new float[targetWidth * targetHeight];
 
-            for (int i = 0; i < bitmap.Size.Height; i++)
+            for (int i = 0; i < targetHeight; i++)
             {
-                for (int j = 0; j < bitmap.Size.Width; j++)
+                for (int j = 0; j < targetWidth; j++)
                 {
                     var color = bitmap.GetPixel(j,i).GetBrightness();
-                    input[i * bitmap.Size.Width + j] = 1.0f - color; //in input 1.0f is black, 0.0f is white
+                    input[i * targetWidth + j] = 1.0f - color; //in input 1.0f is black, 0.0f is white
                 }
             }
 
@@ -423,13 +477,13 @@ namespace NumberRecognize
 
             int imgid = (int)numericUpDown2.Value;
             int imageDataOffset = 16; //first 4x32 bits are not interesting for us.
-            int imageSize = bitmap.Size.Width * bitmap.Size.Height;
+            int imageSize = targetWidth * targetHeight;
 
-            for (int i = 0; i < bitmap.Size.Height; i++)
+            for (int i = 0; i < targetHeight; i++)
             {
-                for (int j = 0; j < bitmap.Size.Width; j++)
+                for (int j = 0; j < targetWidth; j++)
                 {
-                    int c = 255 - content[imageDataOffset + imageSize * imgid + i * bitmap.Size.Width + j];
+                    int c = 255 - content[imageDataOffset + imageSize * imgid + i * targetWidth + j];
                     bitmap.SetPixel(j, i, Color.FromArgb(255, c, c, c));
                 }
             }
