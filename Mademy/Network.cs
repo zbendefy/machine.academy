@@ -141,18 +141,27 @@ namespace Mademy
                             regularizationTerm2Base = -((trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count)));
                         }
 
+                        bool applyRegularizationTerm2 = trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L1;
+
                         //Apply accumulated gradient to network (Gradient descent)
                         float sizeDivisorAndLearningRate = sizeDivisor * trainingSuite.config.learningRate;
                         for (int i = 0; i < layers.Count; ++i)
                         {
                             var layer = layers[i];
-                            for (int j = 0; j < layer.GetNeuronCount(); ++j)
+                            var weightsPerNeuron = layer.GetWeightsPerNeuron();
+                            var layerNeuronCount = layer.GetNeuronCount();
+                            var weightMx = layer.weightMx;
+                            var biases = layer.biases;
+
+                            for (int j = 0; j < layerNeuronCount; ++j)
                             {
-                                layer.biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
-                                for (int w = 0; w < layer.GetWeightsPerNeuron(); ++w)
+                                var layerGradientWeights = accumulatedGradient[i][j].weights;
+                                biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
+                                for (int w = 0; w < weightsPerNeuron; ++w)
                                 {
-                                    float regularizationTerm2 = regularizationTerm2Base * (float)Math.Sign(layer.weightMx[j, w]);
-                                    layer.weightMx[j, w] = regularizationTerm1 * layer.weightMx[j, w] - regularizationTerm2 - accumulatedGradient[i][j].weights[w] * sizeDivisorAndLearningRate;
+                                    weightMx[j, w] = regularizationTerm1 * weightMx[j, w] - layerGradientWeights[w] * sizeDivisorAndLearningRate;
+                                    if (applyRegularizationTerm2)
+                                        weightMx[j, w] -= regularizationTerm2Base * (float)Math.Sign(weightMx[j, w]);
                                 }
                             }
                         }
