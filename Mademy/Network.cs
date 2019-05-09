@@ -144,30 +144,24 @@ namespace Mademy
                         bool applyRegularizationTerm2 = trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L1;
 
                         //Apply accumulated gradient to network (Gradient descent)
-                        unsafe
+                        float sizeDivisorAndLearningRate = sizeDivisor * trainingSuite.config.learningRate;
+                        for (int i = 0; i < layers.Count; ++i)
                         {
-                            float sizeDivisorAndLearningRate = sizeDivisor * trainingSuite.config.learningRate;
-                            for (int i = 0; i < layers.Count; ++i)
+                            var layer = layers[i];
+                            var weightsPerNeuron = layer.GetWeightsPerNeuron();
+                            var layerNeuronCount = layer.GetNeuronCount();
+                            var weightMx = layer.weightMx;
+                            var biases = layer.biases;
+
+                            for (int j = 0; j < layerNeuronCount; ++j)
                             {
-                                var layer = layers[i];
-                                var weightsPerNeuron = layer.GetWeightsPerNeuron();
-                                var layerNeuronCount = layer.GetNeuronCount();
-                                var biases = layer.biases;
-
-                                fixed (float* weightMx = layer.weightMx)
+                                var layerGradientWeights = accumulatedGradient[i][j].weights;
+                                biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
+                                for (int w = 0; w < weightsPerNeuron; ++w)
                                 {
-
-                                    for (int j = 0; j < layerNeuronCount; ++j)
-                                    {
-                                        var layerGradientWeights = accumulatedGradient[i][j].weights;
-                                        biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
-                                        for (int w = 0; w < weightsPerNeuron; ++w)
-                                        {
-                                            weightMx[j + +w * layerNeuronCount] = regularizationTerm1 * weightMx[j + w * layerNeuronCount] - layerGradientWeights[w] * sizeDivisorAndLearningRate;
-                                            if (applyRegularizationTerm2)
-                                                weightMx[j + w * layerNeuronCount] -= regularizationTerm2Base * (float)Math.Sign(weightMx[j + w * layerNeuronCount]);
-                                        }
-                                    }
+                                    weightMx[j, w] = regularizationTerm1 * weightMx[j, w] - layerGradientWeights[w] * sizeDivisorAndLearningRate;
+                                    if (applyRegularizationTerm2)
+                                        weightMx[j, w] -= regularizationTerm2Base * (float)Math.Sign(weightMx[j, w]);
                                 }
                             }
                         }
