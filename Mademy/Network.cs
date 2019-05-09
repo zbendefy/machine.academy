@@ -161,7 +161,7 @@ namespace Mademy
                                 {
                                     weightMx[j, w] = regularizationTerm1 * weightMx[j, w] - layerGradientWeights[w] * sizeDivisorAndLearningRate;
                                     if (applyRegularizationTerm2)
-                                        weightMx[j, w] -= regularizationTerm2Base * (float)Math.Sign(weightMx[j, w]);
+                                        weightMx[j, w] -= regularizationTerm2Base * Utils.Sign(weightMx[j, w]);
                                 }
                             }
                         }

@@ -23,6 +23,15 @@ namespace Mademy
             }
         }
 
+        public static float Sign(float x)
+        {
+            if (x < 0)
+                return -1;
+            else if (x > 0)
+                return 1;
+            return 0;
+        }
+
         public static List<List<NeuronData>> CreateGradientVector(Network network)
         {
             var ret = new List<List<NeuronData>>();
