@@ -94,7 +94,18 @@ namespace Mademy
         public void AttachName(string _name) { name = _name;  }
 
         public void AttachDescription(string _desc) { description = _desc;  }
-        
+
+        public List<int> GetLayerConfig()
+        {
+            List<int> ret = new List<int>();
+            ret.Add(layers.First().GetWeightsPerNeuron());
+            foreach (var item in layers)
+            {
+                ret.Add(item.GetNeuronCount());
+            }
+            return ret;
+        }
+
         public TrainingPromise Train(MathLib mathLib, TrainingSuite trainingSuite)
         {
             if (trainingPromise != null)

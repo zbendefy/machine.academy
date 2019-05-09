@@ -59,6 +59,8 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
+            this.lblnetcfg = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numEpoch)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
@@ -117,7 +119,7 @@
             // 
             this.button4.Location = new System.Drawing.Point(3, 283);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(208, 23);
+            this.button4.Size = new System.Drawing.Size(274, 23);
             this.button4.TabIndex = 4;
             this.button4.Text = "Train network";
             this.button4.UseVisualStyleBackColor = true;
@@ -179,7 +181,7 @@
             // 
             // numEpoch
             // 
-            this.numEpoch.Location = new System.Drawing.Point(129, 40);
+            this.numEpoch.Location = new System.Drawing.Point(151, 40);
             this.numEpoch.Maximum = new decimal(new int[] {
             10000,
             0,
@@ -191,7 +193,7 @@
             0,
             0});
             this.numEpoch.Name = "numEpoch";
-            this.numEpoch.Size = new System.Drawing.Size(82, 20);
+            this.numEpoch.Size = new System.Drawing.Size(115, 20);
             this.numEpoch.TabIndex = 10;
             this.numEpoch.Value = new decimal(new int[] {
             10,
@@ -238,6 +240,8 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.lblnetcfg);
+            this.panel1.Controls.Add(this.label10);
             this.panel1.Controls.Add(this.label9);
             this.panel1.Controls.Add(this.comboCostFunction);
             this.panel1.Controls.Add(this.label8);
@@ -256,7 +260,7 @@
             this.panel1.Controls.Add(this.button4);
             this.panel1.Location = new System.Drawing.Point(737, 12);
             this.panel1.Name = "panel1";
-            this.panel1.Size = new System.Drawing.Size(223, 309);
+            this.panel1.Size = new System.Drawing.Size(280, 309);
             this.panel1.TabIndex = 14;
             // 
             // label9
@@ -276,9 +280,9 @@
             this.comboCostFunction.Items.AddRange(new object[] {
             "Mean Squared",
             "Cross Entropy"});
-            this.comboCostFunction.Location = new System.Drawing.Point(129, 191);
+            this.comboCostFunction.Location = new System.Drawing.Point(151, 191);
             this.comboCostFunction.Name = "comboCostFunction";
-            this.comboCostFunction.Size = new System.Drawing.Size(82, 21);
+            this.comboCostFunction.Size = new System.Drawing.Size(115, 21);
             this.comboCostFunction.TabIndex = 27;
             // 
             // label8
@@ -296,7 +300,7 @@
             this.checkShuffle.AutoSize = true;
             this.checkShuffle.Checked = true;
             this.checkShuffle.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.checkShuffle.Location = new System.Drawing.Point(196, 171);
+            this.checkShuffle.Location = new System.Drawing.Point(151, 171);
             this.checkShuffle.Name = "checkShuffle";
             this.checkShuffle.Size = new System.Drawing.Size(15, 14);
             this.checkShuffle.TabIndex = 25;
@@ -320,9 +324,9 @@
             "None",
             "L1",
             "L2"});
-            this.comboRegularization.Location = new System.Drawing.Point(129, 118);
+            this.comboRegularization.Location = new System.Drawing.Point(151, 118);
             this.comboRegularization.Name = "comboRegularization";
-            this.comboRegularization.Size = new System.Drawing.Size(82, 21);
+            this.comboRegularization.Size = new System.Drawing.Size(115, 21);
             this.comboRegularization.TabIndex = 23;
             // 
             // numLambda
@@ -333,14 +337,14 @@
             0,
             0,
             131072});
-            this.numLambda.Location = new System.Drawing.Point(129, 145);
+            this.numLambda.Location = new System.Drawing.Point(151, 145);
             this.numLambda.Maximum = new decimal(new int[] {
             10000,
             0,
             0,
             0});
             this.numLambda.Name = "numLambda";
-            this.numLambda.Size = new System.Drawing.Size(82, 20);
+            this.numLambda.Size = new System.Drawing.Size(115, 20);
             this.numLambda.TabIndex = 22;
             this.numLambda.Value = new decimal(new int[] {
             1,
@@ -366,14 +370,14 @@
             0,
             0,
             131072});
-            this.numLearningRate.Location = new System.Drawing.Point(129, 92);
+            this.numLearningRate.Location = new System.Drawing.Point(151, 92);
             this.numLearningRate.Maximum = new decimal(new int[] {
             10000,
             0,
             0,
             0});
             this.numLearningRate.Name = "numLearningRate";
-            this.numLearningRate.Size = new System.Drawing.Size(82, 20);
+            this.numLearningRate.Size = new System.Drawing.Size(115, 20);
             this.numLearningRate.TabIndex = 20;
             this.numLearningRate.Value = new decimal(new int[] {
             25,
@@ -393,7 +397,7 @@
             // 
             // numMiniBatchSize
             // 
-            this.numMiniBatchSize.Location = new System.Drawing.Point(129, 66);
+            this.numMiniBatchSize.Location = new System.Drawing.Point(151, 66);
             this.numMiniBatchSize.Maximum = new decimal(new int[] {
             10000,
             0,
@@ -405,7 +409,7 @@
             0,
             0});
             this.numMiniBatchSize.Name = "numMiniBatchSize";
-            this.numMiniBatchSize.Size = new System.Drawing.Size(82, 20);
+            this.numMiniBatchSize.Size = new System.Drawing.Size(115, 20);
             this.numMiniBatchSize.TabIndex = 18;
             this.numMiniBatchSize.Value = new decimal(new int[] {
             250,
@@ -443,11 +447,30 @@
             this.label2.TabIndex = 15;
             this.label2.Text = "Training parameters";
             // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label10.Location = new System.Drawing.Point(9, 243);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(82, 13);
+            this.label10.TabIndex = 29;
+            this.label10.Text = "Network config:";
+            // 
+            // lblnetcfg
+            // 
+            this.lblnetcfg.AutoSize = true;
+            this.lblnetcfg.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.lblnetcfg.Location = new System.Drawing.Point(3, 256);
+            this.lblnetcfg.Name = "lblnetcfg";
+            this.lblnetcfg.Size = new System.Drawing.Size(0, 13);
+            this.lblnetcfg.TabIndex = 30;
+            // 
             // Main
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(960, 325);
+            this.ClientSize = new System.Drawing.Size(1029, 325);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.numericUpDown2);
             this.Controls.Add(this.button8);
@@ -513,6 +536,8 @@
         private System.Windows.Forms.CheckBox checkShuffle;
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.ComboBox comboCostFunction;
+        private System.Windows.Forms.Label lblnetcfg;
+        private System.Windows.Forms.Label label10;
     }
 }
 

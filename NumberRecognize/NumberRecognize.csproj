@@ -86,6 +86,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="NetworkConfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="NetworkConfig.Designer.cs">
+      <DependentUpon>NetworkConfig.cs</DependentUpon>
+    </Compile>
     <Compile Include="LoadingWindow.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -106,6 +112,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="NetworkConfig.resx">
+      <DependentUpon>NetworkConfig.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="LoadingWindow.resx">
       <DependentUpon>LoadingWindow.cs</DependentUpon>
     </EmbeddedResource>

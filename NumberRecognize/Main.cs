@@ -20,6 +20,7 @@ namespace NumberRecognize
         private Network.TrainingPromise trainingPromise = null;
         Timer trainingtimer = new Timer();
         TrainingWindow progressDialog = null;
+        NetworkConfig layerConfWindow = new NetworkConfig();
 
         private int targetWidth = 28, targetHeight = 28;
         private int downScaleWidth = 20, downScaleHeight = 20;
@@ -72,12 +73,10 @@ namespace NumberRecognize
 
         private void InitRandomNetwork()
         {
-            List<int> layerConfig = new List<int>();
-            layerConfig.Add(targetWidth * targetHeight);
-            layerConfig.Add(64);
-            layerConfig.Add(10);
+            List<int> layerConfig = layerConfWindow.GetLayerConfig();
 
             network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
+            lblnetcfg.Text = String.Join("x", network.GetLayerConfig());
             network.AttachName("MNIST learning DNN");
             network.AttachDescription("MNIST learning DNN using " + layerConfig.Count + " layers in structure: (" + string.Join(", ", layerConfig) + " ). Creation date: " + DateTime.Now.ToString() );
         }
@@ -95,6 +94,9 @@ namespace NumberRecognize
 
         private void button3_Click(object sender, EventArgs e)
         {
+            if (layerConfWindow.ShowDialog() != DialogResult.OK)
+                return;
+
             InitRandomNetwork();
         }
 
@@ -122,6 +124,8 @@ namespace NumberRecognize
                     string file = System.IO.File.ReadAllText(openFileDialog1.FileName);
                     var newNetwork = Network.LoadTrainingDataFromJSON(file);
                     network = newNetwork;
+
+                    lblnetcfg.Text = String.Join("x", network.GetLayerConfig());
                 }
                 catch (Exception exc)
                 {
