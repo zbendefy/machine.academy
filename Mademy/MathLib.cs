@@ -20,7 +20,7 @@ namespace Mademy
         public MathLib(ComputeDevice clDevice = null)
         {
             if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-finite-math-only -cl-mad-enable");
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-mad-enable");
         }
 
         /// <summary>
