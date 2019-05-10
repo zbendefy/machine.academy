@@ -1,4 +1,5 @@
 ﻿using Mademy;
+using Mademy.OpenCL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;

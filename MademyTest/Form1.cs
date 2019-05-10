@@ -1,4 +1,5 @@
 ﻿using Mademy;
+using Mademy.OpenCL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -112,7 +113,7 @@ namespace MademyTest
             if (comboBox1.SelectedIndex == 0)
                 mathLib = new MathLib();
             else
-                mathLib = new MathLib( ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1] );
+                mathLib = new MathLib(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1] );
         }
 
         private void label1_Click(object sender, EventArgs e)

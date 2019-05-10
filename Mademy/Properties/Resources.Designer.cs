@@ -62,24 +62,34 @@ namespace Mademy.Properties {
         
         /// <summary>
         ///   Looks up a localized string similar to 
-        ///float ActivationFunction(float x, int functionId)
+        ///float ActivationFunction(int functionId, float x)
         ///{
         ///	switch(functionId)
         ///	{
-        ///		case 1:
+        ///		case 1: //Sigmoid
         ///			return 1.0f/(1.0f + exp(-x));
-        ///		case 0:
+        ///		case 0: //Passtrough
         ///		default:
         ///			return x;
         ///	}
         ///}
         ///
-        ///
-        ///__kernel void calcLayer(__global const float* weightMx, __global const float* biases, __global const float* prevActivation, __global const int* config, __global float* output) 
+        ///float ActivationFunctionPrime(int functionId, float x)
         ///{
-        ///    const int rowCount = config[0]; //number of neurons
-        ///    const int colCount = config[1]; //weights-per-neurons
-        ///    const int activationFunctionId = conf [rest of string was truncated]&quot;;.
+        ///	switch(functionId)
+        ///	{
+        ///		case 1: //Sigmoid
+        ///        {
+        ///			const float sigm = 1.0f/(1.0f + exp(-x));
+        ///            return sigm * (1.0f - sigm);
+        ///        }
+        ///		case 0: //Passtrough
+        ///		default:
+        ///			return 0;
+        ///	}
+        ///}
+        ///
+        ///float CostFunctionDelta(int costFunctionId, [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string CLKernel {
             get {

@@ -6,7 +6,7 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Mademy
+namespace Mademy.OpenCL
 {
     class CLSourceProvider
     {

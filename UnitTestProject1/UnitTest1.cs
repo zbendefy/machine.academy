@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using Mademy;
+using Mademy.OpenCL;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UnitTestProject1

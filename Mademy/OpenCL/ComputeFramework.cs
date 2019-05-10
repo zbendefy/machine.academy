@@ -14,7 +14,7 @@ namespace Mademy.OpenCL
             public IMem buffer;
             public int bufferSizeInBytes;
             public MemFlags flags;
-            public static int allocatedMemory = 0;
+            private static int allocatedMemory = 0;
 
             public MemoryAllocation(IMem buffer, int size, MemFlags flags)
             {
@@ -37,6 +37,10 @@ namespace Mademy.OpenCL
                     Cl.ReleaseMemObject(buffer);
                     buffer = null;
                 }
+            }
+            internal static int GetUsedMemory()
+            {
+                return allocatedMemory;
             }
         }
 
@@ -172,7 +176,7 @@ namespace Mademy.OpenCL
             }
         }
 
-        public MemoryAllocation GetMemoryFor(int requiredSizeInBytes, MemFlags flags, IntPtr data)
+        public MemoryAllocation GetMemoryFor(int requiredSizeInBytes, MemFlags flags, IntPtr data )
         {
             if (!IsInitialized())
                 return null;
@@ -207,7 +211,7 @@ namespace Mademy.OpenCL
                 usedMemoryAllocations.Add(candidate);
             }
 
-            if (flags.HasFlag(MemFlags.CopyHostPtr))
+            if (flags.HasFlag(MemFlags.CopyHostPtr) && data != IntPtr.Zero)
             {
                 Event e;
                 Cl.EnqueueWriteBuffer(commandQueue, candidate.buffer, Bool.False, IntPtr.Zero, new IntPtr(requiredSizeInBytes), data, 0, null, out e);
@@ -286,7 +290,7 @@ namespace Mademy.OpenCL
             }
         }
 
-        public int GetUsedMemory() { return MemoryAllocation.allocatedMemory; }
+        public int GetUsedMemory() { return MemoryAllocation.GetUsedMemory(); }
 
         internal void FlushCommandBuffer()
         {
