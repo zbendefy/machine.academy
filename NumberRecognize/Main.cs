@@ -123,7 +123,7 @@ namespace NumberRecognize
                 try
                 {
                     string file = System.IO.File.ReadAllText(openFileDialog1.FileName);
-                    var newNetwork = Network.LoadTrainingDataFromJSON(file);
+                    var newNetwork = Network.CreateNetworkFromJSON(file);
                     network = newNetwork;
 
                     lblnetcfg.Text = String.Join("x", network.GetLayerConfig());

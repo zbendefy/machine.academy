@@ -279,7 +279,7 @@ namespace Mademy
             return output;
         }
 
-        public static Network LoadTrainingDataFromJSON(string jsonData)
+        public static Network CreateNetworkFromJSON(string jsonData)
         {
             return JsonConvert.DeserializeObject<Network>(jsonData);
         }

@@ -121,34 +121,36 @@ namespace Mademy.OpenCL
 
         public bool IsInitialized() { return hasClInitialized; }
 
-        public void UploadToMemory(MemoryAllocation mem, int offset, int size, IntPtr data, bool IsBlocking)
+        public void UploadToMemory(MemoryAllocation mem, int offsetInBytes, int sizeInBytes, IntPtr data, bool IsBlocking)
         {
             Event e;
-            Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(size), data, 0, null, out e);
+            Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offsetInBytes), new IntPtr(sizeInBytes), data, 0, null, out e);
             Cl.ReleaseEvent(e);
         }
 
-        public void UploadToMemory(MemoryAllocation mem, int offset, int[] data, bool IsBlocking)
+        public void UploadToMemory(MemoryAllocation mem, int offset, int[] data, bool IsBlocking, int size = -1)
         {
+            int uploadSize = size < 0 ? (data.Length * 4) : size * 4;
             Event e;
             unsafe
             {
                 fixed (int* dataPtr = data)
                 {
-                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(data.Length * 4), new IntPtr(dataPtr), 0, null, out e);
+                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset*4), new IntPtr(uploadSize), new IntPtr(dataPtr), 0, null, out e);
                 }
             }
             Cl.ReleaseEvent(e);
         }
 
-        public void UploadToMemory(MemoryAllocation mem, int offset, float[] data, bool IsBlocking)
+        public void UploadToMemory(MemoryAllocation mem, int offset, float[] data, bool IsBlocking, int size = -1)
         {
+            int uploadSize = size < 0 ? (data.Length * 4) : size * 4;
             Event e;
             unsafe
             {
                 fixed (float* dataPtr = data)
                 {
-                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset), new IntPtr(data.Length * 4), new IntPtr(dataPtr), 0, null, out e);
+                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset*4), new IntPtr(uploadSize), new IntPtr(dataPtr), 0, null, out e);
                 }
             }
             Cl.ReleaseEvent(e);

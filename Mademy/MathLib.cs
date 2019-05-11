@@ -13,14 +13,26 @@ namespace Mademy
     public class MathLib
     {
         private ComputeFramework computeFramework = null;
+        private DeviceConfig deviceConfig;
         private static readonly string calcLayerKernel = "calcSingleLayer";
         private static readonly string forwardPass = "trainingForwardPass";
         private static readonly string backwardPassKernel = "trainingBackwardPass";
 
-        public MathLib(ComputeDevice clDevice = null)
+        public class DeviceConfig
         {
+            public int idealWorkgroupSizeX = 8;
+            public int idealWorkgroupSizeY = 8;
+            public string compileOptions = "-cl-mad-enable -cl-no-signed-zeros";
+        }
+
+        public MathLib(ComputeDevice clDevice = null, DeviceConfig _deviceConfig = null)
+        {
+            deviceConfig = _deviceConfig;
+            if (deviceConfig == null)
+                deviceConfig = new DeviceConfig();
+
             if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , "-cl-mad-enable -cl-no-signed-zeros");
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , deviceConfig.compileOptions);
         }
 
         /// <summary>
@@ -283,16 +295,20 @@ namespace Mademy
             computeFramework.SetKernelArg(forwardPass, 2, mem_InputActivations);
             computeFramework.SetKernelArg(forwardPass, 3, mem_weightsAndBiases);
 
-            var localWorkGroupSize = new IntPtr[] { new IntPtr(8), new IntPtr(8) };
+            int[] layerIndexBuffer = new int[network.layers.Count];
+            for (int i = 0; i < layerIndexBuffer.Length; ++i)
+                layerIndexBuffer[i] = i;
+
+            var localWorkGroupSize = new IntPtr[] { new IntPtr(deviceConfig.idealWorkgroupSizeX), new IntPtr(deviceConfig.idealWorkgroupSizeY) }; 
             var globalWorkSize = new IntPtr[] { new IntPtr(0)
                 , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
 
             #region Forward pass
-            for (int i = 0; i < network.layers.Count; i++)
+            for (int i = 0; i < network.layers.Count; ++i)
             {
                 if (i > 0)
                 {
-                    computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, new int[] { i }, false); //Update layer index to be processed by the kernel
+                    computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
                 }
 
                 globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
@@ -326,7 +342,8 @@ namespace Mademy
             for (int i = network.layers.Count - 1; i >= 0; --i)
             {
                 globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
-                computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, new int[] { i }, false); //Update layer index to be processed by the kernel
+                if ( i != network.layers.Count - 1)
+                    computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
                 computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
             }
             #endregion

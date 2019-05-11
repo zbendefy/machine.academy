@@ -39,8 +39,8 @@ namespace UnitTestProject1
 
             Network networkReference = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
             var jsonData = networkReference.GetTrainingDataJSON();
-            Network networkCpuTrained = Network.LoadTrainingDataFromJSON(jsonData);
-            Network networkOpenCLTrained = Network.LoadTrainingDataFromJSON(jsonData);
+            Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
+            Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
             MathLib cpuCalculator = new MathLib();
             MathLib openCLCalculator = new MathLib(ComputeDevice.GetDevices()[0]);
@@ -99,8 +99,8 @@ namespace UnitTestProject1
 
             Network networkReference = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
             var jsonData = networkReference.GetTrainingDataJSON();
-            Network networkCpuTrained = Network.LoadTrainingDataFromJSON(jsonData);
-            Network networkOpenCLTrained = Network.LoadTrainingDataFromJSON(jsonData);
+            Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
+            Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
             MathLib cpuCalculator = new MathLib();
             MathLib openCLCalculator = new MathLib(ComputeDevice.GetDevices()[0]);

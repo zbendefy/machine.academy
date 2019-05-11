@@ -29,8 +29,7 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
-            layerConfig.Add(512);
-            layerConfig.Add(512);
+            layerConfig.Add(123);
             layerConfig.Add(5);
 
             solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -67,7 +66,7 @@ namespace MademyTest
 
         private void button3_Click(object sender, EventArgs e)
         {
-            solver = Network.LoadTrainingDataFromJSON(textBox1.Text);
+            solver = Network.CreateNetworkFromJSON(textBox1.Text);
         }
 
         private void button4_Click(object sender, EventArgs e)
