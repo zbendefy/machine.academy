@@ -136,7 +136,7 @@ namespace Mademy.OpenCL
             {
                 fixed (int* dataPtr = data)
                 {
-                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset*4), new IntPtr(uploadSize), new IntPtr(dataPtr), 0, null, out e);
+                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, IntPtr.Zero, new IntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out e);
                 }
             }
             Cl.ReleaseEvent(e);
@@ -150,7 +150,7 @@ namespace Mademy.OpenCL
             {
                 fixed (float* dataPtr = data)
                 {
-                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offset*4), new IntPtr(uploadSize), new IntPtr(dataPtr), 0, null, out e);
+                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, IntPtr.Zero, new IntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out e);
                 }
             }
             Cl.ReleaseEvent(e);
