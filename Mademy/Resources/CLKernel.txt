@@ -41,7 +41,7 @@ float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, f
 __kernel void calcSingleLayer(__global const float* weightMx, 
                               __global const float* biases, 
                               __global const float* prevActivation, 
-                              __global const int* config, 
+                              __constant const int* config, 
                               __global float* output) 
 {
     const int rowCount = config[0]; //number of neurons
@@ -78,7 +78,7 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
     } while( current.u32 != expected.u32 );
 }
 
-int GetWeightAndBiasOffset(int layerId, __global const int* layerSizes)
+int GetWeightAndBiasOffset(int layerId, __constant const int* layerSizes)
 {
     int offset = 0;
     for(int i = 0; i < layerId; ++i){
@@ -87,7 +87,7 @@ int GetWeightAndBiasOffset(int layerId, __global const int* layerSizes)
     return offset;
 }
 
-int GetActivationLayerOffset(int layerId, __global const int* layerSizes)
+int GetActivationLayerOffset(int layerId, __constant const int* layerSizes)
 {
     int offset = 0;
     for(int i = 0; i < layerId; ++i){
@@ -96,7 +96,7 @@ int GetActivationLayerOffset(int layerId, __global const int* layerSizes)
     return offset;
 }
 
-__kernel void trainingForwardPass(__global const int* config, 
+__kernel void trainingForwardPass(__constant const int* config, 
                                   __global float* activationsAndZValues, 
                                   __global const float* inputValues, 
                                   __global const float* weightsAndBiases) 
@@ -108,7 +108,7 @@ __kernel void trainingForwardPass(__global const int* config,
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
     const int weightsPerNeuron = config[8 + layerId]; //number of weights per neurons on the current layer
     const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
-    __global const int* layerNeuronCountBegin = config+8;
+    __constant const int* layerNeuronCountBegin = config+8;
 
     const int neuronId = get_global_id(0);
     const int trainingSample = get_global_id(1);
@@ -138,7 +138,7 @@ __kernel void trainingForwardPass(__global const int* config,
     activationsAndZValues[activationOffset+neuronId] = ActivationFunction(activationFunctionId, acc);
 }
 
-__kernel void trainingBackwardPass(__global const int* config,
+__kernel void trainingBackwardPass(__constant const int* config,
                                    __global const float* activationsAndZValues, 
                                    __global float* delta_k_vector, 
                                    __global float* gradient, 
@@ -152,11 +152,11 @@ __kernel void trainingBackwardPass(__global const int* config,
     const int activationFunctionId = config[3]; //which activation function to use
     const int costFunctionId = config[4]; //which cost function to use
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
-    const int totalWeightAndBiasCount = config[6]; //How many weights and biases are in the network in all layers
+    //const int totalWeightAndBiasCount = config[6]; //How many weights and biases are in the network in all layers
     const int deltaKVectorStride = config[7]; //Table size of delta_k vector
     const int weightsPerNeuron = config[8 + layerId]; //number of weights per neurons on the current layer
     const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
-    __global const int* layerNeuronCountBegin = config+8;
+    __constant const int* layerNeuronCountBegin = config+8;
 
     const int neuronId = get_global_id(0);
     const int trainingSample = get_global_id(1);
