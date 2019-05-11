@@ -32,6 +32,7 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.button1 = new System.Windows.Forms.Button();
             this.lblStop = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // label1
@@ -45,7 +46,7 @@
             // 
             // progressBar1
             // 
-            this.progressBar1.Location = new System.Drawing.Point(12, 65);
+            this.progressBar1.Location = new System.Drawing.Point(12, 99);
             this.progressBar1.Name = "progressBar1";
             this.progressBar1.Size = new System.Drawing.Size(314, 23);
             this.progressBar1.TabIndex = 1;
@@ -63,23 +64,33 @@
             // lblStop
             // 
             this.lblStop.AutoSize = true;
-            this.lblStop.Location = new System.Drawing.Point(12, 49);
+            this.lblStop.Location = new System.Drawing.Point(12, 83);
             this.lblStop.Name = "lblStop";
             this.lblStop.Size = new System.Drawing.Size(0, 13);
             this.lblStop.TabIndex = 3;
             // 
-            // Form2
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(12, 48);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(33, 13);
+            this.label2.TabIndex = 4;
+            this.label2.Text = "Time:";
+            // 
+            // TrainingWindow
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(338, 100);
+            this.ClientSize = new System.Drawing.Size(338, 134);
+            this.Controls.Add(this.label2);
             this.Controls.Add(this.lblStop);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.label1);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
-            this.Name = "Form2";
+            this.Name = "TrainingWindow";
             this.Text = "Training";
             this.Load += new System.EventHandler(this.Form2_Load);
             this.ResumeLayout(false);
@@ -93,5 +104,6 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label lblStop;
+        private System.Windows.Forms.Label label2;
     }
 }

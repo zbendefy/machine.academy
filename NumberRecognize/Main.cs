@@ -22,6 +22,7 @@ namespace NumberRecognize
         Timer trainingtimer = new Timer();
         TrainingWindow progressDialog = null;
         NetworkConfig layerConfWindow = new NetworkConfig();
+        DateTime trainingStart;
 
         private int targetWidth = 28, targetHeight = 28;
         private int downScaleWidth = 20, downScaleHeight = 20;
@@ -62,7 +63,10 @@ namespace NumberRecognize
         {
             if (progressDialog != null && trainingPromise != null)
             {
-                progressDialog.UpdateResult(trainingPromise.GetTotalProgress(), trainingPromise.IsReady(), "Training... Epochs done: " + trainingPromise.GetEpochsDone());
+                var timespan = (DateTime.Now - trainingStart);
+                string time = new TimeSpan(timespan.Hours, timespan.Minutes, timespan.Seconds).ToString();
+
+                progressDialog.UpdateResult(trainingPromise.GetTotalProgress(), trainingPromise.IsReady(), "Training... Epochs done: " + trainingPromise.GetEpochsDone(), time);
                 if (trainingPromise.IsReady())
                 {
                     trainingPromise = null;
@@ -239,8 +243,10 @@ namespace NumberRecognize
 
             trainingSuite.config.epochs = (int)numEpoch.Value;
 
+            trainingStart = DateTime.Now;
             trainingPromise = network.Train(mathLib, trainingSuite);
             trainingtimer.Start();
+
 
             progressDialog = new TrainingWindow(trainingPromise);
             progressDialog.ShowDialog();

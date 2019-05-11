@@ -20,7 +20,7 @@ namespace NumberRecognize
             trainingPromise = _trainingPromise;
         }
 
-        public void UpdateResult(float percentage, bool isFinished, string text)
+        public void UpdateResult(float percentage, bool isFinished, string text, string time)
         {
             if (isFinished)
             {
@@ -29,6 +29,7 @@ namespace NumberRecognize
             }
             label1.Text = text;
             progressBar1.Value = (int)(percentage*100);
+            label2.Text = "Time: " + time;
         }
         private void Form2_Load(object sender, EventArgs e)
         {
