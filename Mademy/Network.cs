@@ -134,7 +134,7 @@ namespace Mademy
                         //Calculate the accumulated gradient. Accumulated means, that the gradient has to be divided by the number of samples in the minibatch.
                         List<List<NeuronData>> accumulatedGradient = null;
                         accumulatedGradient = mathLib.CalculateAccumulatedGradientForMinibatch(this, trainingSuite, trainingDataBegin, trainingDataEnd);
-                        float sizeDivisor = 1.0f / (float)(trainingDataEnd - trainingDataBegin);
+                        float sizeDivisor = (float)(trainingDataEnd - trainingDataBegin) / (float)trainingSuite.trainingData.Count;
 
                         //Calculate regularization terms based on the training configuration
                         float regularizationTerm1 = 1.0f;

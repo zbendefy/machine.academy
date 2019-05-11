@@ -238,7 +238,7 @@ namespace Mademy
                 List<int> networkConfigParamsList = new List<int>();
                 /*0*/networkConfigParamsList.Add(0); //layer index to be processed
                 /*1*/networkConfigParamsList.Add(network.layers.Count); //Layer count
-                /*2*/networkConfigParamsList.Add(trainingSamples); //Layer count
+                /*2*/networkConfigParamsList.Add(trainingSamples); //numTrainingSamples
                 /*3*/networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
                 /*4*/networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
                 /*5*/networkConfigParamsList.Add(totalActivationCount); //totalActivationCount

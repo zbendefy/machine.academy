@@ -8,22 +8,23 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 namespace UnitTestProject1
 {
     [TestClass]
-    public class UnitTest1
+    public class ModuleTests
     {
         public void CheckNetworkError(float[] a, float[] b)
         {
-            float error = 0;
+            double error = 0;
 
             if (a.Length != b.Length)
-                Assert.Fail();
+                Assert.Fail("Network output sizes do not match!");
 
             for (int i = 0; i < a.Length; i++)
             {
-                error += Math.Abs(a[i] - b[i]);
+                error += Math.Abs((double)a[i] - (double)b[i]);
             }
 
-            if (error > 0.00001f)
-                Assert.Fail();
+            var meanError = (error / a.Length);
+            if (meanError > 0.001) 
+                Assert.Fail("Networks do not match. Error was: " + meanError);
         }
 
         [TestMethod]
@@ -68,6 +69,7 @@ namespace UnitTestProject1
             TrainingSuite suite = new TrainingSuite(trainingData);
             suite.config.epochs = 1;
             suite.config.shuffleTrainingData = false;
+            suite.config.miniBatchSize = 13;
 
             var promise1 = networkCpuTrained.Train(cpuCalculator, suite);
             var promise2 = networkOpenCLTrained.Train(openCLCalculator, suite);
@@ -110,6 +112,53 @@ namespace UnitTestProject1
             var openCLTrainedOutput = networkOpenCLTrained.Compute(cpuCalculator, testInput);
 
             CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
+        }
+
+
+        [TestMethod]
+        public void TestTrainingRegression()
+        {
+            List<int> layerConfig = new List<int>();
+            layerConfig.Add(5);
+            layerConfig.Add(33);
+            layerConfig.Add(12);
+            layerConfig.Add(51);
+            layerConfig.Add(5);
+
+            Network network = Network.CreateNetworkFromJSON(Properties.Resources.ReferenceNetwork1JSON);
+
+            #region Training
+            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
+            for (int i = 0; i < 1000; i++)
+            {
+                float[] input = new float[layerConfig[0]];
+                float[] desiredOutput = new float[layerConfig[layerConfig.Count - 1]];
+
+                input[(i * 13426) % 5] = 1.0f;
+                desiredOutput[(i * 13426) % 5] = 1.0f;
+
+                trainingData.Add(new TrainingSuite.TrainingData(input, desiredOutput));
+            }
+
+            TrainingSuite suite = new TrainingSuite(trainingData);
+            suite.config.epochs = 2;
+            suite.config.shuffleTrainingData = false;
+            suite.config.miniBatchSize = 13;
+
+            var promise = network.Train(new MathLib(), suite);
+
+            while (!promise.IsReady())
+            {
+                Thread.Sleep(20);
+            }
+            #endregion
+
+            float[] testInput = new float[] {0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
+            var result = network.Compute(new MathLib(), testInput);
+
+            float[] referenceOutput = new float[] { 3.46114769E-11f, 0.139522761f, 3.66372E-05f, 0.391267f, 1.0775824E-06f };
+
+            CheckNetworkError(result, referenceOutput); 
         }
     }
 }

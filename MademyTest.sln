@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mademy", "Mademy\Mademy.csp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NumberRecognize", "NumberRecognize\NumberRecognize.csproj", "{FD052260-5E66-40BE-8C69-AD7B7FCCD22F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ModuleTest", "UnitTestProject1\ModuleTest.csproj", "{FB8E1728-225B-4B25-82BC-F618476023E4}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "UnitTestProject1\Testing.csproj", "{FB8E1728-225B-4B25-82BC-F618476023E4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
