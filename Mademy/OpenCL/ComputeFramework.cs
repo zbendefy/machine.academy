@@ -73,9 +73,7 @@ namespace Mademy.OpenCL
                 OnLowDeviceMemory();
                 buffer = Cl.CreateBuffer(clContext, flags, new IntPtr(byteSize), data, out err);
                 if (err != ErrorCode.Success)
-                {
-                    throw new Exception("Failed to allocate device memory. Error code: " + err.ToString());
-                }
+                    ThrowOnError(err, String.Format("Failed to allocate device memory. Size: {0}", byteSize));
             }
             return new MemoryAllocation(buffer, byteSize, flags);
         }
@@ -124,38 +122,49 @@ namespace Mademy.OpenCL
         public void UploadToMemory(MemoryAllocation mem, int offsetInBytes, int sizeInBytes, IntPtr data, bool IsBlocking)
         {
             Event e;
-            Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offsetInBytes), new IntPtr(sizeInBytes), data, 0, null, out e);
-            Cl.ReleaseEvent(e);
+            var errCodeWrite = Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, new IntPtr(offsetInBytes), new IntPtr(sizeInBytes), data, 0, null, out e);
+            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}", sizeInBytes, mem.bufferSizeInBytes));
+
+            var errCodeEv = Cl.ReleaseEvent(e);
+            ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer, UploadToMemory_1)"));
         }
 
         public void UploadToMemory(MemoryAllocation mem, int offset, int[] data, bool IsBlocking, int size = -1)
         {
             int uploadSize = size < 0 ? (data.Length * 4) : size * 4;
             Event e;
+            ErrorCode errCodeWrite;
             unsafe
             {
                 fixed (int* dataPtr = data)
                 {
-                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, IntPtr.Zero, new IntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out e);
+                    errCodeWrite = Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, IntPtr.Zero, new IntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out e);
                 }
             }
-            Cl.ReleaseEvent(e);
+            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}, offset:{2}", uploadSize, mem.bufferSizeInBytes, offset*4));
+
+            var errCodeEv = Cl.ReleaseEvent(e);
+            ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer, UploadToMemory_2)"));
         }
 
         public void UploadToMemory(MemoryAllocation mem, int offset, float[] data, bool IsBlocking, int size = -1)
         {
             int uploadSize = size < 0 ? (data.Length * 4) : size * 4;
             Event e;
+            ErrorCode errCodeWrite;
             unsafe
             {
                 fixed (float* dataPtr = data)
                 {
-                    Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, IntPtr.Zero, new IntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out e);
+                    errCodeWrite = Cl.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? Bool.True : Bool.False, IntPtr.Zero, new IntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out e);
                 }
             }
-            Cl.ReleaseEvent(e);
-        }
+            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}, offset:{2}", uploadSize, mem.bufferSizeInBytes, offset * 4));
 
+            var errCodeEv = Cl.ReleaseEvent(e);
+            ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer, UploadToMemory_3)"));
+        }
+        
         public MemoryAllocation GetMemoryFor(MemFlags flags, int[] data)
         {
             unsafe
@@ -216,8 +225,11 @@ namespace Mademy.OpenCL
             if (flags.HasFlag(MemFlags.CopyHostPtr) && data != IntPtr.Zero)
             {
                 Event e;
-                Cl.EnqueueWriteBuffer(commandQueue, candidate.buffer, Bool.False, IntPtr.Zero, new IntPtr(requiredSizeInBytes), data, 0, null, out e);
-                Cl.ReleaseEvent(e);
+                var errCodeWrite = Cl.EnqueueWriteBuffer(commandQueue, candidate.buffer, Bool.False, IntPtr.Zero, new IntPtr(requiredSizeInBytes), data, 0, null, out e);
+                ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}", requiredSizeInBytes, candidate.bufferSizeInBytes));
+
+                var errCodeEv = Cl.ReleaseEvent(e);
+                ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer)"));
             }
 
             return candidate;
@@ -232,28 +244,42 @@ namespace Mademy.OpenCL
             usedMemoryAllocations.Clear();
         }
 
+        private void ThrowOnError(ErrorCode err, string message)
+        {
+            if ( err != ErrorCode.Success)
+                throw new Exception(message + " Error code: " + err.ToString());
+        }
+
         public void SetKernelArg(string kernelName, uint idx, MemoryAllocation mem)
         {
-            Cl.SetKernelArg(kernels[kernelName], idx, mem.buffer);
+            var errCode = Cl.SetKernelArg(kernels[kernelName], idx, mem.buffer);
+            ThrowOnError(errCode, String.Format("Failed to set arg #{0} for kernel {1}", idx, kernelName));
         }
 
         public void ReadBuffer(MemoryAllocation mem, bool isBlocking, IntPtr offset, IntPtr lengthInBytes, IntPtr output)
         {
             Event ev;
-            Cl.EnqueueReadBuffer(commandQueue, mem.buffer, isBlocking ? Bool.True : Bool.False, offset, lengthInBytes, output, 0, null, out ev);
-            Cl.ReleaseEvent(ev);
+            var errCodeRead = Cl.EnqueueReadBuffer(commandQueue, mem.buffer, isBlocking ? Bool.True : Bool.False, offset, lengthInBytes, output, 0, null, out ev);
+            ThrowOnError(errCodeRead, String.Format("Failed to enqueue read buffer. Read Size: {0}, Buffer size: {1}", lengthInBytes, mem.bufferSizeInBytes));
+
+            var errCodeEv = Cl.ReleaseEvent(ev);
+            ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueReadBuffer)"));
         }
 
         public void BlockUntilAllTasksDone()
         {
-            Cl.Finish(commandQueue);
+            var errCode = Cl.Finish(commandQueue);
+            ThrowOnError(errCode, String.Format("Failed clFinish() call"));
         }
 
         public void EnqueueKernel(string kernelName, IntPtr[] globalWorkSize, IntPtr[] localWorkSize)
         {
             Event ev;
-            Cl.EnqueueNDRangeKernel(commandQueue, kernels[kernelName], (uint)globalWorkSize.Length, null, globalWorkSize, localWorkSize, 0, null, out ev);
-            Cl.ReleaseEvent(ev);
+            var errCodeRunKernel = Cl.EnqueueNDRangeKernel(commandQueue, kernels[kernelName], (uint)globalWorkSize.Length, null, globalWorkSize, localWorkSize, 0, null, out ev);
+            ThrowOnError(errCodeRunKernel, String.Format("Failed to enqueue kernel {0}.", kernelName));
+
+            var errCodeEv = Cl.ReleaseEvent(ev);
+            ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueNDRangeKernel)"));
         }
 
         private void InitCL(String[] kernelSource, String[] kernelNames, string compileArguments)
