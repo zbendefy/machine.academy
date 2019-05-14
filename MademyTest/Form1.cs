@@ -30,6 +30,7 @@ namespace MademyTest
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
             layerConfig.Add(123);
+            layerConfig.Add(6);
             layerConfig.Add(5);
 
             solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
@@ -89,8 +90,8 @@ namespace MademyTest
             }
 
             var trainingSuite = new TrainingSuite(trainingData);
-            trainingSuite.config.miniBatchSize = 100;
-            trainingSuite.config.epochs = 2;
+            trainingSuite.config.miniBatchSize = 6;
+            trainingSuite.config.epochs = (int)numericUpDown6.Value;
             trainingSuite.config.shuffleTrainingData = false;
 
             trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
@@ -124,12 +125,12 @@ namespace MademyTest
         {
             if (trainingPromise != null)
             {
+                label4.Text = "Epocs: " + trainingPromise.GetEpochsDone();
                 progressBar1.Value = (int)(trainingPromise.GetTotalProgress() * 100.0f);
                 if (trainingPromise.IsReady())
                 {
                     var period = DateTime.Now.Subtract(trainingBegin);
                     label2.Text = "Training done in " + period.TotalSeconds+"s";
-
 
 
                     timer1.Stop();
@@ -146,6 +147,12 @@ namespace MademyTest
         {
             if (mathLib != null)
                 mathLib.CleanupResources();
+        }
+
+        private void button5_Click(object sender, EventArgs e)
+        {
+            if (trainingPromise != null)
+                trainingPromise.StopAtNextEpoch();
         }
     }
 }

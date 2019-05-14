@@ -44,11 +44,16 @@
             this.timer1 = new System.Windows.Forms.Timer(this.components);
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.label2 = new System.Windows.Forms.Label();
+            this.numericUpDown6 = new System.Windows.Forms.NumericUpDown();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label4 = new System.Windows.Forms.Label();
+            this.button5 = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown3)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown4)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown5)).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown6)).BeginInit();
             this.SuspendLayout();
             // 
             // button1
@@ -224,17 +229,71 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(686, 333);
+            this.label2.Location = new System.Drawing.Point(686, 325);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(35, 13);
             this.label2.TabIndex = 13;
             this.label2.Text = "label2";
+            // 
+            // numericUpDown6
+            // 
+            this.numericUpDown6.Location = new System.Drawing.Point(571, 403);
+            this.numericUpDown6.Maximum = new decimal(new int[] {
+            1000000,
+            0,
+            0,
+            0});
+            this.numericUpDown6.Minimum = new decimal(new int[] {
+            1,
+            0,
+            0,
+            0});
+            this.numericUpDown6.Name = "numericUpDown6";
+            this.numericUpDown6.Size = new System.Drawing.Size(102, 20);
+            this.numericUpDown6.TabIndex = 14;
+            this.numericUpDown6.Value = new decimal(new int[] {
+            10,
+            0,
+            0,
+            0});
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(522, 405);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(43, 13);
+            this.label3.TabIndex = 15;
+            this.label3.Text = "Epochs";
+            // 
+            // label4
+            // 
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(799, 341);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(10, 13);
+            this.label4.TabIndex = 16;
+            this.label4.Text = "-";
+            // 
+            // button5
+            // 
+            this.button5.Location = new System.Drawing.Point(721, 386);
+            this.button5.Name = "button5";
+            this.button5.Size = new System.Drawing.Size(75, 23);
+            this.button5.TabIndex = 17;
+            this.button5.Text = "Stop";
+            this.button5.UseVisualStyleBackColor = true;
+            this.button5.Click += new System.EventHandler(this.button5_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(889, 450);
+            this.Controls.Add(this.button5);
+            this.Controls.Add(this.label4);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.numericUpDown6);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.progressBar1);
             this.Controls.Add(this.numericUpDown5);
@@ -258,6 +317,7 @@
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown3)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown4)).EndInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown5)).EndInit();
+            ((System.ComponentModel.ISupportInitialize)(this.numericUpDown6)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -280,6 +340,10 @@
         private System.Windows.Forms.Timer timer1;
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.NumericUpDown numericUpDown6;
+        private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label label4;
+        private System.Windows.Forms.Button button5;
     }
 }
 
