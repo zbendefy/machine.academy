@@ -31,8 +31,8 @@ namespace Mademy
             if (deviceConfig == null)
                 deviceConfig = new DeviceConfig();
 
-            if ( clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel } , deviceConfig.compileOptions);
+            if (clDevice != null)
+                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel }, deviceConfig.compileOptions);
         }
 
         /// <summary>
@@ -53,7 +53,7 @@ namespace Mademy
             return new MathLib(HasComputeFramework() ? computeFramework.GetOpenCLDevice() : null);
         }
 
-        internal float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
+        internal unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
         {
             if (!HasComputeFramework()) //CPU fallback
             {
@@ -73,48 +73,35 @@ namespace Mademy
             }
 
             int matrixRows = weightMx.GetLength(0);
-
-            MemoryAllocation mem_param_weightMx, mem_param_bias, mem_param_prevActivation, mem_param_config, mem_param_output;
-            unsafe
-            {
-                fixed (float* weightArrayPtr = weightMx)
-                {
-                    mem_param_weightMx = computeFramework.GetMemoryFor(weightMx.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(weightArrayPtr));
-                }
-                fixed (float* biasPtr = bias)
-                {
-                    mem_param_bias = computeFramework.GetMemoryFor(bias.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(biasPtr));
-                }
-                fixed (float* prevActivationPtr = prevActivations)
-                {
-                    mem_param_prevActivation = computeFramework.GetMemoryFor(prevActivations.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(prevActivationPtr));
-                }
-
-                int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ sigmoidFunction.GetOpenCLFunctionId() };
-                fixed (int* configPtr = configParams)
-                {
-                    mem_param_config = computeFramework.GetMemoryFor(configParams.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(configPtr));
-                }
-                mem_param_output = computeFramework.GetMemoryFor(matrixRows * 4, MemFlags.WriteOnly, IntPtr.Zero);
-            }
-
-            computeFramework.SetKernelArg(calcLayerKernel, 0, mem_param_weightMx);
-            computeFramework.SetKernelArg(calcLayerKernel, 1, mem_param_bias);
-            computeFramework.SetKernelArg(calcLayerKernel, 2, mem_param_prevActivation);
-            computeFramework.SetKernelArg(calcLayerKernel, 3, mem_param_config);
-            computeFramework.SetKernelArg(calcLayerKernel, 4, mem_param_output);
-
-            int localWorkgroupSize = 32;
-            int globalWorkSize = ExtendGlobalWorkSize(matrixRows, localWorkgroupSize);
-            computeFramework.EnqueueKernel(calcLayerKernel, new IntPtr[] { new IntPtr(globalWorkSize) }, new IntPtr[] { new IntPtr(localWorkgroupSize) });
-
             float[] output = new float[matrixRows];
+            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ sigmoidFunction.GetOpenCLFunctionId() };
 
-            unsafe
+            fixed (int* configPtr = configParams)
             {
-                fixed (float* outputPtr = output)
+                fixed (float* weightArrayPtr = weightMx, biasPtr = bias, prevActivationPtr = prevActivations)
                 {
-                    computeFramework.ReadBuffer(mem_param_output, true, IntPtr.Zero, new IntPtr(matrixRows * 4), new IntPtr(outputPtr));
+                    MemoryAllocation mem_param_weightMx, mem_param_bias, mem_param_prevActivation, mem_param_config, mem_param_output;
+                    mem_param_weightMx = computeFramework.GetMemoryFor(weightMx.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(weightArrayPtr));
+                    mem_param_bias = computeFramework.GetMemoryFor(bias.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(biasPtr));
+                    mem_param_prevActivation = computeFramework.GetMemoryFor(prevActivations.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(prevActivationPtr));
+                    mem_param_config = computeFramework.GetMemoryFor(configParams.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(configPtr));
+                    mem_param_output = computeFramework.GetMemoryFor(matrixRows * 4, MemFlags.WriteOnly, IntPtr.Zero);
+
+                    computeFramework.SetKernelArg(calcLayerKernel, 0, mem_param_weightMx);
+                    computeFramework.SetKernelArg(calcLayerKernel, 1, mem_param_bias);
+                    computeFramework.SetKernelArg(calcLayerKernel, 2, mem_param_prevActivation);
+                    computeFramework.SetKernelArg(calcLayerKernel, 3, mem_param_config);
+                    computeFramework.SetKernelArg(calcLayerKernel, 4, mem_param_output);
+
+                    int localWorkgroupSize = 32;
+                    int globalWorkSize = ExtendGlobalWorkSize(matrixRows, localWorkgroupSize);
+                    computeFramework.EnqueueKernel(calcLayerKernel, new IntPtr[] { new IntPtr(globalWorkSize) }, new IntPtr[] { new IntPtr(localWorkgroupSize) });
+
+
+                    fixed (float* outputPtr = output)
+                    {
+                        computeFramework.ReadBuffer(mem_param_output, true, IntPtr.Zero, new IntPtr(matrixRows * 4), new IntPtr(outputPtr));
+                    }
                 }
             }
 
@@ -129,7 +116,7 @@ namespace Mademy
                 computeFramework.CleanupCLResources();
         }
 
-        private void CalculateGradientForSingleTrainingExample( Network network, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
+        private void CalculateGradientForSingleTrainingExample(Network network, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
         {
             List<float[]> activations = new List<float[]>();
             List<float[]> zValues = new List<float[]>();
@@ -197,7 +184,7 @@ namespace Mademy
 
         internal void FlushWorkingCache()
         {
-            if ( HasComputeFramework())
+            if (HasComputeFramework())
                 computeFramework.FlushWorkingCache();
         }
 
@@ -209,9 +196,9 @@ namespace Mademy
         /// <param name="trainingDataBegin"></param>
         /// <param name="trainingDataEnd"></param>
         /// <returns></returns>
-        internal List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
+        internal unsafe List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
         {
-            //Backpropagation
+            int trainingSamples = trainingDataEnd - trainingDataBegin;
             var ret = Utils.CreateGradientVector(network);
 
             if (!HasComputeFramework()) //CPU fallback
@@ -223,12 +210,12 @@ namespace Mademy
                 return ret;
             }
 
-            int trainingSamples = trainingDataEnd - trainingDataBegin;
 
             int[] networkConfigParams = null;
             int totalWeightAndBiasCount = 0;
             int delta_k_vectorSize = 0;
             int totalActivationCount = 0; //Add 
+            int inputActivationCount = network.layers.First().GetWeightsPerNeuron();
             {
                 foreach (var item in network.layers)
                 {
@@ -236,15 +223,24 @@ namespace Mademy
                 }
 
                 List<int> networkConfigParamsList = new List<int>();
-                /*0*/networkConfigParamsList.Add(0); //layer index to be processed
-                /*1*/networkConfigParamsList.Add(network.layers.Count); //Layer count
-                /*2*/networkConfigParamsList.Add(trainingSamples); //numTrainingSamples
-                /*3*/networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
-                /*4*/networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
-                /*5*/networkConfigParamsList.Add(totalActivationCount); //totalActivationCount
-                /*6*/networkConfigParamsList.Add(0); //totalWeightsAndBiases
-                /*7*/networkConfigParamsList.Add(0); //widestLayerNeuronCount
-                /*8*/networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
+                //0
+                networkConfigParamsList.Add(0); //layer index to be processed
+                //1
+                networkConfigParamsList.Add(network.layers.Count); //Layer count
+                //2
+                networkConfigParamsList.Add(trainingSamples); //numTrainingSamples
+                //3
+                networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
+                //4
+                networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
+                //5
+                networkConfigParamsList.Add(totalActivationCount); //totalActivationCount
+                //6
+                networkConfigParamsList.Add(0); //totalWeightsAndBiases
+                //7
+                networkConfigParamsList.Add(0); //widestLayerNeuronCount
+                //8
+                networkConfigParamsList.Add(network.layers.First().GetWeightsPerNeuron()); //Input count
                 for (int i = 0; i < network.layers.Count; i++)
                 {
                     networkConfigParamsList.Add(network.layers[i].GetNeuronCount()); //Layer neuron count
@@ -259,106 +255,112 @@ namespace Mademy
 
                 networkConfigParams = networkConfigParamsList.ToArray();
             }
-            MemoryAllocation mem_NetworkConfigParams = computeFramework.GetMemoryFor( MemFlags.ReadOnly | MemFlags.CopyHostPtr, networkConfigParams );
-
-            int inputActivationCount = network.layers.First().GetWeightsPerNeuron();
-            float[] inputParameters = new float[trainingSamples * inputActivationCount];
-            for (int i = 0; i < trainingSamples; ++i)
-                Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount * 4);
-            MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, inputParameters);
-
-            ///Contains the whole network's activation values, and Z values for each training sample
-            ///Memory layout for one layer is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
-            ///After that, the next layer's same values are there
-            MemoryAllocation mem_activationsAndZValues = computeFramework.GetMemoryFor(totalActivationCount * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero);
-
-
-            float[] weightsAndBiases = new float[totalWeightAndBiasCount];
-            {
-                int offset = 0;
-                foreach (var layer in network.layers)
-                {
-                    Buffer.BlockCopy(layer.weightMx, 0, weightsAndBiases, offset, layer.weightMx.Length * 4);
-                    offset += layer.weightMx.Length * 4;
-                    Buffer.BlockCopy(layer.biases, 0, weightsAndBiases, offset, layer.biases.Length * 4);
-                    offset += layer.biases.Length * 4;
-                }
-            }
-            MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, weightsAndBiases);
-
-            //delta_k_vector is double buffered (hence the * 2). In a pass, the previous delta_k values are read, and the next ones are written
-            //Memory layout is: [delta_k_vector buffer1 of trainingSample0][delta_k_vector buffer2 of trainingSample0] [delta_k_vector buffer1 of trainingSample1][delta_k_vector buffer2 of trainingSample1] ...
-            MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(Math.Max(1, delta_k_vectorSize * trainingSamples * 2 * 4), MemFlags.ReadWrite, IntPtr.Zero); 
-
-            computeFramework.SetKernelArg(forwardPass, 0, mem_NetworkConfigParams);
-            computeFramework.SetKernelArg(forwardPass, 1, mem_activationsAndZValues);
-            computeFramework.SetKernelArg(forwardPass, 2, mem_InputActivations);
-            computeFramework.SetKernelArg(forwardPass, 3, mem_weightsAndBiases);
-
-            int[] layerIndexBuffer = new int[network.layers.Count];
-            for (int i = 0; i < layerIndexBuffer.Length; ++i)
-                layerIndexBuffer[i] = i;
-
-            var localWorkGroupSize = new IntPtr[] { new IntPtr(deviceConfig.idealWorkgroupSizeX), new IntPtr(deviceConfig.idealWorkgroupSizeY) }; 
-            var globalWorkSize = new IntPtr[] { new IntPtr(0)
-                , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
-
-            #region Forward pass
-            for (int i = 0; i < network.layers.Count; ++i)
-            {
-                if (i > 0)
-                {
-                    computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
-                }
-
-                globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
-                computeFramework.EnqueueKernel(forwardPass, globalWorkSize, localWorkGroupSize);
-                // todo: run forward pass
-            }
-            #endregion
-
-            #region backward pass
 
             float[] desiredOutputs = new float[network.layers.Last().GetNeuronCount() * trainingSamples];
-            int desiredOutputByteSizePerTrainigSample = network.layers.Last().GetNeuronCount() * 4;
-            for (int i = 0; i < trainingSamples; i++)
-                Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
-            var mem_desired_outputs = computeFramework.GetMemoryFor(MemFlags.ReadOnly | MemFlags.CopyHostPtr, desiredOutputs);
+            float[] outputGradient = new float[totalWeightAndBiasCount];//Memory layout is: [weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
+            float[] inputParameters = new float[trainingSamples * inputActivationCount];
+            float[] weightsAndBiases = new float[totalWeightAndBiasCount];
 
-            //Memory layout is:
-            //[weights, biases for trainingsample0, layer0-N][weights, biases for trainingsample1, layer0-N] ...
-            float[] outputGradient = new float[totalWeightAndBiasCount];
-            var mem_param_gradient = computeFramework.GetMemoryFor(MemFlags.ReadWrite | MemFlags.CopyHostPtr, outputGradient);
-
-            computeFramework.SetKernelArg(backwardPassKernel, 0, mem_NetworkConfigParams);
-            computeFramework.SetKernelArg(backwardPassKernel, 1, mem_activationsAndZValues);
-            computeFramework.SetKernelArg(backwardPassKernel, 2, mem_delta_k_vector);
-            computeFramework.SetKernelArg(backwardPassKernel, 3, mem_param_gradient);
-            computeFramework.SetKernelArg(backwardPassKernel, 4, mem_desired_outputs);
-            computeFramework.SetKernelArg(backwardPassKernel, 5, mem_InputActivations);
-            computeFramework.SetKernelArg(backwardPassKernel, 6, mem_weightsAndBiases);
-
-            //Run backward pass for all hidden layers
-            for (int i = network.layers.Count - 1; i >= 0; --i)
+            fixed (int* networkConfigParamsPtr = networkConfigParams)
             {
-                globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
-                if ( i != network.layers.Count - 1)
-                    computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
-                computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
-            }
-            #endregion
-
-            computeFramework.FlushCommandBuffer();
-
-            unsafe
-            {
-                fixed (float* outputPtr = outputGradient)
+                fixed (float* outputGradientPtr = outputGradient, desiredOutputsPtr = desiredOutputs, inputParametersPtr = inputParameters, weightsAndBiasesPtr = weightsAndBiases)
                 {
-                    computeFramework.ReadBuffer(mem_param_gradient, true, new IntPtr(0), new IntPtr(mem_param_gradient.bufferSizeInBytes), new IntPtr(outputPtr));
+                    MemoryAllocation mem_NetworkConfigParams = computeFramework.GetMemoryFor(networkConfigParams.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(networkConfigParamsPtr));
+
+                    for (int i = 0; i < trainingSamples; ++i)
+                        Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].input, 0, inputParameters, i * inputActivationCount * 4, inputActivationCount * 4);
+                    MemoryAllocation mem_InputActivations = computeFramework.GetMemoryFor(inputParameters.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(inputParametersPtr));
+
+                    ///Contains the whole network's activation values, and Z values for each training sample
+                    ///Memory layout for one layer is like this: [...input values...][...first layer's activations...][...second layer's activations]...[last layer's activations][first layer's z values][second layer's zvalues]...[last layer's z values]
+                    ///After that, the next layer's same values are there
+                    MemoryAllocation mem_activationsAndZValues = computeFramework.GetMemoryFor(totalActivationCount * trainingSamples * 2 * 4, MemFlags.ReadWrite, IntPtr.Zero);
+
+                    {
+                        int offset = 0;
+                        foreach (var layer in network.layers)
+                        {
+                            Buffer.BlockCopy(layer.weightMx, 0, weightsAndBiases, offset, layer.weightMx.Length * 4);
+                            offset += layer.weightMx.Length * 4;
+                            Buffer.BlockCopy(layer.biases, 0, weightsAndBiases, offset, layer.biases.Length * 4);
+                            offset += layer.biases.Length * 4;
+                        }
+                    }
+                    MemoryAllocation mem_weightsAndBiases = computeFramework.GetMemoryFor(weightsAndBiases.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(weightsAndBiasesPtr));
+
+                    //delta_k_vector is double buffered (hence the * 2). In a pass, the previous delta_k values are read, and the next ones are written
+                    //Memory layout is: [delta_k_vector buffer1 of trainingSample0][delta_k_vector buffer2 of trainingSample0] [delta_k_vector buffer1 of trainingSample1][delta_k_vector buffer2 of trainingSample1] ...
+                    MemoryAllocation mem_delta_k_vector = computeFramework.GetMemoryFor(Math.Max(1, delta_k_vectorSize * trainingSamples * 2 * 4), MemFlags.ReadWrite, IntPtr.Zero);
+
+                    computeFramework.SetKernelArg(forwardPass, 0, mem_NetworkConfigParams);
+                    computeFramework.SetKernelArg(forwardPass, 1, mem_activationsAndZValues);
+                    computeFramework.SetKernelArg(forwardPass, 2, mem_InputActivations);
+                    computeFramework.SetKernelArg(forwardPass, 3, mem_weightsAndBiases);
+
+                    int[] layerIndexBuffer = new int[network.layers.Count];
+                    for (int i = 0; i < layerIndexBuffer.Length; ++i)
+                        layerIndexBuffer[i] = i;
+
+                    var localWorkGroupSize = new IntPtr[] { new IntPtr(deviceConfig.idealWorkgroupSizeX), new IntPtr(deviceConfig.idealWorkgroupSizeY) };
+                    var globalWorkSize = new IntPtr[] { new IntPtr(0)
+                , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
+
+                    #region Forward pass
+                    for (int i = 0; i < network.layers.Count; ++i)
+                    {
+                        if (i > 0)
+                        {
+                            computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
+                        }
+
+                        globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
+                        computeFramework.EnqueueKernel(forwardPass, globalWorkSize, localWorkGroupSize);
+                        // todo: run forward pass
+                    }
+                    #endregion
+
+                    #region backward pass
+
+                    int desiredOutputByteSizePerTrainigSample = network.layers.Last().GetNeuronCount() * 4;
+                    for (int i = 0; i < trainingSamples; i++)
+                        Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
+                    var mem_desired_outputs = computeFramework.GetMemoryFor(desiredOutputs.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(desiredOutputsPtr));
+
+                    var mem_param_gradient = computeFramework.GetMemoryFor(outputGradient.Length * 4, MemFlags.ReadWrite | MemFlags.CopyHostPtr, new IntPtr(outputGradientPtr));
+
+                    computeFramework.SetKernelArg(backwardPassKernel, 0, mem_NetworkConfigParams);
+                    computeFramework.SetKernelArg(backwardPassKernel, 1, mem_activationsAndZValues);
+                    computeFramework.SetKernelArg(backwardPassKernel, 2, mem_delta_k_vector);
+                    computeFramework.SetKernelArg(backwardPassKernel, 3, mem_param_gradient);
+                    computeFramework.SetKernelArg(backwardPassKernel, 4, mem_desired_outputs);
+                    computeFramework.SetKernelArg(backwardPassKernel, 5, mem_InputActivations);
+                    computeFramework.SetKernelArg(backwardPassKernel, 6, mem_weightsAndBiases);
+
+                    //Run backward pass for all hidden layers
+                    for (int i = network.layers.Count - 1; i >= 0; --i)
+                    {
+                        globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
+                        if (i != network.layers.Count - 1)
+                            computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
+                        computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
+                    }
+                    #endregion
+
+                    computeFramework.FlushCommandBuffer();
+
+                    computeFramework.ReadBuffer(mem_param_gradient, true, new IntPtr(0), new IntPtr(mem_param_gradient.bufferSizeInBytes), new IntPtr(outputGradientPtr));
                 }
             }
 
             computeFramework.UnuseMemoryAllocations();
+
+            /*for (int i = 0; i < outputGradient.Length; i++)
+            {
+                if (float.IsNaN(outputGradient[i]))
+                {
+                    Console.WriteLine("problem" );
+                }
+            }*/
 
             int gradIdx = 0;
             foreach (var layer in ret)
@@ -401,7 +403,7 @@ namespace Mademy
                 }
             }
 
-            return (float)(error/divisor);
+            return (float)(error / divisor);
         }
     }
 }

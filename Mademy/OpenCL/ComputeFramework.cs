@@ -164,28 +164,6 @@ namespace Mademy.OpenCL
             var errCodeEv = Cl.ReleaseEvent(e);
             ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer, UploadToMemory_3)"));
         }
-        
-        public MemoryAllocation GetMemoryFor(MemFlags flags, int[] data)
-        {
-            unsafe
-            {
-                fixed (int* dataPtr = data)
-                {
-                    return GetMemoryFor(data.Length * 4, flags, new IntPtr( dataPtr));
-                }
-            }
-        }
-
-        public MemoryAllocation GetMemoryFor(MemFlags flags, float[] data)
-        {
-            unsafe
-            {
-                fixed (float* dataPtr = data)
-                {
-                    return GetMemoryFor(data.Length * 4, flags, new IntPtr(dataPtr));
-                }
-            }
-        }
 
         public MemoryAllocation GetMemoryFor(int requiredSizeInBytes, MemFlags flags, IntPtr data )
         {
