@@ -302,8 +302,7 @@ namespace Mademy
                         layerIndexBuffer[i] = i;
 
                     var localWorkGroupSize = new IntPtr[] { new IntPtr(deviceConfig.idealWorkgroupSizeX), new IntPtr(deviceConfig.idealWorkgroupSizeY) };
-                    var globalWorkSize = new IntPtr[] { new IntPtr(0)
-                , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
+                    var globalWorkSize = new IntPtr[] { new IntPtr(0) , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
 
                     #region Forward pass
                     for (int i = 0; i < network.layers.Count; ++i)
@@ -322,7 +321,7 @@ namespace Mademy
                     #region backward pass
 
                     int desiredOutputByteSizePerTrainigSample = network.layers.Last().GetNeuronCount() * 4;
-                    for (int i = 0; i < trainingSamples; i++)
+                    for (int i = 0; i < trainingSamples; ++i)
                         Buffer.BlockCopy(suite.trainingData[trainingDataBegin + i].desiredOutput, 0, desiredOutputs, i * desiredOutputByteSizePerTrainigSample, desiredOutputByteSizePerTrainigSample);
                     var mem_desired_outputs = computeFramework.GetMemoryFor(desiredOutputs.Length * 4, MemFlags.ReadOnly | MemFlags.CopyHostPtr, new IntPtr(desiredOutputsPtr));
 
@@ -353,14 +352,6 @@ namespace Mademy
             }
 
             computeFramework.UnuseMemoryAllocations();
-
-            /*for (int i = 0; i < outputGradient.Length; i++)
-            {
-                if (float.IsNaN(outputGradient[i]))
-                {
-                    Console.WriteLine("problem" );
-                }
-            }*/
 
             int gradIdx = 0;
             foreach (var layer in ret)
