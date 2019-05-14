@@ -1,3 +1,6 @@
+///
+/// OpenCL kernels implementing network calculations, and backpropagation
+///
 
 float ActivationFunction(int functionId, float x)
 {
@@ -63,7 +66,7 @@ __kernel void calcSingleLayer(__global const float* weightMx,
     output[rowId] = acc;
 }
 
-//from: https://streamhpc.com/blog/2016-02-09/atomic-operations-for-floats-in-opencl-improved/
+//Atomic addition function from: https://streamhpc.com/blog/2016-02-09/atomic-operations-for-floats-in-opencl-improved/
 void atomicAdd_g_f(volatile __global float *addr, float val)
 {
     union {
