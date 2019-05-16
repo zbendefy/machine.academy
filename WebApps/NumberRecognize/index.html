@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Number recognizer</title>
+        <link rel="stylesheet" type="text/css" href="main.css"></link>
+    </head>
+
+    <body>
+        <div class="flex-container">
+            <canvas id="drawCanvasSmall" class="canvas" width="28" height="28" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+            <canvas id="drawCanvas" class="canvas" width="300" height="300" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+            <button type="button" onclick="clearImage()">Clear</button>
+            <button type="button" onclick="calculate()">What did I draw?</button>
+        </div>
+
+        <script>
+            function loadFile(filePath) {
+                var result = null;
+                var xmlhttp = new XMLHttpRequest();
+                xmlhttp.open("GET", filePath, false);
+                xmlhttp.send();
+                if (xmlhttp.status==200) {
+                    result = xmlhttp.responseText;
+                }
+                return result;
+            }
+
+            class NeuralNetwork
+            {
+                constructor(jsonObject)
+                {
+                    this.jsonData = jsonObject;
+                }
+
+                Calculate(input){
+                    return [0,0,0,1,0,0,0,0,0,0];
+                }
+
+                GetName(){ return this.jsonData.name; }
+            }
+
+            var canvas = document.getElementById("drawCanvas");
+            var canvasSmall = document.getElementById("drawCanvasSmall");
+            let ctx = canvas.getContext("2d");
+
+            var canvasDrawing = false;
+            var prevX = -1;
+            var prevY = -1;
+
+            var networkFilenames = [ "file:///D:/Dev/Mademy/WebApps/NumberRecognize/network1.json" ];
+            var networks = [];
+
+            for (let value of networkFilenames) {
+                let fileContent = loadFile(value);
+                let network = new NeuralNetwork(JSON.parse(fileContent));
+                networks.push(network);
+                console.log("Loaded network: " + network.GetName());
+            }
+
+            canvas.addEventListener("mousemove", function (e) {
+                if ( canvasDrawing ) {
+                    
+                    let rect = canvas.getBoundingClientRect();
+                    let facx = (e.clientX - rect.left) / canvas.clientWidth;
+                    let facy = (e.clientY - rect.top) / canvas.clientHeight;
+
+                    let numPerPixel = 4;
+                    let cs_x = Math.max(0, Math.min( facx * (canvasSmall.clientWidth-1), canvasSmall.clientWidth - 1));
+                    let cs_y = Math.max(0, Math.min( facy * (canvasSmall.clientHeight-1), canvasSmall.clientHeight - 1));
+
+                    let from_x = prevX < 0 ? cs_x : prevX;
+                    let from_y = prevY < 0 ? cs_y : prevY;
+
+                    let ctxSmall = canvasSmall.getContext("2d");
+                    ctxSmall.beginPath();
+                    ctxSmall.moveTo(from_x|0, from_y|0);
+                    ctxSmall.lineTo(cs_x|0, cs_y|0);
+                    ctxSmall.strokeStyle = "#000000";
+                    ctxSmall.stroke();
+
+                    prevX = cs_x;
+                    prevY = cs_y;
+
+                    let ctx = canvas.getContext("2d");
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(canvasSmall, 0, 0, 8, 8);
+
+                }
+            }, false);
+            canvas.addEventListener("mousedown", function (e) {
+                canvasDrawing = true;
+            }, false);
+            canvas.addEventListener("mouseup", function (e) {
+                canvasDrawing = false;
+            }, false);
+            canvas.addEventListener("mouseout", function (e) {
+                canvasDrawing = false;
+            }, false);
+
+            function clearImage(){
+                let ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                let ctxSmall = canvasSmall.getContext("2d");
+                ctxSmall.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            
+            
+            function calculate(){
+                let result = [];
+                for (let i = 0; i < 10; i++) { result.push(0); }
+                
+                for (let n of networks) {
+                    let output = n.Calculate([1]);
+                    
+                    let largestIdx = -1;
+                    let largestVal = -1;
+                    for (let i = 0; i < output.length; i++) { 
+                        if ( output[i] > largestVal ){
+                            largestVal = output[i];
+                            largestIdx = i;
+                        }
+                     }
+
+                     result[largestIdx]++;
+                }
+
+                console.log(result);
+            }
+
+        </script>
+
+    </body>
+</html>
