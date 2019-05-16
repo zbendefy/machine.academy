@@ -91,7 +91,7 @@ namespace Mademy
 
         public void AttachDescription(string _desc) { description = _desc;  }
 
-        public List<int> GetLayerConfig()
+        public int[] GetLayerConfig()
         {
             List<int> ret = new List<int>();
             ret.Add(layers.First().GetWeightsPerNeuron());
@@ -99,7 +99,7 @@ namespace Mademy
             {
                 ret.Add(item.GetNeuronCount());
             }
-            return ret;
+            return ret.ToArray();
         }
 
         public TrainingPromise Train(MathLib mathLib, TrainingSuite trainingSuite)
@@ -271,7 +271,7 @@ namespace Mademy
             return new Network(layers, activationFunction);
         }
 
-        public string GetTrainingDataJSON()
+        public string GetNetworkAsJSON()
         {
             if (trainingPromise != null)
                 throw new Exception("Cannot perform operation while training is in progress!");
@@ -284,14 +284,14 @@ namespace Mademy
             return JsonConvert.DeserializeObject<Network>(jsonData);
         }
 
-        public static Network CreateNetworkInitRandom(List<int> layerConfig, IActivationFunction activationFunction, IWeightInitializer weightInitializer = null)
+        public static Network CreateNetworkInitRandom(int[] layerConfig, IActivationFunction activationFunction, IWeightInitializer weightInitializer = null)
         {
             if (weightInitializer == null)
                 weightInitializer = new DefaultWeightInitializer();
 
             List<List<Tuple<List<float>, float>>> inputLayers = new List<List<Tuple<List<float>, float>>>();
 
-            for(int layId = 1; layId < layerConfig.Count; ++layId)
+            for(int layId = 1; layId < layerConfig.Length; ++layId)
             {
                 int prevLayerSize = layerConfig[layId - 1];
                 int layerSize = layerConfig[layId];

@@ -27,13 +27,13 @@ namespace MademyTest
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            List<int> layerConfig = new List<int>();
+            List<int> layerConfig = new List<int>( new int[]{ 784, 32, 32, 10 });
             layerConfig.Add(5);
             layerConfig.Add(256);
             layerConfig.Add(256);
             layerConfig.Add(5);
 
-            solver = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
+            solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
 
             mathLib = new MathLib( null );
 
@@ -62,7 +62,7 @@ namespace MademyTest
 
         private void button2_Click(object sender, EventArgs e)
         {
-            textBox1.Text = solver.GetTrainingDataJSON();
+            textBox1.Text = solver.GetNetworkAsJSON();
         }
 
         private void button3_Click(object sender, EventArgs e)

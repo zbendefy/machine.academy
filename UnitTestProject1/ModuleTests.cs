@@ -38,8 +38,8 @@ namespace UnitTestProject1
             layerConfig.Add(51);
             layerConfig.Add(30);
 
-            Network networkReference = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
-            var jsonData = networkReference.GetTrainingDataJSON();
+            Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
+            var jsonData = networkReference.GetNetworkAsJSON();
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
@@ -99,8 +99,8 @@ namespace UnitTestProject1
             layerConfig.Add(51);
             layerConfig.Add(30);
 
-            Network networkReference = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation());
-            var jsonData = networkReference.GetTrainingDataJSON();
+            Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
+            var jsonData = networkReference.GetNetworkAsJSON();
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 

@@ -80,7 +80,7 @@ namespace NumberRecognize
         {
             List<int> layerConfig = layerConfWindow.GetLayerConfig();
 
-            network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
+            network = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
             lblnetcfg.Text = String.Join("x", network.GetLayerConfig());
             network.AttachName("MNIST learning DNN");
             network.AttachDescription("MNIST learning DNN using " + layerConfig.Count + " layers in structure: (" + string.Join(", ", layerConfig) + " ). Creation date: " + DateTime.Now.ToString() );
@@ -113,7 +113,7 @@ namespace NumberRecognize
                 saveFileDialog1.Title = "Save training data";
                 if (saveFileDialog1.ShowDialog() == DialogResult.OK)
                 {
-                    System.IO.File.WriteAllText(saveFileDialog1.FileName, network.GetTrainingDataJSON());
+                    System.IO.File.WriteAllText(saveFileDialog1.FileName, network.GetNetworkAsJSON());
                 }
             }
         }
