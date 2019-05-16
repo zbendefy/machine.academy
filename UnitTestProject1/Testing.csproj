@@ -78,9 +78,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Mademy\Mademy.csproj">
+    <ProjectReference Include="..\Mademy\Macademy.csproj">
       <Project>{88AD671C-2D39-4D63-8D8D-55D2C9E07738}</Project>
-      <Name>Mademy</Name>
+      <Name>Macademy</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
