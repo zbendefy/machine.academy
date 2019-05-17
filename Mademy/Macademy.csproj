@@ -95,7 +95,7 @@
     <Compile Include="IErrorFunction.cs" />
     <Compile Include="IWeightInitializer.cs" />
     <Compile Include="Layer.cs" />
-    <Compile Include="MathLib.cs" />
+    <Compile Include="Calculator.cs" />
     <Compile Include="Network.cs" />
     <Compile Include="OpenCL\CLSourceProvider.cs" />
     <Compile Include="OpenCL\ComputeDevice.cs" />

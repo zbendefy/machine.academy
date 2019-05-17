@@ -45,6 +45,8 @@
             this.button8 = new System.Windows.Forms.Button();
             this.numericUpDown2 = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.lblnetcfg = new System.Windows.Forms.Label();
+            this.label10 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
             this.comboCostFunction = new System.Windows.Forms.ComboBox();
             this.label8 = new System.Windows.Forms.Label();
@@ -59,8 +61,6 @@
             this.label4 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
-            this.label10 = new System.Windows.Forms.Label();
-            this.lblnetcfg = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numEpoch)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.numericUpDown2)).BeginInit();
@@ -148,7 +148,7 @@
             // label1
             // 
             this.label1.AutoSize = true;
-            this.label1.Location = new System.Drawing.Point(393, 239);
+            this.label1.Location = new System.Drawing.Point(302, 239);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(87, 13);
             this.label1.TabIndex = 7;
@@ -159,9 +159,9 @@
             this.comboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.ImeMode = System.Windows.Forms.ImeMode.NoControl;
-            this.comboBox1.Location = new System.Drawing.Point(486, 236);
+            this.comboBox1.Location = new System.Drawing.Point(395, 236);
             this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(245, 21);
+            this.comboBox1.Size = new System.Drawing.Size(336, 21);
             this.comboBox1.TabIndex = 8;
             this.comboBox1.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
             // 
@@ -262,6 +262,25 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(280, 309);
             this.panel1.TabIndex = 14;
+            // 
+            // lblnetcfg
+            // 
+            this.lblnetcfg.AutoSize = true;
+            this.lblnetcfg.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.lblnetcfg.Location = new System.Drawing.Point(3, 256);
+            this.lblnetcfg.Name = "lblnetcfg";
+            this.lblnetcfg.Size = new System.Drawing.Size(0, 13);
+            this.lblnetcfg.TabIndex = 30;
+            // 
+            // label10
+            // 
+            this.label10.AutoSize = true;
+            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
+            this.label10.Location = new System.Drawing.Point(9, 243);
+            this.label10.Name = "label10";
+            this.label10.Size = new System.Drawing.Size(82, 13);
+            this.label10.TabIndex = 29;
+            this.label10.Text = "Network config:";
             // 
             // label9
             // 
@@ -446,25 +465,6 @@
             this.label2.Size = new System.Drawing.Size(129, 16);
             this.label2.TabIndex = 15;
             this.label2.Text = "Training parameters";
-            // 
-            // label10
-            // 
-            this.label10.AutoSize = true;
-            this.label10.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.label10.Location = new System.Drawing.Point(9, 243);
-            this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(82, 13);
-            this.label10.TabIndex = 29;
-            this.label10.Text = "Network config:";
-            // 
-            // lblnetcfg
-            // 
-            this.lblnetcfg.AutoSize = true;
-            this.lblnetcfg.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(238)));
-            this.lblnetcfg.Location = new System.Drawing.Point(3, 256);
-            this.lblnetcfg.Name = "lblnetcfg";
-            this.lblnetcfg.Size = new System.Drawing.Size(0, 13);
-            this.lblnetcfg.TabIndex = 30;
             // 
             // Main
             // 

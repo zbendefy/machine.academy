@@ -64,6 +64,15 @@ namespace Mademy.OpenCL
             return result.ToString();
         }
 
+        public long GetGlobalMemorySize()
+        {
+            ErrorCode err;
+            var result = Cl.GetDeviceInfo(device, DeviceInfo.GlobalMemSize, out err);
+            if (err != ErrorCode.Success)
+                return 0;
+            return result.CastTo<long>();
+        }
+
         public static List<ComputeDevice> GetDevices()
         {
             List<ComputeDevice> ret = new List<ComputeDevice>();

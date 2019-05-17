@@ -15,7 +15,7 @@ namespace MademyTest
     public partial class Form1 : Form
     {
         Network solver = null;
-        MathLib mathLib = null;
+        Calculator calculator = null;
         Network.TrainingPromise trainingPromise = null;
         DateTime trainingBegin;
         List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
@@ -35,7 +35,7 @@ namespace MademyTest
 
             solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
 
-            mathLib = new MathLib( null );
+            calculator = new Calculator( null );
 
             comboBox1.Items.Add("Use CPU calculation");
             comboBox1.SelectedIndex = 0;
@@ -55,14 +55,14 @@ namespace MademyTest
             input.Add((float)numericUpDown4.Value);
             input.Add((float)numericUpDown5.Value);
 
-            var result = solver.Compute(mathLib, input.ToArray());
+            var result = solver.Compute(input.ToArray(), calculator);
 
             label1.Text = ("Result of: " + string.Join(", ", input) + " is: \n" + string.Join("\n", result));
         }
 
         private void button2_Click(object sender, EventArgs e)
         {
-            textBox1.Text = solver.GetNetworkAsJSON();
+            textBox1.Text = solver.ExportToJSON();
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -97,7 +97,7 @@ namespace MademyTest
             trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
             trainingSuite.config.costFunction = new CrossEntropy();
 
-            trainingPromise = solver.Train(mathLib, trainingSuite);
+            trainingPromise = solver.Train(trainingSuite, calculator);
 
             progressBar1.Value = 0;
             label2.Text = "Training...";
@@ -107,13 +107,13 @@ namespace MademyTest
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (mathLib != null)
-                mathLib.CleanupResources();
+            if (calculator != null)
+                calculator.CleanupResources();
 
             if (comboBox1.SelectedIndex == 0)
-                mathLib = new MathLib();
+                calculator = new Calculator();
             else
-                mathLib = new MathLib(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1] );
+                calculator = new Calculator(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1] );
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -145,8 +145,8 @@ namespace MademyTest
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (mathLib != null)
-                mathLib.CleanupResources();
+            if (calculator != null)
+                calculator.CleanupResources();
         }
 
         private void button5_Click(object sender, EventArgs e)

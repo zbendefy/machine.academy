@@ -39,12 +39,12 @@ namespace UnitTestProject1
             layerConfig.Add(30);
 
             Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
-            var jsonData = networkReference.GetNetworkAsJSON();
+            var jsonData = networkReference.ExportToJSON();
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
-            MathLib cpuCalculator = new MathLib();
-            MathLib openCLCalculator = new MathLib(ComputeDevice.GetDevices()[0]);
+            Calculator cpuCalculator = new Calculator();
+            Calculator openCLCalculator = new Calculator(ComputeDevice.GetDevices()[0]);
 
             var rnd = new Random();
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
@@ -71,8 +71,8 @@ namespace UnitTestProject1
             suite.config.shuffleTrainingData = false;
             suite.config.miniBatchSize = 13;
 
-            var promise1 = networkCpuTrained.Train(cpuCalculator, suite);
-            var promise2 = networkOpenCLTrained.Train(openCLCalculator, suite);
+            var promise1 = networkCpuTrained.Train(suite, cpuCalculator);
+            var promise2 = networkOpenCLTrained.Train(suite, openCLCalculator);
 
             while (!promise1.IsReady() || !promise2.IsReady())
             {
@@ -81,8 +81,8 @@ namespace UnitTestProject1
 
             float[] testInput = new float[layerConfig[0]];
 
-            var cpuTrainedOutput = networkCpuTrained.Compute(cpuCalculator, testInput);
-            var openCLTrainedOutput = networkOpenCLTrained.Compute(cpuCalculator, testInput);
+            var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
+            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
 
             CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
@@ -100,16 +100,16 @@ namespace UnitTestProject1
             layerConfig.Add(30);
 
             Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
-            var jsonData = networkReference.GetNetworkAsJSON();
+            var jsonData = networkReference.ExportToJSON();
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
-            MathLib cpuCalculator = new MathLib();
-            MathLib openCLCalculator = new MathLib(ComputeDevice.GetDevices()[0]);
+            Calculator cpuCalculator = new Calculator();
+            Calculator openCLCalculator = new Calculator(ComputeDevice.GetDevices()[0]);
 
             float[] testInput = new float[layerConfig[0]];
-            var cpuTrainedOutput = networkCpuTrained.Compute(cpuCalculator, testInput);
-            var openCLTrainedOutput = networkOpenCLTrained.Compute(cpuCalculator, testInput);
+            var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
+            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
 
             CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
@@ -145,7 +145,7 @@ namespace UnitTestProject1
             suite.config.shuffleTrainingData = false;
             suite.config.miniBatchSize = 13;
 
-            var promise = network.Train(new MathLib(), suite);
+            var promise = network.Train(suite, new Calculator());
 
             while (!promise.IsReady())
             {
@@ -154,7 +154,7 @@ namespace UnitTestProject1
             #endregion
 
             float[] testInput = new float[] {0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
-            var result = network.Compute(new MathLib(), testInput);
+            var result = network.Compute( testInput, new Calculator());
 
             float[] referenceOutput = new float[] { 3.46114769E-11f, 0.139522761f, 3.66372E-05f, 0.391267f, 1.0775824E-06f };
 

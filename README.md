@@ -10,49 +10,75 @@ Neural network training library written in C# as a learning project.
  * Stochastic gradient descent with shuffled mini-batches
 
 
-### TODO:
+### Future plans:
  * Code refactor and cleanup
+ * Optimize memory usage (too many copies on cpu side)
+ * CUDA support?
  * New features: Dropout, Softmax layers
  * Convolutional layer
  * LSTM networks
 
+## Sample code:
 
-## Projects in the repo
-### Macademy
-
-A Class library that provides Neural network training.
-
-#### Sample code:
-
-Initializing a random network
+### Initializing a random network:
 ```
 var layerConfig = new int[]{ 784, 32, 32, 10 };
-var network = Network.CreateNetworkInitRandom(layerConfig, new SigmoidActivation(), new DefaultWeightInitializer());
+var network = Network.CreateNetworkInitRandom( layerConfig, new SigmoidActivation(), new DefaultWeightInitializer() );
 ```
 
-Initializing from JSON:
+### Initializing from JSON:
 ```
 string jsonData = "{ ... }";
 var network = Network.CreateNetworkFromJSON( jsonData ); 
 ```
 
 
-Exporting to JSON
+### Exporting to JSON:
 ```
-string json = network.GetNetworkAsJSON();
+string json = network.ExportToJSON();
 ```
 
-
-Calculating an output
+### Calculating an output to a given input:
 ```
 float[] input = { ...};
-float[] results = network.Compute( new MathLib(), input );
+float[] results = network.Compute( input, new Calculator() );
 ```
 
-Training
+### Training
 ```
-//todo: write example
+List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
+
+//Set up training examples
+for (int i = 0; i < 10000; ++i)
+{
+    float[] trainingInput = ...;
+    float[] desiredOutput = ...;
+    trainingData.Add( new TrainingSuite.TrainingData( trainingInput, desiredOutput ) );
+}
+
+TrainingSuite trainingSuite = new TrainingSuite(trainingData);
+
+//Set up training configuration
+trainingSuite.config.epochs = 100;
+trainingSuite.config.shuffleTrainingData = true;
+trainingSuite.config.miniBatchSize = 50;
+trainingSuite.config.learningRate = 0.005f;
+trainingSuite.config.costFunction = new CrossEntropy();
+trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
+trainingSuite.config.regularizationLambda = 0.5f;
+
+var trainingPromise = network.Train( trainingSuite, new Calculator() );
+
+trainingPromise.Await();
 ```
+
+## Dependencies
+All dependencies are set up in nuget.
+* OpenCL.Net
+* Newtonsoft.Json
+
+## Projects in the repo
+
 
 ## Resources
 

@@ -10,7 +10,7 @@ using static Mademy.OpenCL.ComputeFramework;
 
 namespace Mademy
 {
-    public class MathLib
+    public class Calculator
     {
         private ComputeFramework computeFramework = null;
         private DeviceConfig deviceConfig;
@@ -25,7 +25,7 @@ namespace Mademy
             public string compileOptions = "-cl-mad-enable -cl-no-signed-zeros";
         }
 
-        public MathLib(ComputeDevice clDevice = null, DeviceConfig _deviceConfig = null)
+        public Calculator(ComputeDevice clDevice = null, DeviceConfig _deviceConfig = null)
         {
             deviceConfig = _deviceConfig;
             if (deviceConfig == null)
@@ -48,9 +48,9 @@ namespace Mademy
 
         private bool HasComputeFramework() { return computeFramework != null; }
 
-        public MathLib Clone()
+        public Calculator Clone()
         {
-            return new MathLib(HasComputeFramework() ? computeFramework.GetOpenCLDevice() : null);
+            return new Calculator(HasComputeFramework() ? computeFramework.GetOpenCLDevice() : null);
         }
 
         internal unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)

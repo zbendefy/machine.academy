@@ -37,7 +37,7 @@ namespace Mademy
             biases = (float[])info.GetValue("biases", typeof(float[]));
         }
 
-        public float[] Compute(MathLib mathLib, float[] input, IActivationFunction activationFunction)
+        public float[] Compute(Calculator mathLib, float[] input, IActivationFunction activationFunction)
         {
             return mathLib.CalculateLayer(weightMx, biases, input, activationFunction);
         }

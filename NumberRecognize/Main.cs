@@ -14,7 +14,7 @@ namespace NumberRecognize
 {
     public partial class Main : Form
     {
-        private MathLib mathLib = null;
+        private Calculator calculator = null;
         private Network network = null;
         Bitmap bitmap;
         Bitmap bitmapDownscaled;
@@ -37,7 +37,7 @@ namespace NumberRecognize
             comboRegularization.SelectedIndex = 2;
             comboCostFunction.SelectedIndex = 1;
 
-            mathLib = new MathLib(null);
+            calculator = new Calculator(null);
 
             bitmap = new Bitmap(targetWidth, targetHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
             bitmapDownscaled = new Bitmap(downScaleWidth, downScaleHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
@@ -48,7 +48,7 @@ namespace NumberRecognize
             comboBox1.SelectedIndex = 0;
             foreach (var device in ComputeDevice.GetDevices())
             {
-                string item = "[" + device.GetPlatformID() + ":" + device.GetDeviceID() + ", " + device.GetDeviceType().ToString() + "] " + device.GetName();
+                string item = "[" + device.GetPlatformID() + ":" + device.GetDeviceID() + ", " + device.GetDeviceType().ToString() + "] " + device.GetName().Trim() + " " + (device.GetGlobalMemorySize() / (1024*1024) ) + "MB";
                 comboBox1.Items.Add(item);
             }
 
@@ -88,13 +88,13 @@ namespace NumberRecognize
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (mathLib != null)
-                mathLib.CleanupResources();
+            if (calculator != null)
+                calculator.CleanupResources();
 
             if (comboBox1.SelectedIndex == 0)
-                mathLib = new MathLib();
+                calculator = new Calculator();
             else
-                mathLib = new MathLib(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1]);
+                calculator = new Calculator(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1]);
         }
 
         private void button3_Click(object sender, EventArgs e)
@@ -113,7 +113,7 @@ namespace NumberRecognize
                 saveFileDialog1.Title = "Save training data";
                 if (saveFileDialog1.ShowDialog() == DialogResult.OK)
                 {
-                    System.IO.File.WriteAllText(saveFileDialog1.FileName, network.GetNetworkAsJSON());
+                    System.IO.File.WriteAllText(saveFileDialog1.FileName, network.ExportToJSON());
                 }
             }
         }
@@ -244,7 +244,7 @@ namespace NumberRecognize
             trainingSuite.config.epochs = (int)numEpoch.Value;
 
             trainingStart = DateTime.Now;
-            trainingPromise = network.Train(mathLib, trainingSuite);
+            trainingPromise = network.Train(trainingSuite, calculator);
             trainingtimer.Start();
 
 
@@ -384,7 +384,7 @@ namespace NumberRecognize
                 }
             }
 
-            var output = network.Compute(mathLib, input);
+            var output = network.Compute(input, calculator);
 
             int resultIdx = ClassifyOutput(output);
 
@@ -440,7 +440,7 @@ namespace NumberRecognize
                 wnd.SetText("Testing...");
                 for (int i = 0; i < trainingData.Count; i++)
                 {
-                    var output = network.Compute(mathLib, trainingData[i].input);
+                    var output = network.Compute(trainingData[i].input, calculator);
 
                     int resultIdx = ClassifyOutput(output);
                     int expectedIdx = ClassifyOutput(trainingData[i].desiredOutput);
@@ -503,8 +503,8 @@ namespace NumberRecognize
 
         private void Main_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (mathLib != null)
-                mathLib.CleanupResources();
+            if (calculator != null)
+                calculator.CleanupResources();
         }
     }
 }
