@@ -119,8 +119,8 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Mademy\Macademy.csproj">
-      <Project>{88AD671C-2D39-4D63-8D8D-55D2C9E07738}</Project>
+    <ProjectReference Include="..\Macademy\Macademy.csproj">
+      <Project>{88ad671c-2d39-4d63-8d8d-55d2c9e07738}</Project>
       <Name>Macademy</Name>
     </ProjectReference>
   </ItemGroup>

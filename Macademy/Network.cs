@@ -17,7 +17,7 @@ namespace Macademy
         {
             private static readonly int maxProgress = 100;
 
-            private object lockObj = new object();
+            private readonly object lockObj = new object();
             private int progress = 0;
             private int epochsDone = 0;
 
@@ -96,7 +96,7 @@ namespace Macademy
         internal IActivationFunction activationFunction;
         internal TrainingPromise trainingPromise = null;
         private Thread trainingThread = null;
-        private Object lockObj_gradientAccess = new object();
+        private readonly object lockObj_gradientAccess = new object();
 
         Network(List<Layer> layers, IActivationFunction activationFunction)
         {
