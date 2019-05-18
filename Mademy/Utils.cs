@@ -7,6 +7,13 @@ namespace Macademy
     {
         private static Random rnd = new Random();
 
+        public static IActivationFunction GetActivationFunctionFromString(string type)
+        {
+            if (type == new SigmoidActivation().GetSerializedName())
+                return new SigmoidActivation();
+            throw new Exception("Could not create activation function: " + type);
+        }
+
         public static void ShuffleList<T>(ref List<T> list)
         {
             int n = list.Count;

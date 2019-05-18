@@ -11,15 +11,6 @@ Neural network training library written in C# as a learning project.
  * Optimized weight and bias initialization
  * Stochastic gradient descent with shuffled mini-batches
 
-
-### Future plans:
- * Code refactor and cleanup
- * Optimize memory usage (too many copies on cpu side)
- * CUDA support?
- * New features: Dropout, Softmax layers
- * Convolutional layer
- * LSTM networks
-
 ## Sample code:
 
 ### Initializing a random network:
@@ -58,7 +49,7 @@ for (int i = 0; i < 10000; ++i)
     trainingData.Add( new TrainingSuite.TrainingData( trainingInput, desiredOutput ) );
 }
 
-TrainingSuite trainingSuite = new TrainingSuite(trainingData);
+TrainingSuite trainingSuite = new TrainingSuite( trainingData );
 
 //Set up training configuration
 trainingSuite.config.epochs = 100;
@@ -79,8 +70,17 @@ All dependencies are set up in nuget.
 * OpenCL.Net
 * Newtonsoft.Json
 
+### Future plans:
+ * .NET Core port
+ * Optimize memory usage (too many copies on cpu side)
+ * CUDA support?
+ * New features: Dropout, Softmax layers
+ * Convolutional layer
+ * LSTM networks
+
 ## Projects in the repo
 
+...
 
 ## Resources
 

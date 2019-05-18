@@ -112,8 +112,7 @@ namespace Macademy
             activationFunctionName = (string)info.GetValue("activationFunctionName", typeof(string));
             layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
 
-            Type t = Type.GetType("Macademy."+activationFunctionName);
-            activationFunction = (IActivationFunction)Activator.CreateInstance(t);
+            activationFunction = Utils.GetActivationFunctionFromString(activationFunctionName);
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
