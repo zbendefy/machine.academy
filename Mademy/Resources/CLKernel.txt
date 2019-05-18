@@ -34,7 +34,7 @@ float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, f
 	switch(costFunctionId)
 	{
 		case 0: //Mean-squared error cost function
-			return (a - desiredOutput) * ActivationFunction(activationFunctionId, z);
+			return (a - desiredOutput) * ActivationFunctionPrime(activationFunctionId, z);
 		case 1: //Cross-entropy cost function
 		default:
 			return a - desiredOutput;
