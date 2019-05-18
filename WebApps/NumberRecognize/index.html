@@ -6,11 +6,14 @@
     </head>
 
     <body>
-        <div class="flex-container">
+        <div class="flex-container main">
             <canvas id="drawCanvasSmall" class="canvas" width="28" height="28" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
             <canvas id="drawCanvas" class="canvas" width="300" height="300" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
-            <button type="button" onclick="clearImage()">Clear</button>
-            <button type="button" onclick="calculate()">What did I draw?</button>
+            <div class="flex-container controls" width="400" height="200">
+                <button type="button" onclick="clearImage()">Clear</button>
+                <button type="button" onclick="calculate()">What did I draw?</button>
+                <p id="lblResult">Draw a number from 0 to 9!</p>
+            </div>
         </div>
 
         <script>
@@ -32,8 +35,33 @@
                     this.jsonData = jsonObject;
                 }
 
+                _Sigmoid(x){
+                    return 1.0 / (1.0 + Math.exp(-x));
+                }
+
+                _CalculateLayer(input, layer) {
+                    let ret = [];
+                    let neuronCount = layer.weightMx.length;
+                    let weightsPerNeuron = layer.weightMx[0].length;
+
+                    for (let i = 0; i < neuronCount; i++) {
+                        let acc = 0;
+                        for (let j = 0; j < weightsPerNeuron; j++) {
+                            acc += layer.weightMx[i][j] * input[j];
+                        }
+                        acc += layer.biases[i];
+                        ret[i] = this._Sigmoid( acc );
+                    }
+                    return ret;
+                }
+
                 Calculate(input){
-                    return [0,0,0,1,0,0,0,0,0,0];
+                    let current = input;
+                    for(let layer of this.jsonData.layers){
+                        current = this._CalculateLayer(current, layer);
+                    }
+
+                    return current;
                 }
 
                 GetName(){ return this.jsonData.name; }
@@ -106,12 +134,24 @@
             
             
             function calculate(){
+                let input = [];
                 let result = [];
-                for (let i = 0; i < 10; i++) { result.push(0); }
                 
+                for (let i = 0; i < 10; i++) { result.push(0); }
+
+                let ctxSmall = canvasSmall.getContext("2d");
+                let imgdata = ctxSmall.getImageData(0,0, canvasSmall.clientWidth, canvasSmall.clientHeight);
+                for (let i = 0; i < canvasSmall.clientHeight; i++) { 
+                    for (let j = 0; j < canvasSmall.clientWidth; j++) { 
+                        let pxVal = imgdata.data[i * canvasSmall.clientWidth * 4 + j * 4];
+                        let inputActivation = pxVal / 255;
+                        input[i*canvasSmall.clientWidth+j] = inputActivation;
+                    }
+                }
+
                 for (let n of networks) {
-                    let output = n.Calculate([1]);
-                    
+                    let output = n.Calculate(input);
+                    console.log("Network output:" + output);
                     let largestIdx = -1;
                     let largestVal = -1;
                     for (let i = 0; i < output.length; i++) { 
@@ -124,7 +164,17 @@
                      result[largestIdx]++;
                 }
 
-                console.log(result);
+
+                let largestIdx = -1;
+                let largestVal = -1;
+                for (let i = 0; i < result.length; i++) { 
+                    if ( result[i] > largestVal ){
+                        largestVal = result[i];
+                        largestIdx = i;
+                    }
+                }
+                
+                document.getElementById("lblResult").innerHTML = "I was thinking of " + largestIdx + "\n[" + result + "]";
             }
 
         </script>

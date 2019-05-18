@@ -27,7 +27,7 @@ namespace SandboxApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            List<int> layerConfig = new List<int>( new int[]{ 5, 32, 32, 5 });
+            List<int> layerConfig = new List<int>( new int[]{ 5, 1, 1, 5 });
 
             solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
 

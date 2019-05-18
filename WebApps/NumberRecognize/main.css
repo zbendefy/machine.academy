@@ -1,3 +1,11 @@
 .canvas {
     border: 1px solid #ddd !important;
 }
+
+.flex-container.main{
+    align-content: center;
+}
+
+.flex-container.controls{
+    flex-direction: column;
+}
