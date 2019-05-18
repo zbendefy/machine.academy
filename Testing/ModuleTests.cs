@@ -5,11 +5,8 @@ using Macademy;
 using Macademy.OpenCL;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
-namespace UnitTestProject1
+namespace ModuleTests
 {
-    
-
-
     [TestClass]
     public class ModuleTests
     {
@@ -42,47 +39,8 @@ namespace UnitTestProject1
         [TestMethod]
         public void TestTrainingRegression()
         {
-            List<int> layerConfig = new List<int>();
-            layerConfig.Add(5);
-            layerConfig.Add(33);
-            layerConfig.Add(12);
-            layerConfig.Add(51);
-            layerConfig.Add(5);
-
-            Network network = Network.CreateNetworkFromJSON(Properties.Resources.ReferenceNetwork1JSON);
-
-            #region Training
-            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
-            for (int i = 0; i < 1000; i++)
-            {
-                float[] input = new float[layerConfig[0]];
-                float[] desiredOutput = new float[layerConfig[layerConfig.Count - 1]];
-
-                input[(i * 13426) % 5] = 1.0f;
-                desiredOutput[(i * 13426) % 5] = 1.0f;
-
-                trainingData.Add(new TrainingSuite.TrainingData(input, desiredOutput));
-            }
-
-            TrainingSuite suite = new TrainingSuite(trainingData);
-            suite.config.epochs = 2;
-            suite.config.shuffleTrainingData = false;
-            suite.config.miniBatchSize = 13;
-
-            var promise = network.Train(suite, new Calculator());
-
-            while (!promise.IsReady())
-            {
-                Thread.Sleep(20);
-            }
-            #endregion
-
-            float[] testInput = new float[] {0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
-            var result = network.Compute( testInput, new Calculator());
-
             float[] referenceOutput = new float[] { 3.46114769E-11f, 0.139522761f, 3.66372E-05f, 0.391267f, 1.0775824E-06f };
-
-            Utils.CheckNetworkError(result, referenceOutput);
+            Utils.TestTraining(referenceOutput, new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.01f);
         }
 
         [TestMethod]

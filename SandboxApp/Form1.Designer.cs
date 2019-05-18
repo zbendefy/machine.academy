@@ -1,4 +1,4 @@
-﻿namespace MademyTest
+﻿namespace SandboxApp
 {
     partial class Form1
     {
