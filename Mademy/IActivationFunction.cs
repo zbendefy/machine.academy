@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Mademy
+namespace Macademy
 {
     public abstract class IActivationFunction
     {
@@ -14,7 +14,7 @@ namespace Mademy
         public string GetSerializedName() { return GetType().Name; }
     }
 
-    public class PasstroughActivation : IActivationFunction
+    public sealed class PasstroughActivation : IActivationFunction
     {
         public override float Calculate(float x)
         {
@@ -32,7 +32,7 @@ namespace Mademy
         }
     }
 
-    public class SigmoidActivation : IActivationFunction
+    public sealed class SigmoidActivation : IActivationFunction
     {
         public override float Calculate(float x)
         {

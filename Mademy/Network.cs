@@ -5,8 +5,11 @@ using System.Runtime.Serialization;
 using System.Threading;
 using Newtonsoft.Json;
 
-namespace Mademy
+namespace Macademy
 {
+    /// <summary>
+    /// A neural network consisting of layers.
+    /// </summary>
     [Serializable]
     public class Network : ISerializable
     {
@@ -109,7 +112,7 @@ namespace Mademy
             activationFunctionName = (string)info.GetValue("activationFunctionName", typeof(string));
             layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
 
-            Type t = Type.GetType("Mademy."+activationFunctionName);
+            Type t = Type.GetType("Macademy."+activationFunctionName);
             activationFunction = (IActivationFunction)Activator.CreateInstance(t);
         }
 

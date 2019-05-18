@@ -1,93 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
-using Mademy;
-using Mademy.OpenCL;
+using Macademy;
+using Macademy.OpenCL;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace UnitTestProject1
 {
+    
+
+
     [TestClass]
     public class ModuleTests
     {
-        public void CheckNetworkError(float[] a, float[] b)
-        {
-            double error = 0;
-
-            if (a.Length != b.Length)
-                Assert.Fail("Network output sizes do not match!");
-
-            for (int i = 0; i < a.Length; i++)
-            {
-                error += Math.Abs((double)a[i] - (double)b[i]);
-            }
-
-            var meanError = (error / a.Length);
-            if (meanError > 0.001) 
-                Assert.Fail("Networks do not match. Error was: " + meanError);
-        }
-
-        [TestMethod]
-        public void TestOpenCLTraining()
-        {
-            List<int> layerConfig = new List<int>();
-            layerConfig.Add(10);
-            layerConfig.Add(512);
-            layerConfig.Add(12);
-            layerConfig.Add(3);
-            layerConfig.Add(51);
-            layerConfig.Add(30);
-
-            Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
-            var jsonData = networkReference.ExportToJSON();
-            Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
-            Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
-
-            Calculator cpuCalculator = new Calculator();
-            Calculator openCLCalculator = new Calculator(ComputeDevice.GetDevices()[0]);
-
-            var rnd = new Random();
-            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
-            for (int i = 0; i < 1000; i++)
-            {
-                float[] input = new float[layerConfig[0]];
-                float[] output = new float[layerConfig[layerConfig.Count - 1]];
-
-                var idx = rnd.Next(0, input.Length);
-                input[rnd.Next(0, input.Length)] = 1.0f;
-
-                for (int j = 0; j < 10; j++)
-                {
-                    output[j*3+0] = idx * 0.1f;
-                    output[j*3+1] = 1.0f - (idx * 0.1f);
-                    output[j*3+2] = idx * 0.05f;
-                }
-
-                trainingData.Add(new TrainingSuite.TrainingData(input, output));
-            }
-
-            TrainingSuite suite = new TrainingSuite(trainingData);
-            suite.config.epochs = 1;
-            suite.config.shuffleTrainingData = false;
-            suite.config.miniBatchSize = 13;
-
-            var promise1 = networkCpuTrained.Train(suite, cpuCalculator);
-            var promise2 = networkOpenCLTrained.Train(suite, openCLCalculator);
-
-            while (!promise1.IsReady() || !promise2.IsReady())
-            {
-                Thread.Sleep(20);
-            }
-
-            float[] testInput = new float[layerConfig[0]];
-
-            var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
-            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
-
-            CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
-        }
-
-
         [TestMethod]
         public void TestOpenCLLayerCalc()
         {
@@ -111,9 +36,8 @@ namespace UnitTestProject1
             var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
             var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
 
-            CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
+            Utils.CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
-
 
         [TestMethod]
         public void TestTrainingRegression()
@@ -158,7 +82,64 @@ namespace UnitTestProject1
 
             float[] referenceOutput = new float[] { 3.46114769E-11f, 0.139522761f, 3.66372E-05f, 0.391267f, 1.0775824E-06f };
 
-            CheckNetworkError(result, referenceOutput); 
+            Utils.CheckNetworkError(result, referenceOutput);
+        }
+
+        [TestMethod]
+        public void TestTrainingOpenCL_CrossEntropy_L2()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingOpenCL_CrossEntropy_L1()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.01f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingOpenCL_CrossEntropy_NpRegularization()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.01f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingOpenCL_MSE_L2()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingOpenCL_MSE_L1()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.01f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingOpenCL_MSE_NpRegularization()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.01f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestJSONExportImport()
+        {
+            List<int> layerConfig = new List<int>();
+            layerConfig.Add(5);
+            layerConfig.Add(33);
+            layerConfig.Add(12);
+            layerConfig.Add(51);
+            layerConfig.Add(5);
+
+            float[] testInput = new float[] { 0.1f, 0.5f, 0.2f, 0.14f, 0.54f };
+
+            Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
+            Network networkFromJSON = Network.CreateNetworkFromJSON(networkReference.ExportToJSON());
+
+            float[] outputRef = networkReference.Compute(testInput);
+            float[] outputJS = networkFromJSON.Compute(testInput);
+
+            Utils.CheckNetworkError(outputRef, outputJS);
         }
     }
 }

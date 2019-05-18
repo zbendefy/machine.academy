@@ -4,8 +4,11 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Mademy
+namespace Macademy
 {
+    /// <summary>
+    /// An interface for error functions
+    /// </summary>
     public abstract class IErrorFunction
     {
         public abstract float CalculateError(float output, float desiredOutput);
@@ -13,7 +16,10 @@ namespace Mademy
         public abstract int GetOpenCLFunctionID();
     }
 
-    public class MeanSquaredError : IErrorFunction
+    /// <summary>
+    /// Mean squared error function
+    /// </summary>
+    public sealed class MeanSquaredErrorFunction : IErrorFunction
     {
         public override float CalculateDelta(float z, float a, float desiredOutput, IActivationFunction activationFunction)
         {
@@ -23,7 +29,7 @@ namespace Mademy
         public override float CalculateError(float output, float desiredOutput)
         {
             float v = output - desiredOutput;
-            return 0.5f * v*v;
+            return 0.5f * v * v;
         }
 
         public override int GetOpenCLFunctionID()
@@ -32,7 +38,11 @@ namespace Mademy
         }
     }
 
-    public class CrossEntropy : IErrorFunction
+    /// <summary>
+    /// Cross entropy error function.
+    /// Avoids slow learning on steep gradients of the sigmoid function
+    /// </summary>
+    public sealed class CrossEntropyErrorFunction : IErrorFunction
     {
         public override float CalculateDelta(float z, float a, float desiredOutput, IActivationFunction activationFunction)
         {

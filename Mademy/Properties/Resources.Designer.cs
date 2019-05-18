@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace Mademy.Properties {
+namespace Macademy.Properties {
     using System;
     
     

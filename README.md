@@ -4,7 +4,9 @@ Neural network training library written in C# as a learning project.
 
 ### Features:
  * GPU acceleration (using OpenCL)
- * Cost functions: Mean-Squared, Cross-entropy
+ * Cost functions: 
+    * Mean-Squared
+    * Cross-entropy
  * Optional L1 and L2 regularization
  * Optimized weight and bias initialization
  * Stochastic gradient descent with shuffled mini-batches
@@ -23,7 +25,7 @@ Neural network training library written in C# as a learning project.
 ### Initializing a random network:
 ```
 var layerConfig = new int[]{ 784, 32, 32, 10 };
-var network = Network.CreateNetworkInitRandom( layerConfig, new SigmoidActivation(), new DefaultWeightInitializer() );
+var network = Network.CreateNetworkInitRandom( layerConfig, new SigmoidActivation() );
 ```
 
 ### Initializing from JSON:
@@ -63,7 +65,7 @@ trainingSuite.config.epochs = 100;
 trainingSuite.config.shuffleTrainingData = true;
 trainingSuite.config.miniBatchSize = 50;
 trainingSuite.config.learningRate = 0.005f;
-trainingSuite.config.costFunction = new CrossEntropy();
+trainingSuite.config.costFunction = new CrossEntropyErrorFunction();
 trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
 trainingSuite.config.regularizationLambda = 0.5f;
 

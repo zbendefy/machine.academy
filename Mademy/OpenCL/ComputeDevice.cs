@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using OpenCL.Net;
 
-namespace Mademy.OpenCL
+namespace Macademy.OpenCL
 {
+    /// <summary>
+    /// An OpenCL Computing device.
+    /// </summary>
     public class ComputeDevice
     {
         Platform platform;
@@ -13,7 +16,7 @@ namespace Mademy.OpenCL
 
         public enum ComputeDeviceType { CPU, GPU, Accelerator, Unknown };
 
-        public ComputeDevice(Platform platform, Device device, int platformId, int deviceId)
+        internal ComputeDevice(Platform platform, Device device, int platformId, int deviceId)
         {
             this.platform = platform;
             this.device = device;
@@ -21,9 +24,14 @@ namespace Mademy.OpenCL
             this.deviceId = deviceId;
         }
 
-        public Platform GetPlatform() { return platform; }
-        public Device GetDevice() { return device; }
+        internal Platform GetPlatform() { return platform; }
 
+        internal Device GetDevice() { return device; }
+
+        /// <summary>
+        /// Returns the type of the device (CPU, GPU, Accelerator)
+        /// </summary>
+        /// <returns>The type of the device, or Unknown if it cannot be determined</returns>
         public ComputeDeviceType GetDeviceType()
         {
             ErrorCode err;
@@ -46,6 +54,10 @@ namespace Mademy.OpenCL
             return ComputeDeviceType.Unknown;
         }
 
+        /// <summary>
+        /// The name of the device as visible from OpenCL 
+        /// </summary>
+        /// <returns>The device's name</returns>
         public String GetName()
         {
             ErrorCode err;
@@ -55,6 +67,10 @@ namespace Mademy.OpenCL
             return result.ToString();
         }
 
+        /// <summary>
+        /// The vendor of the device
+        /// </summary>
+        /// <returns>The vendor's name</returns>
         public String GetVendor()
         {
             ErrorCode err;
@@ -64,6 +80,10 @@ namespace Mademy.OpenCL
             return result.ToString();
         }
 
+        /// <summary>
+        /// The size of the global memory in bytes
+        /// </summary>
+        /// <returns>Global memory size in bytes</returns>
         public long GetGlobalMemorySize()
         {
             ErrorCode err;
@@ -73,6 +93,10 @@ namespace Mademy.OpenCL
             return result.CastTo<long>();
         }
 
+        /// <summary>
+        /// Provides a list of available OpenCL devices on the system
+        /// </summary>
+        /// <returns>A list of OpenCL devices</returns>
         public static List<ComputeDevice> GetDevices()
         {
             List<ComputeDevice> ret = new List<ComputeDevice>();
@@ -99,11 +123,19 @@ namespace Mademy.OpenCL
             return ret;
         }
 
+        /// <summary>
+        /// The OpenCL platform id
+        /// </summary>
+        /// <returns>The OpenCL platform id</returns>
         public int GetPlatformID()
         {
             return platformId;
         }
 
+        /// <summary>
+        /// The OpenCL device id in the platform it is in
+        /// </summary>
+        /// <returns>The OpenCL device id</returns>
         public int GetDeviceID()
         {
             return deviceId;

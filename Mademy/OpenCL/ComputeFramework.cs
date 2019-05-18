@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Mademy.OpenCL
+namespace Macademy.OpenCL
 {
     internal class ComputeFramework
     {

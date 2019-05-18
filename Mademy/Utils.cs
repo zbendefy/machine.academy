@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Mademy
+namespace Macademy
 {
     internal static class Utils
     {

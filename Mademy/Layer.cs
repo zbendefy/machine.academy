@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Runtime.Serialization;
 
-namespace Mademy
+namespace Macademy
 {
     [Serializable]
-    class Layer : ISerializable
+    internal class Layer : ISerializable
     {
         public float[,] weightMx;
         public float[] biases;

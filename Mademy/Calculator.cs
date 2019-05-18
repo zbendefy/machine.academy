@@ -1,15 +1,18 @@
-﻿using Mademy;
-using Mademy.OpenCL;
+﻿using Macademy;
+using Macademy.OpenCL;
 using OpenCL.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using static Mademy.OpenCL.ComputeFramework;
+using static Macademy.OpenCL.ComputeFramework;
 
-namespace Mademy
+namespace Macademy
 {
+    /// <summary>
+    /// A Calculator class providing neural network calculations using the given OpenCL device, or using the CPU
+    /// </summary>
     public class Calculator
     {
         private ComputeFramework computeFramework = null;
@@ -18,13 +21,30 @@ namespace Mademy
         private static readonly string forwardPass = "trainingForwardPass";
         private static readonly string backwardPassKernel = "trainingBackwardPass";
 
+        /// <summary>
+        /// A hardware specific configuration providing configurable parameters for an OpenCL device
+        /// </summary>
         public class DeviceConfig
         {
-            public int idealWorkgroupSizeX = 8;
-            public int idealWorkgroupSizeY = 8;
-            public string compileOptions = "-cl-mad-enable -cl-no-signed-zeros";
+            public readonly int idealWorkgroupSizeX = 8;
+            public readonly int idealWorkgroupSizeY = 8;
+            public readonly string compileOptions = "-cl-mad-enable -cl-no-signed-zeros";
+
+            public DeviceConfig() { }
+
+            public DeviceConfig(int idealWorkgroupSizeX, int idealWorkgroupSizeY, string compileOptions)
+            {
+                this.idealWorkgroupSizeX = idealWorkgroupSizeX;
+                this.idealWorkgroupSizeY = idealWorkgroupSizeY;
+                this.compileOptions = compileOptions;
+            }
         }
 
+        /// <summary>
+        /// Constructs a new calculator instance.
+        /// </summary>
+        /// <param name="clDevice">The OpenCL device to use. If null, a software fallback will be used running on the CPU</param>
+        /// <param name="_deviceConfig">Device specific configuration. If null, a default configuration will be used.</param>
         public Calculator(ComputeDevice clDevice = null, DeviceConfig _deviceConfig = null)
         {
             deviceConfig = _deviceConfig;
@@ -110,7 +130,10 @@ namespace Mademy
             return output;
         }
 
-        public void CleanupResources()
+        /// <summary>
+        /// Uninitializes the calculator. This instance cannot be used after this call
+        /// </summary>
+        internal void Uninitialize()
         {
             if (computeFramework != null)
                 computeFramework.CleanupCLResources();

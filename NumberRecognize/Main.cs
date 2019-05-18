@@ -1,5 +1,5 @@
-﻿using Mademy;
-using Mademy.OpenCL;
+﻿using Macademy;
+using Macademy.OpenCL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -88,9 +88,6 @@ namespace NumberRecognize
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (calculator != null)
-                calculator.CleanupResources();
-
             if (comboBox1.SelectedIndex == 0)
                 calculator = new Calculator();
             else
@@ -237,9 +234,9 @@ namespace NumberRecognize
                 trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
 
             if (comboCostFunction.SelectedIndex == 0)
-                trainingSuite.config.costFunction = new MeanSquaredError();
+                trainingSuite.config.costFunction = new MeanSquaredErrorFunction();
             else if (comboCostFunction.SelectedIndex == 1)
-                trainingSuite.config.costFunction = new CrossEntropy();
+                trainingSuite.config.costFunction = new CrossEntropyErrorFunction();
 
             trainingSuite.config.epochs = (int)numEpoch.Value;
 
@@ -503,8 +500,6 @@ namespace NumberRecognize
 
         private void Main_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (calculator != null)
-                calculator.CleanupResources();
         }
     }
 }

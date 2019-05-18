@@ -6,9 +6,9 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Mademy.OpenCL
+namespace Macademy.OpenCL
 {
-    class CLSourceProvider
+    internal class CLSourceProvider
     {
         public static string ReadSourceFile()
         {

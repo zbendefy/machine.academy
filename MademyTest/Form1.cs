@@ -1,5 +1,5 @@
-﻿using Mademy;
-using Mademy.OpenCL;
+﻿using Macademy;
+using Macademy.OpenCL;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -29,8 +29,8 @@ namespace MademyTest
         {
             List<int> layerConfig = new List<int>( new int[]{ 784, 32, 32, 10 });
             layerConfig.Add(5);
-            layerConfig.Add(256);
-            layerConfig.Add(256);
+            layerConfig.Add(32);
+            layerConfig.Add(32);
             layerConfig.Add(5);
 
             solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
@@ -95,7 +95,7 @@ namespace MademyTest
             trainingSuite.config.shuffleTrainingData = false;
 
             trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
-            trainingSuite.config.costFunction = new CrossEntropy();
+            trainingSuite.config.costFunction = new CrossEntropyErrorFunction();
 
             trainingPromise = solver.Train(trainingSuite, calculator);
 
@@ -107,9 +107,6 @@ namespace MademyTest
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (calculator != null)
-                calculator.CleanupResources();
-
             if (comboBox1.SelectedIndex == 0)
                 calculator = new Calculator();
             else
@@ -145,8 +142,6 @@ namespace MademyTest
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (calculator != null)
-                calculator.CleanupResources();
         }
 
         private void button5_Click(object sender, EventArgs e)
