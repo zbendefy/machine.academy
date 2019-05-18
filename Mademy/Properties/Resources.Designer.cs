@@ -39,7 +39,7 @@ namespace Macademy.Properties {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Mademy.Properties.Resources", typeof(Resources).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("Macademy.Properties.Resources", typeof(Resources).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,7 +61,10 @@ namespace Macademy.Properties {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to 
+        ///   Looks up a localized string similar to ///
+        ////// OpenCL kernels implementing network calculations, and backpropagation
+        //////
+        ///
         ///float ActivationFunction(int functionId, float x)
         ///{
         ///	switch(functionId)
@@ -83,13 +86,7 @@ namespace Macademy.Properties {
         ///			const float sigm = 1.0f/(1.0f + exp(-x));
         ///            return sigm * (1.0f - sigm);
         ///        }
-        ///		case 0: //Passtrough
-        ///		default:
-        ///			return 0;
-        ///	}
-        ///}
-        ///
-        ///float CostFunctionDelta(int costFunctionId, [rest of string was truncated]&quot;;.
+        ///		case 0: //Passt [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string CLKernel {
             get {

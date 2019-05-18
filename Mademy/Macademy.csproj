@@ -7,8 +7,8 @@
     <ProjectGuid>{88AD671C-2D39-4D63-8D8D-55D2C9E07738}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Mademy</RootNamespace>
-    <AssemblyName>Mademy</AssemblyName>
+    <RootNamespace>Macademy</RootNamespace>
+    <AssemblyName>Macademy</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <NuGetPackageImportStamp>
