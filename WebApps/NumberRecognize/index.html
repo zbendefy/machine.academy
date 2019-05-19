@@ -105,13 +105,14 @@
                     ctxSmall.lineTo(cs_x|0, cs_y|0);
                     ctxSmall.strokeStyle = "#000000";
                     ctxSmall.stroke();
+                    ctxSmall.moveTo(cs_x|0, cs_y|0);
 
                     prevX = cs_x;
                     prevY = cs_y;
 
                     let ctx = canvas.getContext("2d");
                     ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(canvasSmall, 0, 0, 8, 8);
+                    ctx.drawImage(canvasSmall, 0, 0, canvas.width, canvas.height);
 
                 }
             }, false);
@@ -127,9 +128,12 @@
 
             function clearImage(){
                 let ctx = canvas.getContext("2d");
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#ffffff";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
                 let ctxSmall = canvasSmall.getContext("2d");
-                ctxSmall.clearRect(0, 0, canvas.width, canvas.height);
+                ctxSmall.fillStyle = "#ffffff";
+                ctxSmall.fillRect(0, 0, canvasSmall.width, canvasSmall.height);
             }
             
             
