@@ -75,6 +75,8 @@
             var prevX = -1;
             var prevY = -1;
 
+            clearImage();
+
             var networkFilenames = [ "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network1.json" ];
             var networks = [];
 
@@ -106,6 +108,7 @@
                     ctxSmall.strokeStyle = "#000000";
                     ctxSmall.stroke();
                     ctxSmall.moveTo(cs_x|0, cs_y|0);
+                    ctxSmall.beginPath();
 
                     prevX = cs_x;
                     prevY = cs_y;
@@ -121,9 +124,13 @@
             }, false);
             canvas.addEventListener("mouseup", function (e) {
                 canvasDrawing = false;
+                prevX = -1;
+                prevY = -1;
             }, false);
             canvas.addEventListener("mouseout", function (e) {
                 canvasDrawing = false;
+                prevX = -1;
+                prevY = -1;
             }, false);
 
             function clearImage(){
@@ -147,7 +154,7 @@
                 let imgdata = ctxSmall.getImageData(0,0, canvasSmall.clientWidth, canvasSmall.clientHeight);
                 for (let i = 0; i < canvasSmall.clientHeight; i++) { 
                     for (let j = 0; j < canvasSmall.clientWidth; j++) { 
-                        let pxVal = imgdata.data[i * canvasSmall.clientWidth * 4 + j * 4];
+                        let pxVal = 255-imgdata.data[i * canvasSmall.clientWidth * 4 + j * 4];
                         let inputActivation = pxVal / 255;
                         input[i*canvasSmall.clientWidth+j] = inputActivation;
                     }
@@ -167,7 +174,6 @@
 
                      result[largestIdx]++;
                 }
-
 
                 let largestIdx = -1;
                 let largestVal = -1;
