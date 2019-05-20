@@ -63,36 +63,50 @@ namespace ModuleTests
         public void TestTrainingOpenCL_CrossEntropy_L2()
         {
             Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.0f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.0f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.0f, 0.0f);
         }
 
         [TestMethod]
         public void TestTrainingOpenCL_CrossEntropy_L1()
         {
             Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.01f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.01f, 0.0f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.0f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.1f, 0.0f);
         }
 
         [TestMethod]
         public void TestTrainingOpenCL_CrossEntropy_NpRegularization()
         {
-            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.01f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.00f);
         }
 
         [TestMethod]
         public void TestTrainingOpenCL_MSE_L2()
         {
             Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.0f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.0f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.0f, 0.0f);
         }
 
         [TestMethod]
         public void TestTrainingOpenCL_MSE_L1()
         {
             Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.01f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.01f, 0.0f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.0f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.1f, 0.0f);
         }
 
         [TestMethod]
         public void TestTrainingOpenCL_MSE_NpRegularization()
         {
-            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.01f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.01f);
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.0f);
         }
 
         [TestMethod]
@@ -113,7 +127,7 @@ namespace ModuleTests
             float[] outputRef = networkReference.Compute(testInput);
             float[] outputJS = networkFromJSON.Compute(testInput);
 
-            Utils.CheckNetworkError(outputRef, outputJS);
+            Utils.CheckNetworkError(outputRef, outputJS, 0.00000001);
         }
     }
 }

@@ -120,7 +120,7 @@ namespace ModuleTests
             CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
 
-        public static void CheckNetworkError(float[] a, float[] b)
+        public static void CheckNetworkError(float[] a, float[] b, double errorThreshold = 0.00001)
         {
             double error = 0;
 
@@ -133,7 +133,7 @@ namespace ModuleTests
             }
 
             var meanError = (error / a.Length);
-            if (meanError > 0.0001)
+            if (meanError > errorThreshold)
                 Assert.Fail("Networks do not match. Error was: " + meanError);
         }
     }
