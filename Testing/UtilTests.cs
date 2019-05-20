@@ -7,10 +7,17 @@ using System.Threading.Tasks;
 
 namespace Testing
 {
+    [TestClass]
     class UtilTests
     {
         [TestMethod]
         public void TestListShuffle()
+        {
+            Assert.Fail("unimplemented test");
+        }
+
+        [TestMethod]
+        public void TestSign()
         {
             Assert.Fail("unimplemented test");
         }

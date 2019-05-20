@@ -11,6 +11,22 @@ namespace ModuleTests
     public class ModuleTests
     {
         [TestMethod]
+        public void TestRandomNetwork()
+        {
+            int[] referenceLayerConf = new int[] { 3, 7, 5, 4 };
+
+            var network = Network.CreateNetworkInitRandom(referenceLayerConf, new SigmoidActivation());
+
+            Assert.AreEqual(3, network.GetLayerConfig()[0]);
+            Assert.AreEqual(7, network.GetLayerConfig()[1]);
+            Assert.AreEqual(5, network.GetLayerConfig()[2]);
+            Assert.AreEqual(4, network.GetLayerConfig()[3]);
+
+            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f });
+            Assert.AreEqual( referenceLayerConf[referenceLayerConf.Length-1], result.Length);
+        }
+
+        [TestMethod]
         public void TestOpenCLLayerCalc()
         {
             List<int> layerConfig = new List<int>();
