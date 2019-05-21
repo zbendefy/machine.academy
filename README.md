@@ -10,7 +10,7 @@ Neural network training library written in C# as a learning project.
     * Mean-Squared
     * Cross-entropy
  * Optional L1 and L2 regularization
- * Optimized weight and bias initialization
+ * Xavier weight initialization
  * Stochastic gradient descent with shuffled mini-batches
 
 ## Sample code:
