@@ -11,6 +11,17 @@ namespace ModuleTests
     public class ModuleTests
     {
         [TestMethod]
+        public void TestRandomNetworkWithNoLayers()
+        {
+            int[] referenceLayerConf = new int[] { 3, 4 };
+
+            var network = Network.CreateNetworkInitRandom(referenceLayerConf, new SigmoidActivation());
+
+            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f });
+            Assert.AreEqual( referenceLayerConf[referenceLayerConf.Length-1], result.Length);
+        }
+
+        [TestMethod]
         public void TestRandomNetwork()
         {
             int[] referenceLayerConf = new int[] { 3, 7, 5, 4 };
@@ -23,7 +34,7 @@ namespace ModuleTests
             Assert.AreEqual(4, network.GetLayerConfig()[3]);
 
             float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f });
-            Assert.AreEqual( referenceLayerConf[referenceLayerConf.Length-1], result.Length);
+            Assert.AreEqual(referenceLayerConf[referenceLayerConf.Length - 1], result.Length);
         }
 
         [TestMethod]
@@ -53,10 +64,51 @@ namespace ModuleTests
         }
 
         [TestMethod]
-        public void TestTrainingRegression()
+        public void TestTrainingRegression_CrossEntropy_L2()
         {
-            float[] referenceOutput = new float[] { 3.46114769E-11f, 0.139522761f, 3.66372E-05f, 0.391267f, 1.0775824E-06f };
-            Utils.TestTraining(referenceOutput, new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 0.01f, 0.01f);
+            float[] referenceOutput = new float[] { 5.959933E-11f, 0.1458118f, 4.22751E-05f, 0.3619123f, 1.531221E-06f };
+            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
+            Utils.TestTraining(network, referenceOutput, new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 10.0f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingRegression_CrossEntropy_L1()
+        {
+            float[] referenceOutput = new float[] { 2.571606E-11f, 0.1361623f, 3.719596E-05f, 0.3950554f, 8.929147E-07f };
+            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
+            Utils.TestTraining(network, referenceOutput, new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 10.0f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingRegression_CrossEntropy()
+        {
+            float[] referenceOutput = new float[] { 3.45829E-11f, 0.139514f, 3.661705E-05f, 0.3912812f, 1.076772E-06f };
+            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
+            Utils.TestTraining(network, referenceOutput, new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingRegression_MeanSquared_L2()
+        {
+            float[] referenceOutput = new float[] { 2.466907E-12f, 0.2984998f, 3.949761E-08f, 0.000338129f, 4.667237E-06f };
+            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
+            Utils.TestTraining(network, referenceOutput, new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L2, 10.0f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingRegression_MeanSquared_L1()
+        {
+            float[] referenceOutput = new float[] { 1.059097E-12f, 0.3169f, 3.026366E-08f, 0.0003242506f, 3.843542E-06f };
+            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
+            Utils.TestTraining(network, referenceOutput, new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 10.0f, 0.01f);
+        }
+
+        [TestMethod]
+        public void TestTrainingRegression_MeanSquared()
+        {
+            float[] referenceOutput = new float[] { 1.485432E-12f, 0.3179092f, 3.043587E-08f, 0.0003209518f, 4.003032E-06f };
+            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
+            Utils.TestTraining(network, referenceOutput, new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.01f);
         }
 
         [TestMethod]

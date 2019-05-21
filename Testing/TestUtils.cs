@@ -11,7 +11,7 @@ namespace ModuleTests
 {
     public static class Utils
     {
-        public static void TestTraining(float[] referenceOutput, IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
+        public static void TestTraining( Network network, float[] referenceOutput, IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
@@ -19,8 +19,6 @@ namespace ModuleTests
             layerConfig.Add(12);
             layerConfig.Add(51);
             layerConfig.Add(5);
-
-            Network network = Network.CreateNetworkFromJSON(Testing.Properties.Resources.ReferenceNetwork1JSON);
 
             #region Training
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
@@ -53,7 +51,7 @@ namespace ModuleTests
             float[] testInput = new float[] { 0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
             var result = network.Compute(testInput, new Calculator());
             
-            Utils.CheckNetworkError(result, referenceOutput);
+            Utils.CheckNetworkError(referenceOutput, result);
         }
 
         public static void TestOpenCLTrainingWithConfig(IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
@@ -120,21 +118,23 @@ namespace ModuleTests
             CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
 
-        public static void CheckNetworkError(float[] a, float[] b, double errorThreshold = 0.00001)
+        public static void CheckNetworkError(float[] expected, float[] actual, double errorThreshold = 0.00001)
         {
             double error = 0;
 
-            if (a.Length != b.Length)
-                Assert.Fail("Network output sizes do not match!");
+            if (expected.Length != actual.Length)
+                Assert.Fail( String.Format( "Network output sizes do not match! Expected size: {0}. Got: {1}", expected.Length, actual.Length ) );
 
-            for (int i = 0; i < a.Length; i++)
+            for (int i = 0; i < expected.Length; i++)
             {
-                error += Math.Abs((double)a[i] - (double)b[i]);
+                error += Math.Abs((double)expected[i] - (double)actual[i]);
             }
 
-            var meanError = (error / a.Length);
+            var meanError = (error / expected.Length);
             if (meanError > errorThreshold)
-                Assert.Fail("Networks do not match. Error was: " + meanError);
+            {
+                Assert.Fail(String.Format("Networks do not match. Error was: {0}. Expected: [{1}]  Got: [{2}]", meanError, string.Join(", ", expected), string.Join(", ", actual)));
+            }
         }
     }
 }
