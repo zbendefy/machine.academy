@@ -402,5 +402,26 @@ namespace Macademy
 
             return CreateNetwork(inputLayers, activationFunction);
         }
+
+        public List<List<NeuronData>> __GetInternalConfiguration()
+        {
+            var ret = new List<List<NeuronData>>();
+            foreach (var layer in layers)
+            {
+                var layerStruct = new List<NeuronData>();
+                for (int i = 0; i < layer.GetNeuronCount(); ++i)
+                {
+                    var weights = new float[layer.GetWeightsPerNeuron()];
+                    for (int j = 0; j < weights.Length; j++)
+                    {
+                        weights[j] = layer.weightMx[i,j];
+                    }
+                    layerStruct.Add(new NeuronData(weights, layer.biases[i]));
+                }
+
+                ret.Add(layerStruct);
+            }
+            return ret;
+        }
     }
 }

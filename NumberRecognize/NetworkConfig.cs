@@ -10,6 +10,9 @@ using System.Windows.Forms;
 
 namespace NumberRecognize
 {
+
+    //TODO: Clean up this UI setup code, its not easily maintainable
+
     public partial class NetworkConfig : Form
     {
         List<int> layerconfig = new List<int>();
@@ -33,9 +36,9 @@ namespace NumberRecognize
                 panel1.Controls.Add(lbl);
 
                 NumericUpDown num = new NumericUpDown();
-                num.Minimum = 768;
-                num.Maximum = 768;
-                num.Value = 768;
+                num.Minimum = 784;
+                num.Maximum = 784;
+                num.Value = 784;
                 num.Top = paddingTop;
                 num.ReadOnly = true;
                 panel1.Controls.Add(num);
