@@ -9,6 +9,8 @@ Neural network training library written in C# as a learning project.
  * Cost functions: 
     * Mean-Squared
     * Cross-entropy
+ * Activation functions:
+    * Sigmoid
  * Optional L1 and L2 regularization
  * Xavier weight initialization
  * Stochastic gradient descent with shuffled mini-batches
@@ -74,15 +76,25 @@ All dependencies are set up in nuget.
 
 ### Future plans:
  * .NET Core port
- * Optimize memory usage (too many copies on cpu side)
- * CUDA support?
+ * Optimize memory layout (to reduce number of buffer copies)
  * New features: Dropout, Softmax layers
+ * More activation functions
  * Convolutional layer
  * LSTM networks
 
 ## Projects in the repo
 
-...
+### Macademy
+
+The neural network library
+
+### NumberRecognizer
+
+A sample app that can load the MNIST digit dataset and trains a network.
+
+### Sandbox
+
+A test app with no specific purpose but to try our some features using a ui
 
 ## Resources
 
