@@ -2,7 +2,9 @@
 
 Neural network training library written in C# as a learning project.
 
-### [Handwritten digit recognizer](http://htmlpreview.github.io/?https://github.com/zbendefy/machine.academy/blob/master/WebApps/NumberRecognize/index.html)
+## Demos:
+
+### [Handwritten digit recognizer web app](http://htmlpreview.github.io/?https://github.com/zbendefy/machine.academy/blob/master/WebApps/NumberRecognize/index.html)
 
 ## Features:
  * GPU acceleration (using OpenCL)
