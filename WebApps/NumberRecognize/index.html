@@ -6,193 +6,26 @@
     </head>
 
     <body>
-        <div class="flex-container main">
-            <canvas id="drawCanvasSmall" class="canvas" width="28" height="28" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
-            <canvas id="drawCanvas" class="canvas" width="300" height="300" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
-            <div class="flex-container controls" width="400" height="200">
-                <button type="button" onclick="clearImage()">Clear</button>
-                <button type="button" onclick="calculate()">What did I draw?</button>
-                <p id="lblResult">Draw a number from 0 to 9!</p>
-            </div>
+        
+        <div class="headingBackground">
+            <p class="text heading">Hand-drawn digit recognizer</h2>
         </div>
 
-        <script>
-            function loadFile(filePath) {
-                var result = null;
-                var xmlhttp = new XMLHttpRequest();
-                xmlhttp.open("GET", filePath, false);
-                xmlhttp.send();
-                if (xmlhttp.status==200) {
-                    result = xmlhttp.responseText;
-                }
-                return result;
-            }
+        
+        <div class="flex-container main">
+            <canvas id="drawCanvasSmall" class="canvas hidecanvas" width="28" height="28" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+            <canvas id="drawCanvas" class="canvas" width="300" height="300" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+            <div class="flex-container controls" width="300" height="200">
+                <button type="button" class="networkbtn" onclick="clearImage()">Clear</button>
+                <button type="button" class="networkbtn" onclick="calculateNetwork('lblResult', 'lblResultCoM', 'lblResultDetails')">What did I draw?</button>
+            </div>
+            <p id="lblResult" class="text">Draw a number from 0 to 9!</p>
+            <p id="lblResultCoM" class="text small"></p>
+            <p id="lblResultDetails" class="text small"></p>
+        </div>
 
-            class NeuralNetwork
-            {
-                constructor(jsonObject)
-                {
-                    this.jsonData = jsonObject;
-                }
-
-                _Sigmoid(x){
-                    return 1.0 / (1.0 + Math.exp(-x));
-                }
-
-                _CalculateLayer(input, layer) {
-                    let ret = [];
-                    let neuronCount = layer.weightMx.length;
-                    let weightsPerNeuron = layer.weightMx[0].length;
-
-                    for (let i = 0; i < neuronCount; i++) {
-                        let acc = 0;
-                        for (let j = 0; j < weightsPerNeuron; j++) {
-                            acc += layer.weightMx[i][j] * input[j];
-                        }
-                        acc += layer.biases[i];
-                        ret[i] = this._Sigmoid( acc );
-                    }
-                    return ret;
-                }
-
-                Calculate(input){
-                    let current = input;
-                    for(let layer of this.jsonData.layers){
-                        current = this._CalculateLayer(current, layer);
-                    }
-
-                    return current;
-                }
-
-                GetName(){ return this.jsonData.name; }
-            }
-
-            var canvas = document.getElementById("drawCanvas");
-            var canvasSmall = document.getElementById("drawCanvasSmall");
-            let ctx = canvas.getContext("2d");
-
-            var canvasDrawing = false;
-            var prevX = -1;
-            var prevY = -1;
-
-            clearImage();
-
-            var networkFilenames = [ 
-                "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network1.json",
-                "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network2.json",
-                "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network3.json",
-                "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network4.json"
-                ];
-            var networks = [];
-
-            for (let value of networkFilenames) {
-                let fileContent = loadFile(value);
-                let network = new NeuralNetwork(JSON.parse(fileContent));
-                networks.push(network);
-                console.log("Loaded network: " + network.GetName());
-            }
-
-            canvas.addEventListener("mousemove", function (e) {
-                if ( canvasDrawing ) {
-                    
-                    let rect = canvas.getBoundingClientRect();
-                    let facx = (e.clientX - rect.left) / canvas.clientWidth;
-                    let facy = (e.clientY - rect.top) / canvas.clientHeight;
-
-                    let numPerPixel = 4;
-                    let cs_x = Math.max(0, Math.min( facx * (canvasSmall.clientWidth-1), canvasSmall.clientWidth - 1));
-                    let cs_y = Math.max(0, Math.min( facy * (canvasSmall.clientHeight-1), canvasSmall.clientHeight - 1));
-
-                    let from_x = prevX < 0 ? cs_x : prevX;
-                    let from_y = prevY < 0 ? cs_y : prevY;
-
-                    let ctxSmall = canvasSmall.getContext("2d");
-                    ctxSmall.beginPath();
-                    ctxSmall.moveTo(from_x|0, from_y|0);
-                    ctxSmall.lineTo(cs_x|0, cs_y|0);
-                    ctxSmall.strokeStyle = "#000000";
-                    ctxSmall.stroke();
-                    ctxSmall.moveTo(cs_x|0, cs_y|0);
-                    ctxSmall.beginPath();
-
-                    prevX = cs_x;
-                    prevY = cs_y;
-
-                    let ctx = canvas.getContext("2d");
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(canvasSmall, 0, 0, canvas.width, canvas.height);
-
-                }
-            }, false);
-            canvas.addEventListener("mousedown", function (e) {
-                canvasDrawing = true;
-            }, false);
-            canvas.addEventListener("mouseup", function (e) {
-                canvasDrawing = false;
-                prevX = -1;
-                prevY = -1;
-            }, false);
-            canvas.addEventListener("mouseout", function (e) {
-                canvasDrawing = false;
-                prevX = -1;
-                prevY = -1;
-            }, false);
-
-            function clearImage(){
-                let ctx = canvas.getContext("2d");
-                ctx.fillStyle = "#ffffff";
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-                let ctxSmall = canvasSmall.getContext("2d");
-                ctxSmall.fillStyle = "#ffffff";
-                ctxSmall.fillRect(0, 0, canvasSmall.width, canvasSmall.height);
-            }
-            
-            
-            function calculate(){
-                let input = [];
-                let result = [];
-                
-                for (let i = 0; i < 10; i++) { result.push(0); }
-
-                let ctxSmall = canvasSmall.getContext("2d");
-                let imgdata = ctxSmall.getImageData(0,0, canvasSmall.clientWidth, canvasSmall.clientHeight);
-                for (let i = 0; i < canvasSmall.clientHeight; i++) { 
-                    for (let j = 0; j < canvasSmall.clientWidth; j++) { 
-                        let pxVal = 255-imgdata.data[i * canvasSmall.clientWidth * 4 + j * 4];
-                        let inputActivation = pxVal / 255;
-                        input[i*canvasSmall.clientWidth+j] = inputActivation;
-                    }
-                }
-
-                for (let n of networks) {
-                    let output = n.Calculate(input);
-                    console.log("Network output:" + output);
-                    let largestIdx = -1;
-                    let largestVal = -1;
-                    for (let i = 0; i < output.length; i++) { 
-                        if ( output[i] > largestVal ){
-                            largestVal = output[i];
-                            largestIdx = i;
-                        }
-                     }
-
-                     result[largestIdx]++;
-                }
-
-                let largestIdx = -1;
-                let largestVal = -1;
-                for (let i = 0; i < result.length; i++) { 
-                    if ( result[i] > largestVal ){
-                        largestVal = result[i];
-                        largestIdx = i;
-                    }
-                }
-                
-                document.getElementById("lblResult").innerHTML = "I was thinking of " + largestIdx + "\n[" + result + "]";
-            }
-
-        </script>
+        <script src="neuralnet.js"> </script>
+        <script src="drawing.js"> </script>
 
     </body>
 </html>
