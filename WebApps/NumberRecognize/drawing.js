@@ -301,3 +301,5 @@ function calculateNetwork(target, centerOfMassTarget, detailTarget)
     document.getElementById(detailTarget).innerHTML =
     "Voting result: [" + voting.toString() + "]";
 }
+
+

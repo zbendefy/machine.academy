@@ -6,7 +6,7 @@
     </head>
 
     <body>
-        
+
         <div class="headingBackground">
             <p class="text heading">Hand-drawn digit recognizer</h2>
         </div>
@@ -24,8 +24,16 @@
             <p id="lblResultDetails" class="text small"></p>
         </div>
 
+        <div id="loading" class="loadingbackground">
+            <p class="loadingtext">Loading networks...</h2>
+        </div>
+
         <script src="neuralnet.js"> </script>
         <script src="drawing.js"> </script>
+        
+        <script>
+            document.getElementById("loading").hidden=true;
+        </script>
 
     </body>
 </html>
