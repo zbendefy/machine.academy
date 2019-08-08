@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Number recognizer</title>
+        <link rel="stylesheet" type="text/css" href="main.css"></link>
+    </head>
+
+    <body>
+
+        <div class="headingBackground">
+            <p class="text heading">Car racing simulator (genetic neural networks)</h2>
+        </div>
+
+        
+        <div class="flex-container main">
+            <canvas id="drawCanvas" class="canvas" width="512" height="512" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+            <div class="flex-container controls" width="512" height="200">
+                <button type="button" class="networkbtn" onclick="drawing.Draw()">Button</button>
+            </div>
+        </div>
+
+        <div id="loading" class="loadingbackground">
+            <p class="loadingtext">Loading...</h2>
+        </div>
+
+        <script src="neuralnet.js"> </script>
+        <script src="initialNetwork.js"> </script>
+        <script src="entity.js"> </script>
+        <script src="drawing.js"> </script>
+        
+        <script>
+            document.getElementById("loading").hidden=true;
+        </script>
+
+        <img id="background" class="hide" src="hungaroring.png" />
+
+
+
+    </body>
+</html>
