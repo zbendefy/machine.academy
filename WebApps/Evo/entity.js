@@ -25,12 +25,14 @@ class Entity {
 
         this.reward = 0;
 
-        console.log(this._GetAngleFromCenterPoint());
+        this.checkpointId=0;
+        this.checkpointRadius = 15;
+        this.checkpoints = [ [126,402], [91,81], [340,398], [263,454] ];
 
     }
 
     _GetAngleFromCenterPoint(){
-        return Math.atan2(this.x - this.imgWidth*0.5, this.y - this.imgHeight*0.5);
+        return Math.atan2(this.y - this.imgHeight*0.5,this.x - this.imgWidth*0.5);
     }
 
     Process(dt) {
@@ -64,11 +66,18 @@ class Entity {
         let deltaY = -Math.sin(this.angle);
 
         this.x += deltaX * this.speed * dt;
-        this.x += deltaY * this.speed * dt;
+        this.y += deltaY * this.speed * dt;
 
         this.reward += this.speed * dt;
 
+        let nextCheckpoint = this.checkpoints[this.checkpointId];
+        if ( Math.abs( nextCheckpoint[0] - this.x ) < this.checkpointRadius && Math.abs( nextCheckpoint[1] - this.y ) < this.checkpointRadius ){
+            this.checkpointId = (this.checkpointId+1) % this.checkpoints.length;
+            this.reward += 1000;
+        }
+    }
 
+    GenerationEnd(){
     }
 
     _HasHitWall(){

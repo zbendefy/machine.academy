@@ -22,12 +22,14 @@ class EvoDrawing
         setInterval(()=>{this.Tick()}, this.frameTimeS * 1000);
     }
 
-    _RegenerateEntities(){
-
+    _GenerationEnd(){
+        for(let entity of this.entities){
+            entity.GenerationEnd();
+        }
     }
 
     _Timeout(){
-        this._RegenerateEntities();
+        this._GenerationEnd();
     }
 
     Simulate(dt) {
