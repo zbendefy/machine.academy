@@ -1,7 +1,8 @@
 class Entity {
-    constructor() {
+    constructor(pixelGetter) {
         this.brain = new NeuralNetwork(GetInitialNetwork());
         this.disqualified = false;
+        this.pixelGetter = pixelGetter;
         this.imgWidth = 512;
         this.imgHeight = 512;
 
@@ -31,10 +32,6 @@ class Entity {
 
     }
 
-    _GetAngleFromCenterPoint(){
-        return Math.atan2(this.y - this.imgHeight*0.5,this.x - this.imgWidth*0.5);
-    }
-
     Process(dt) {
         if ( this.disqualified)
             return;
@@ -52,6 +49,10 @@ class Entity {
             this.reward = 0;
             this.disqualified = true;
         }
+    }
+
+    Mutate(){
+        //TODO: mutate neural network
     }
 
     _Simulate(dt){
@@ -78,6 +79,7 @@ class Entity {
     }
 
     GenerationEnd(){
+        //Any additional calculation for rewards can come here.
     }
 
     _HasHitWall(){
@@ -89,11 +91,11 @@ class Entity {
         let deltaX = Math.cos(this.angle);
         let deltaY = -Math.sin(this.angle);
         
-        let deltaX_left = Math.cos(this.angle -  this.spreadView);
-        let deltaY_left = -Math.sin(this.angle - this.spreadView);
+        let deltaX_left = Math.cos(this.angle -  this.sensor_spreadView);
+        let deltaY_left = -Math.sin(this.angle - this.sensor_spreadView);
         
-        let deltaX_right = Math.cos(this.angle +  this.spreadView);
-        let deltaY_right = -Math.sin(this.angle + this.spreadView);
+        let deltaX_right = Math.cos(this.angle +  this.sensor_spreadView);
+        let deltaY_right = -Math.sin(this.angle + this.sensor_spreadView);
 
         let sensors = [
             this._GetImageValueAt(this.x + deltaX * this.sensor_dist_near, this.y+deltaY * this.sensor_dist_near), //See forward 
@@ -143,7 +145,7 @@ class Entity {
 
     }
 
-    _GetImageValueAt(x, y){
-        return 0.0;
+    _GetImageValueAt(x, y) {
+        return this.pixelGetter(x, y) / 255.0;
     }
 }
