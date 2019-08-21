@@ -35,6 +35,25 @@ class NeuralNetwork
         return current;
     }
 
+    Mutate(amount){
+        for(let layer of this.jsonData.layers){
+
+            let neuronCount = layer.weightMx.length;
+            let weightsPerNeuron = layer.weightMx[0].length;
+
+            for (let i = 0; i < neuronCount; i++) {
+                for (let j = 0; j < weightsPerNeuron; j++) {
+                    layer.weightMx[i][j] += Math.random() * amount;
+                }
+                layer.biases[i] += Math.random() * amount;
+            }
+        }
+    }
+
+    DeepCopy(){
+        return new NeuralNetwork( JSON.parse( JSON.stringify( this.jsonData ) ) );
+    }
+
     GetName(){ return this.jsonData.name; }
     
     GetDescription(){ return this.jsonData.description; }

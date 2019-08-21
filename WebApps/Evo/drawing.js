@@ -15,10 +15,11 @@ class EvoDrawing
 
         this.entities = [];
 
-        this.entityCountTarget = 1;
+        this.entityCountTarget = 100;
         this.entitySurvivals = 1;
         this.entityTimeoutS = 20;
         this.frameTimeS = 0.05; 
+        this.generationSurvivorPercentage = 0.1;
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
@@ -31,29 +32,47 @@ class EvoDrawing
     }
 
     _Timeout() {
+        console.log("Generation " + this.currentGeneration + " finished.");
+
         for(let entity of this.entities){
             entity.GenerationEnd();
         }
 
         this.entities.sort( function(a,b){ return b.reward-a.reward; } ); //Sort by descending order
 
-        this.entities.slice(this.entities.length/2);
+        this.entities = this.entities.slice(0, this.entities.length * this.generationSurvivorPercentage);
         
-        //TODO: copy and mutate elements
+        let survivorCount = this.entities.length;
+        let currentEntity = 0;
+        while(this.entities.length < this.entityCountTarget){
+            this.entities.push(this.entities[currentEntity].DeepCopy());
+            currentEntity = (currentEntity+1)%survivorCount;
+        }
+
+        for(let entity of this.entities){
+            entity.Mutate();
+        }
+
+        for(let entity of this.entities){
+            entity.Reset();
+        }
         
         this.currentSessionTimer = 0;
         this.currentGeneration++;
     }
 
     Simulate(dt) {
+        let allEntitiesDisqualified = this.entities.every( (entity)=>{return entity.IsDisqualified()} );
+
         this.currentSessionTimer += dt;
-        if ( this.currentSessionTimer > this.entityTimeoutS){
+        if ( this.currentSessionTimer > this.entityTimeoutS || allEntitiesDisqualified){
             this._Timeout();
         }
 
         for(let entity of this.entities){
             entity.Process(dt);
         }
+
     }
 
     Draw() {

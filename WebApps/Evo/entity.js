@@ -1,35 +1,46 @@
 class Entity {
-    constructor(pixelGetter) {
-        this.brain = new NeuralNetwork(GetInitialNetwork());
-        this.disqualified = false;
+    constructor(pixelGetter, neuralNetwork = null) {
+        if (neuralNetwork === null)
+            this.brain = new NeuralNetwork(GetInitialNetwork());
+        else
+            this.brain = neuralNetwork;
         this.pixelGetter = pixelGetter;
         this.imgWidth = 512;
         this.imgHeight = 512;
+        
+        this.carSteeringSpeed = 0.1;
+        this.carAcceleration = 10.0;
+        this.carBrakeStrength = 1.0;
+        
+        this.sensor_spreadView = 0.01;
+        this.sensor_dist_near= 40;
+        this.sensor_dist_far= 70;
+        
+        this.checkpointRadius = 15;
+        this.checkpoints = [ [126,402], [91,81], [340,398], [263,454] ];
+        
+        this.Reset();
+    }
+    
+    IsDisqualified()
+    {
+        return this.disqualified;
+    }
+    
+    Reset()
+    {
+        this.input_speed = 0;
+        this.input_steer = 0;
 
+        this.disqualified = false;
         this.x = 263;
         this.y = 454;
         this.angle = Math.PI;
         this.speed = 0;
         this.thinkTime = 0.1;
         this.nextThinkIn = this.thinkTime;
-
-        this.input_speed = 0;
-        this.input_steer = 0;
-
-        this.carSteeringSpeed = 0.1;
-        this.carAcceleration = 10.0;
-        this.carBrakeStrength = 1.0;
-
-        this.sensor_spreadView = 0.01;
-        this.sensor_dist_near= 40;
-        this.sensor_dist_far= 70;
-
         this.reward = 0;
-
-        this.checkpointId=0;
-        this.checkpointRadius = 15;
-        this.checkpoints = [ [126,402], [91,81], [340,398], [263,454] ];
-
+        this.checkpointId = 0;
     }
 
     Process(dt) {
@@ -52,7 +63,11 @@ class Entity {
     }
 
     Mutate(){
-        //TODO: mutate neural network
+        this.brain.Mutate(0.1);
+    }
+
+    DeepCopy(){
+        return new Entity(this.pixelGetter, this.brain.DeepCopy());
     }
 
     _Simulate(dt){
