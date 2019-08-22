@@ -24,11 +24,13 @@ class EvoDrawing
 
         this.entities = [];
 
-        this.entityCountTarget = 50;
+        this.entityCountTarget = 60;
         this.entityTimeoutS = 20;
         this.frameTimeS = 0.05; 
         this.generationSurvivorPercentage = 0.2;
         this.learningRate = 0.01;
+        this.outlierChance = 0.1;
+        this.outlierDelta = 20;
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
@@ -38,11 +40,16 @@ class EvoDrawing
             this.entities.push(new Entity(this.GetPixelAtPoint.bind(this)));
         }
         
-        for(let entity of this.entities){
-            entity.Mutate(this.learningRate);
-        }
+        this._MutateEntities();
         
         this.timerFnc = setInterval(()=>{this.Tick()}, (this.frameTimeS * 1000) / this.simulationSpeed);
+    }
+
+    _MutateEntities(){
+        for(let entity of this.entities){
+            let outlier = (Math.random() < this.outlierChance) ? this.outlierDelta : 0;
+            entity.Mutate(this.learningRate);
+        }
     }
 
     _Timeout() {
@@ -63,9 +70,7 @@ class EvoDrawing
             currentEntityIdx = (currentEntityIdx+1)%survivorCount;
         }
 
-        for(let entity of this.entities){
-            entity.Mutate(this.learningRate);
-        }
+        this._MutateEntities();
 
         for(let entity of this.entities){
             entity.Reset();
