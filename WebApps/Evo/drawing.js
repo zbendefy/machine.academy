@@ -9,13 +9,22 @@ class EvoDrawing
         this.trackImageName = imgName;
         let img = document.getElementById(imgName);
         this.offscreenCanvas = document.createElement('canvas');
+        this.imgWidth = img.width;
         this.offscreenCanvas.width = img.width;
         this.offscreenCanvas.height = img.height;
         this.offscreenCanvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+        this.offscreenCanvasContext = this.offscreenCanvas.getContext('2d');
+        let offscreenCanvasImageRGBA = this.offscreenCanvasContext.getImageData(0, 0, img.width, img.height);
+        this.offscreenCanvasImage = [];
+        for(let iy = 0; iy < img.height; iy++){
+            for(let ix = 0; ix < img.width; ix++){
+                this.offscreenCanvasImage[iy * img.width + ix] = ( offscreenCanvasImageRGBA.data[(iy * img.width + ix)*4] );
+            }   
+        }
 
         this.entities = [];
 
-        this.entityCountTarget = 8;
+        this.entityCountTarget = 50;
         this.entityTimeoutS = 20;
         this.frameTimeS = 0.05; 
         this.generationSurvivorPercentage = 0.2;
@@ -44,10 +53,6 @@ class EvoDrawing
         }
 
         this.entities.sort( function(a,b){ return b.reward-a.reward; } ); //Sort by descending order
-
-        for(let entity of this.entities){
-            console.log(" -> " + entity.reward);
-        }
 
         this.entities = this.entities.slice(0, this.entities.length * this.generationSurvivorPercentage);
         
@@ -100,8 +105,7 @@ class EvoDrawing
 
     GetPixelAtPoint(x,y)
     {
-        let pixelValue = this.offscreenCanvas.getContext("2d").getImageData(x,y,1,1);
-        return pixelValue.data[0];
+        return this.offscreenCanvasImage[(y|0)*this.imgWidth+(x|0)];
     }
 }
 

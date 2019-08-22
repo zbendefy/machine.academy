@@ -110,11 +110,13 @@ class Entity {
 
         let ret = 1.0;
 
-        for(let i = 0; i <= this.maxSeeingDistancePx; i++){
-            testX += deltaX;
-            testY += deltaY;
+        let step = 5;
+
+        for(let i = 0; i <= this.maxSeeingDistancePx / step; i++){
+            testX += deltaX * step;
+            testY += deltaY * step;
             if (this._HasHitWallAtPoint(testX, testY)){
-                ret = i / this.maxSeeingDistancePx;
+                ret = (i * step) / this.maxSeeingDistancePx;
                 break;
             }
         }
