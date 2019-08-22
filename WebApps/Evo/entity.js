@@ -12,7 +12,7 @@ class Entity {
 
         this.thinkTimeS = 0.05;
 
-        this.carSteeringSpeed = 0.2;
+        this.carSteeringSpeed = 0.5;
         this.carAcceleration = 8.0;
         this.carBrakeStrength = 2.0;
         
