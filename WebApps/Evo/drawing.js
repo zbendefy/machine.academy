@@ -15,7 +15,7 @@ class EvoDrawing
 
         this.entities = [];
 
-        this.entityCountTarget = 40;
+        this.entityCountTarget = 8;
         this.entityTimeoutS = 20;
         this.frameTimeS = 0.05; 
         this.generationSurvivorPercentage = 0.2;

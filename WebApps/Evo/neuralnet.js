@@ -27,6 +27,9 @@ class NeuralNetwork
     }
 
     Calculate(input){
+        if (input.length != this.jsonData.layers[0].weightMx[0].length)
+            console.error("Invalid input!");
+
         let current = input;
         for(let layer of this.jsonData.layers){
             current = this._CalculateLayer(current, layer);

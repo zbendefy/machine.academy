@@ -8,15 +8,15 @@ class Entity {
         this.imgWidth = 512;
         this.imgHeight = 512;
         
+        this.maxSeeingDistancePx = 100;
+
         this.thinkTimeS = 0.05;
 
         this.carSteeringSpeed = 0.2;
         this.carAcceleration = 8.0;
         this.carBrakeStrength = 2.0;
         
-        this.sensor_spreadView = 0.04;
-        this.sensor_dist_near= 40;
-        this.sensor_dist_far= 70;
+        this.sensor_spreadView = 0.45;
         
         this.checkpointRadius = 15;
         this.checkpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [117,407], [91,81], [340,398], [263,454] ];
@@ -100,29 +100,49 @@ class Entity {
         //Any additional calculation for rewards can come here.
     }
 
+    //Returns distance in scaled value. 0.0 means that the entity has hit a wall. 1.0 means that the entity cannot see a wall in this direction until the visibility distance
+    _EyeDistanceScaled(relativeAngle){
+        let testX = this.x;
+        let testY = this.y;
+        
+        let deltaX = Math.cos(this.angle + relativeAngle);
+        let deltaY = -Math.sin(this.angle + relativeAngle);
+
+        let ret = 1.0;
+
+        for(let i = 0; i <= this.maxSeeingDistancePx; i++){
+            testX += deltaX;
+            testY += deltaY;
+            if (this._HasHitWallAtPoint(testX, testY)){
+                ret = i / this.maxSeeingDistancePx;
+                break;
+            }
+        }
+
+        return ret;
+    }
+
     _HasHitWall(){
-        let imgValue = this._GetImageValueAt(this.x, this.y);
+        return this._HasHitWallAtPoint(this.x, this.y);
+    }
+
+    _HasHitWallAtPoint(x, y){
+        let imgValue = this._GetImageValueAt(x, y);
         return imgValue > 0.2;
     }
 
     _Think(){
-        let deltaX = Math.cos(this.angle);
-        let deltaY = -Math.sin(this.angle);
-        
-        let deltaX_left = Math.cos(this.angle -  this.sensor_spreadView);
-        let deltaY_left = -Math.sin(this.angle - this.sensor_spreadView);
-        
-        let deltaX_right = Math.cos(this.angle +  this.sensor_spreadView);
-        let deltaY_right = -Math.sin(this.angle + this.sensor_spreadView);
+        let sensorData = [
+            this._EyeDistanceScaled(0), //See forward,
 
-        let sensors = [
-            this._GetImageValueAt(this.x + deltaX * this.sensor_dist_near, this.y+deltaY * this.sensor_dist_near), //See forward 
-            this._GetImageValueAt(this.x + deltaX * this.sensor_dist_far, this.y+deltaY * this.sensor_dist_far), //See forward further
-            this._GetImageValueAt(this.x + deltaX_left * this.sensor_dist_near, this.y+deltaY_left * this.sensor_dist_near), //See left 
-            this._GetImageValueAt(this.x + deltaX_right * this.sensor_dist_near, this.y+deltaY_right * this.sensor_dist_near), //See right
+            this._EyeDistanceScaled(-this.sensor_spreadView), //See left,
+            this._EyeDistanceScaled(-this.sensor_spreadView * 2.0), //See left,
+
+            this._EyeDistanceScaled(this.sensor_spreadView), //See right,
+            this._EyeDistanceScaled(this.sensor_spreadView * 2.0) //See right,
             ];
 
-        let input = [ this.speed, this.angle, this.input_speed, this.input_steer, ...sensors ];
+        let input = [ this.speed, this.angle, this.input_speed, this.input_steer, ...sensorData ];
 
         [this.input_speed, this.input_steer] = this.brain.Calculate(input);
 
