@@ -10,9 +10,9 @@ class Entity {
         
         this.thinkTimeS = 0.05;
 
-        this.carSteeringSpeed = 0.1;
-        this.carAcceleration = 10.0;
-        this.carBrakeStrength = 1.0;
+        this.carSteeringSpeed = 0.2;
+        this.carAcceleration = 8.0;
+        this.carBrakeStrength = 2.0;
         
         this.sensor_spreadView = 0.04;
         this.sensor_dist_near= 40;
