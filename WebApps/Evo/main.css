@@ -15,6 +15,26 @@ html, body {
     overflow: visible;
 }
 
+.textctrl{
+    color: #ffffff;
+    font-size: 1.2em;
+}
+
+.controlpanel{
+    flex-direction: column;
+    background-color: #3b5998;
+    position: absolute;
+    left: 10px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+    width: 200px;
+}
+
+.slider{
+    width:100%;
+}
+
 .loadingbackground{
     position: fixed;
     width:100%;

@@ -8,9 +8,8 @@
     <body>
 
         <div class="headingBackground">
-            <p class="text heading">Car racing simulator (genetic neural networks)</h2>
+            <p class="text heading">Car racing simulator (genetic neural networks)</p>
         </div>
-
         
         <div class="flex-container main">
             <canvas id="drawCanvas" class="canvas" width="512" height="512" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
@@ -20,7 +19,8 @@
         </div>
 
         <div class="controlpanel flex-container">
-            <input type="range" min="1" max="20" value="1" class="slider" id="myRange" >
+            <p class="textctrl">Simulation speed: <span id="simspeed">1</span>x</p>
+            <input type="range" min="1" max="50" value="1" class="slider" id="simspeedinput" >
         </div>
 
         <div id="loading" class="loadingbackground">
@@ -38,7 +38,18 @@
             document.getElementById("loading").hidden=true;
         </script>
 
-
+        <script>
+            var simSpeedSlider = document.getElementById("simspeedinput");
+            var simSpeedElement = document.getElementById("simspeed");
+            
+            simSpeedElement.innerHTML = simSpeedSlider.value|0;
+            drawing.SetSimulationSpeed(simSpeedSlider.value|0);
+            
+            simSpeedSlider.oninput = function() {
+                simSpeedElement.innerHTML = this.value|0;
+                drawing.SetSimulationSpeed(this.value|0);
+            }
+        </script>
 
 
     </body>
