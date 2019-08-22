@@ -32,7 +32,7 @@ class EvoDrawing
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
-        this.simulationSpeed = 4;
+        this.simulationSpeed = 10;
         
         while( this.entities.length < this.entityCountTarget ){
             this.entities.push(new Entity(this.GetPixelAtPoint.bind(this)));
