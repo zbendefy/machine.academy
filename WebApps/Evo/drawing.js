@@ -15,24 +15,29 @@ class EvoDrawing
 
         this.entities = [];
 
-        this.entityCountTarget = 100;
-        this.entitySurvivals = 1;
+        this.entityCountTarget = 40;
         this.entityTimeoutS = 20;
         this.frameTimeS = 0.05; 
-        this.generationSurvivorPercentage = 0.1;
+        this.generationSurvivorPercentage = 0.2;
+        this.learningRate = 0.01;
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
+        this.simulationSpeed = 4;
         
         while( this.entities.length < this.entityCountTarget ){
             this.entities.push(new Entity(this.GetPixelAtPoint.bind(this)));
         }
         
-        setInterval(()=>{this.Tick()}, this.frameTimeS * 1000);
+        for(let entity of this.entities){
+            entity.Mutate(this.learningRate);
+        }
+        
+        setInterval(()=>{this.Tick()}, (this.frameTimeS * 1000) / this.simulationSpeed);
     }
 
     _Timeout() {
-        console.log("Generation " + this.currentGeneration + " finished.");
+        console.log("Generation " + this.currentGeneration + " finished. Rewards:");
 
         for(let entity of this.entities){
             entity.GenerationEnd();
@@ -40,17 +45,21 @@ class EvoDrawing
 
         this.entities.sort( function(a,b){ return b.reward-a.reward; } ); //Sort by descending order
 
+        for(let entity of this.entities){
+            console.log(" -> " + entity.reward);
+        }
+
         this.entities = this.entities.slice(0, this.entities.length * this.generationSurvivorPercentage);
         
         let survivorCount = this.entities.length;
-        let currentEntity = 0;
+        let currentEntityIdx = 0;
         while(this.entities.length < this.entityCountTarget){
-            this.entities.push(this.entities[currentEntity].DeepCopy());
-            currentEntity = (currentEntity+1)%survivorCount;
+            this.entities.push(this.entities[currentEntityIdx].DeepCopy());
+            currentEntityIdx = (currentEntityIdx+1)%survivorCount;
         }
 
         for(let entity of this.entities){
-            entity.Mutate();
+            entity.Mutate(this.learningRate);
         }
 
         for(let entity of this.entities){

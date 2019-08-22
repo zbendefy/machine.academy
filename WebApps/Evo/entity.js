@@ -8,16 +8,18 @@ class Entity {
         this.imgWidth = 512;
         this.imgHeight = 512;
         
+        this.thinkTimeS = 0.05;
+
         this.carSteeringSpeed = 0.1;
         this.carAcceleration = 10.0;
         this.carBrakeStrength = 1.0;
         
-        this.sensor_spreadView = 0.01;
+        this.sensor_spreadView = 0.04;
         this.sensor_dist_near= 40;
         this.sensor_dist_far= 70;
         
         this.checkpointRadius = 15;
-        this.checkpoints = [ [126,402], [91,81], [340,398], [263,454] ];
+        this.checkpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [117,407], [91,81], [340,398], [263,454] ];
         
         this.Reset();
     }
@@ -32,13 +34,13 @@ class Entity {
         this.input_speed = 0;
         this.input_steer = 0;
 
+        this.timeSinceBeginning = 0;
         this.disqualified = false;
         this.x = 263;
         this.y = 454;
         this.angle = Math.PI;
         this.speed = 0;
-        this.thinkTime = 0.1;
-        this.nextThinkIn = this.thinkTime;
+        this.nextThinkIn = this.thinkTimeS;
         this.reward = 0;
         this.checkpointId = 0;
     }
@@ -48,22 +50,23 @@ class Entity {
             return;
 
         this.nextThinkIn -= dt;
-        if (this.nextThinkIn < 0)
+        if (this.nextThinkIn <= 0)
         {
-            this.nextThinkIn += this.thinkTime;
+            this.nextThinkIn += this.thinkTimeS;
             this._Think();
         }
 
         this._Simulate(dt);
 
         if ( this._HasHitWall() ){
-            this.reward = 0;
             this.disqualified = true;
         }
+
+        this.timeSinceBeginning += dt;
     }
 
-    Mutate(){
-        this.brain.Mutate(0.1);
+    Mutate(amount){
+        this.brain.Mutate(amount);
     }
 
     DeepCopy(){
@@ -84,7 +87,7 @@ class Entity {
         this.x += deltaX * this.speed * dt;
         this.y += deltaY * this.speed * dt;
 
-        this.reward += this.speed * dt;
+        this.reward += this.speed * this.speed * dt;
 
         let nextCheckpoint = this.checkpoints[this.checkpointId];
         if ( Math.abs( nextCheckpoint[0] - this.x ) < this.checkpointRadius && Math.abs( nextCheckpoint[1] - this.y ) < this.checkpointRadius ){
@@ -144,14 +147,14 @@ class Entity {
         let p5x = this.x + Math.cos(this.angle - spread) * size*0.4;
         let p5y = this.y - Math.sin(this.angle - spread) * size*0.4;
 
-        context.fillStyle = "#FF3300";
+        context.fillStyle = this.IsDisqualified() ? "#771100" : "#FF3300";
         context.beginPath();
         context.moveTo(p1x, p1y);
         context.lineTo(p2x, p2y);
         context.lineTo(p3x, p3y);
         context.fill();
-
-        context.fillStyle = "#FFCC00";
+        
+        context.fillStyle = this.IsDisqualified() ? "#775500" : "#FFCC00";
         context.beginPath();
         context.moveTo(p1x, p1y);
         context.lineTo(p4x, p4y);

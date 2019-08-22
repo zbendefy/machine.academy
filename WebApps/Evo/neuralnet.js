@@ -36,16 +36,16 @@ class NeuralNetwork
     }
 
     Mutate(amount){
-        for(let layer of this.jsonData.layers){
-
+        for(let layer of this.jsonData.layers) {
             let neuronCount = layer.weightMx.length;
             let weightsPerNeuron = layer.weightMx[0].length;
 
             for (let i = 0; i < neuronCount; i++) {
                 for (let j = 0; j < weightsPerNeuron; j++) {
-                    layer.weightMx[i][j] += Math.random() * amount;
+                    let oldW = layer.weightMx[i][j];
+                    layer.weightMx[i][j] += (Math.random()*2-1) * amount;
                 }
-                layer.biases[i] += Math.random() * amount;
+                layer.biases[i] += (Math.random()*2-1) * amount;
             }
         }
     }
