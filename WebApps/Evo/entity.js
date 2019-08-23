@@ -15,6 +15,7 @@ class Entity {
         this.carSteeringSpeed = 0.5;
         this.carAcceleration = 8.0;
         this.carBrakeStrength = 2.0;
+        this.carAirResistance = 0.01;
         
         this.sensor_spreadView = 0.45;
         
@@ -80,6 +81,10 @@ class Entity {
     _Simulate(dt){
         let speedModifier = dt * (2.0*(this.input_speed - 0.5));
         this.speed += speedModifier * (speedModifier < 0 ? this.carBrakeStrength : this.carAcceleration);
+
+        let drag = this.speed * this.speed * this.carAirResistance;
+        this.speed -= drag;
+
         if ( this.speed < 0 )
             this.speed = 0;
 
