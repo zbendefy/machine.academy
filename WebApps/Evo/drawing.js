@@ -2,10 +2,12 @@
 
 class EvoDrawing
 {
-    constructor(canvas, imgName){
+    constructor(canvas, imgName, resultsName){
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
 
+        this.paused=false;
+        this.resultsLabelName = resultsName;
         this.trackImageName = imgName;
         let img = document.getElementById(imgName);
         this.offscreenCanvas = document.createElement('canvas');
@@ -84,9 +86,13 @@ class EvoDrawing
         this.simulationSpeed = speed;
         clearInterval(this.timerFnc);
         this.timerFnc = setInterval(()=>{this.Tick()}, (this.frameTimeS * 1000) / this.simulationSpeed);
+        this.paused = speed == 0;
     }
 
     Simulate(dt) {
+        if ( this.paused )
+            return;
+            
         let allEntitiesDisqualified = this.entities.every( (entity)=>{return entity.IsDisqualified()} );
 
         this.currentSessionTimer += dt;
@@ -107,6 +113,11 @@ class EvoDrawing
         for(let entity of this.entities){
             entity.Draw(this.context);
         }
+        
+        var resultsPanel = document.getElementById(this.resultsLabelName);
+
+        resultsPanel.innerText = "Generation: " + this.currentGeneration + 
+         "\nCars in race: " + this.entities.filter(x => !x.IsDisqualified()).length;
     }
 
     Tick(){
@@ -120,5 +131,3 @@ class EvoDrawing
     }
 }
 
-
-var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background");

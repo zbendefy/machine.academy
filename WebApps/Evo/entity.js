@@ -1,3 +1,5 @@
+var drawSensorsGlobal = false;
+
 class Entity {
     constructor(pixelGetter, neuralNetwork = null) {
         if (neuralNetwork === null)
@@ -8,17 +10,18 @@ class Entity {
         this.imgWidth = 512;
         this.imgHeight = 512;
         
-        this.maxSeeingDistancePx = 100;
+        this.maxSeeingDistancePx = 150;
 
         this.thinkTimeS = 0.05;
 
         this.carSteeringSpeed = 0.5;
-        this.carAcceleration = 8.0;
+        this.carAcceleration = 10.0;
         this.carBrakeStrength = 2.0;
-        this.carAirResistance = 0.01;
+        this.carAirResistance = 0.0001;
         
         this.sensor_spreadView = 0.45;
-        
+
+        this.drawSensors = false;
         this.checkpointRadius = 15;
         this.checkpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [167,400],
         [220,400], [244,384], [238,363], [202,347], [182,322], [165,238], [154,151], [116,123],
@@ -96,12 +99,12 @@ class Entity {
         this.x += deltaX * this.speed * dt;
         this.y += deltaY * this.speed * dt;
 
-        this.reward += this.speed * this.speed * dt;
+        this.reward += this.speed * this.speed * dt * 0.01;
 
         let nextCheckpoint = this.checkpoints[this.checkpointId];
         if ( Math.abs( nextCheckpoint[0] - this.x ) < this.checkpointRadius && Math.abs( nextCheckpoint[1] - this.y ) < this.checkpointRadius ){
             this.checkpointId = (this.checkpointId+1) % this.checkpoints.length;
-            this.reward += 1000;
+            this.reward += 10000;
         }
     }
 
@@ -142,8 +145,8 @@ class Entity {
         return imgValue > 0.2;
     }
 
-    _Think(){
-        let sensorData = [
+    _GetSensorData(){
+        return [
             this._EyeDistanceScaled(0), //See forward,
 
             this._EyeDistanceScaled(-this.sensor_spreadView), //See left,
@@ -152,6 +155,10 @@ class Entity {
             this._EyeDistanceScaled(this.sensor_spreadView), //See right,
             this._EyeDistanceScaled(this.sensor_spreadView * 2.0) //See right,
             ];
+    }
+
+    _Think(){
+        let sensorData = this._GetSensorData(); 
 
         let input = [ this.speed, this.angle, this.input_speed, this.input_steer, ...sensorData ];
 
@@ -162,6 +169,40 @@ class Entity {
     Draw(context){
         let size = 10;
         let spread = 2.5;
+        
+        if ((this.drawSensors || drawSensorsGlobal) && !this.IsDisqualified()){
+            let sensorData = this._GetSensorData(); 
+
+            let s1x = this.x + Math.cos(this.angle) * sensorData[0] * this.maxSeeingDistancePx;
+            let s1y = this.y - Math.sin(this.angle) * sensorData[0] * this.maxSeeingDistancePx;
+
+            let s2x = this.x + Math.cos(this.angle-this.sensor_spreadView) * sensorData[1] * this.maxSeeingDistancePx;
+            let s2y = this.y - Math.sin(this.angle-this.sensor_spreadView) * sensorData[1] * this.maxSeeingDistancePx;
+
+            let s3x = this.x + Math.cos(this.angle-this.sensor_spreadView*2) * sensorData[2] * this.maxSeeingDistancePx;
+            let s3y = this.y - Math.sin(this.angle-this.sensor_spreadView*2) * sensorData[2] * this.maxSeeingDistancePx;
+
+            let s4x = this.x + Math.cos(this.angle+this.sensor_spreadView) * sensorData[3] * this.maxSeeingDistancePx;
+            let s4y = this.y - Math.sin(this.angle+this.sensor_spreadView) * sensorData[3] * this.maxSeeingDistancePx;
+
+            let s5x = this.x + Math.cos(this.angle+this.sensor_spreadView*2) * sensorData[4] * this.maxSeeingDistancePx;
+            let s5y = this.y - Math.sin(this.angle+this.sensor_spreadView*2) * sensorData[4] * this.maxSeeingDistancePx;
+
+            context.strokeStyle = "#2288ff";
+            context.lineWidth = 1;
+            context.beginPath();
+            context.moveTo(this.x, this.y);
+            context.lineTo(s1x, s1y);
+            context.moveTo(this.x, this.y);
+            context.lineTo(s2x, s2y);
+            context.moveTo(this.x, this.y);
+            context.lineTo(s3x, s3y);
+            context.moveTo(this.x, this.y);
+            context.lineTo(s4x, s4y);
+            context.moveTo(this.x, this.y);
+            context.lineTo(s5x, s5y);
+            context.stroke();
+        }
 
         let p1x = this.x + Math.cos(this.angle) * size;
         let p1y = this.y - Math.sin(this.angle) * size;

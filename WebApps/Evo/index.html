@@ -14,13 +14,14 @@
         <div class="flex-container main">
             <canvas id="drawCanvas" class="canvas" width="512" height="512" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
             <div class="flex-container controls" width="512" height="200">
-                <button type="button" class="networkbtn" onclick="drawing.Draw()">Button</button>
             </div>
         </div>
 
-        <div class="controlpanel flex-container">
-            <p class="textctrl">Simulation speed: <span id="simspeed">1</span>x</p>
-            <input type="range" min="1" max="50" value="1" class="slider" id="simspeedinput" >
+        <div class="controlpanel flex-container textctrl">
+            <p>Simulation speed: <span id="simspeed">1</span>x</p>
+            <input type="range" min="0" max="50" value="1" class="slider" id="simspeedinput" ><br>
+            <input type="checkbox" id="checkDrawSensors" />Show car sensors
+            <p id="results"> </p>
         </div>
 
         <div id="loading" class="loadingbackground">
@@ -39,6 +40,13 @@
         </script>
 
         <script>
+            var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results");
+
+            var checkboxSensors = document.getElementById("checkDrawSensors");
+            checkboxSensors.onclick=function(){
+                drawSensorsGlobal = checkboxSensors.checked;
+            }
+
             var simSpeedSlider = document.getElementById("simspeedinput");
             var simSpeedElement = document.getElementById("simspeed");
             
