@@ -55,8 +55,6 @@ class EvoDrawing
     }
 
     _Timeout() {
-        console.log("Generation " + this.currentGeneration + " finished. Rewards:");
-
         for(let entity of this.entities){
             entity.GenerationEnd();
         }
@@ -92,7 +90,7 @@ class EvoDrawing
     Simulate(dt) {
         if ( this.paused )
             return;
-            
+
         let allEntitiesDisqualified = this.entities.every( (entity)=>{return entity.IsDisqualified()} );
 
         this.currentSessionTimer += dt;

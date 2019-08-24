@@ -16,7 +16,7 @@ class Entity {
 
         this.carSteeringSpeed = 0.5;
         this.carAcceleration = 10.0;
-        this.carBrakeStrength = 2.0;
+        this.carBrakeStrength = 20.0;
         this.carAirResistance = 0.0001;
         
         this.sensor_spreadView = 0.45;
