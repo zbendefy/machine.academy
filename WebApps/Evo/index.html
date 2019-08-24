@@ -24,6 +24,32 @@
             <p id="results"> </p>
         </div>
 
+        <div>
+            <p>
+                This is a simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
+                Each car has a neural network with the following structure: 
+                <ul>
+                    <li>Input layer of 9 neurons
+                        <ul>
+                            <li>Current speed and direction</li>
+                            <li>Current gas/brake and steering wheel position</li>
+                            <li>5 forward facing distance sensors that measure the distance between the car and the edge of the track in 5 directions.</li>
+                        </ul>
+                    </li>
+                    <li>Hidden layer of 64 neurons</li>
+                    <li>Output layer of 2 neurons
+                        <ul>
+                            <li>Gas/brake input</li>
+                            <li>Steering wheel input</li>
+                        </ul>
+                    </li>
+                </ul>  
+                This neural network is choosing the speed and the direction of the vehicle.
+                In each generation 60 cars start racing. Cars get rewards for driven distance, and based on checkpoints around the track.
+                At the end of a generation the best performing 20% will be selected for the next generation, and their network is slightly mutated using a random vector.
+            </p>
+        </div>
+
         <div id="loading" class="loadingbackground">
             <p class="loadingtext">Loading...</h2>
         </div>
