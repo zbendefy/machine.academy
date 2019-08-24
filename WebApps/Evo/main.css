@@ -85,6 +85,7 @@ html, body {
     align-content: center;
     left:50%;
     top:10%;
+    height: 512px;
     margin-top: 4em;
 	margin-left: -150px; /* This is half the width */
 }
@@ -101,6 +102,26 @@ html, body {
     position: absolute;
     overflow: hidden;
     left: -100vw;
+}
+
+.textblock{
+    position: relative;
+    top: 600px;
+    font-size: 1.3em;
+    margin: 30px;
+    background-color: #c7cee0 ;
+}
+
+.textcontent{
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.details{
+    font-size: 2em;
+    color: #ffcc00;
+    background-color: #3b5998;
+    padding: 10px;
 }
 
 

@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Car racing</title>
+        <title>Hungaroring genetic algorithm</title>
         <link rel="stylesheet" type="text/css" href="main.css"></link>
     </head>
 
     <body>
 
         <div class="headingBackground">
-            <p class="text heading">Car racing simulator (genetic neural networks)</p>
+            <p class="text heading">Hungaroring racing</p>
         </div>
         
         <div class="flex-container main">
@@ -24,30 +24,34 @@
             <p id="results"> </p>
         </div>
 
-        <div>
-            <p>
-                This is a simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
-                Each car has a neural network with the following structure: 
-                <ul>
-                    <li>Input layer of 9 neurons
-                        <ul>
-                            <li>Current speed and direction</li>
-                            <li>Current gas/brake and steering wheel position</li>
-                            <li>5 forward facing distance sensors that measure the distance between the car and the edge of the track in 5 directions.</li>
-                        </ul>
-                    </li>
-                    <li>Hidden layer of 64 neurons</li>
-                    <li>Output layer of 2 neurons
-                        <ul>
-                            <li>Gas/brake input</li>
-                            <li>Steering wheel input</li>
-                        </ul>
-                    </li>
-                </ul>  
-                This neural network is choosing the speed and the direction of the vehicle.
-                In each generation 60 cars start racing. Cars get rewards for driven distance, and based on checkpoints around the track.
-                At the end of a generation the best performing 20% will be selected for the next generation, and their network is slightly mutated using a random vector.
-            </p>
+        <div class="textblock">
+            <p class="details" onclick="toggleDetails()" >Details</p>
+            <div  id="expandable">
+                <p class="textcontent">
+                    This is a simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
+                    Each car has a neural network - a brain - that is initialized to a default random network with the following structure: 
+                    <ul>
+                        <li>Input layer of 9 neurons
+                            <ul>
+                                <li>Current speed and direction</li>
+                                <li>Current gas/brake and steering wheel position</li>
+                                <li>5 forward facing distance sensors that measure the distance between the car and the edge of the track in 5 directions.</li>
+                            </ul>
+                        </li>
+                        <li>Hidden layer of 64 neurons</li>
+                        <li>Output layer of 2 neurons
+                            <ul>
+                                <li>Gas/brake input</li>
+                                <li>Steering wheel input</li>
+                            </ul>
+                        </li>
+                    </ul>  
+                    This neural network is driving each vehicle by choosing its speed and the direction.
+                    In each generation 60 cars start racing. Cars get rewards for driven distance, and for passing checkpoints around the track.
+                    At the end of a generation the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
+                    Before starting the new generation all 60 of the are mutated by applying a small random vector to their neural networks weights and biases.
+                </p>
+            </div>
         </div>
 
         <div id="loading" class="loadingbackground">
@@ -66,6 +70,7 @@
         </script>
 
         <script>
+            var isDetailExpanded = false;
             var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results");
 
             var checkboxSensors = document.getElementById("checkDrawSensors");
@@ -82,6 +87,12 @@
             simSpeedSlider.oninput = function() {
                 simSpeedElement.innerHTML = this.value|0;
                 drawing.SetSimulationSpeed(this.value|0);
+            }
+
+            function toggleDetails(){
+                isDetailExpanded=!isDetailExpanded; 
+                let expandable = document.getElementById('expandable');
+                expandable.style.display = isDetailExpanded ? "block" : "none";
             }
         </script>
 

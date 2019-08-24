@@ -115,7 +115,8 @@ class EvoDrawing
         var resultsPanel = document.getElementById(this.resultsLabelName);
 
         resultsPanel.innerText = "Generation: " + this.currentGeneration + 
-         "\nCars in race: " + this.entities.filter(x => !x.IsDisqualified()).length;
+         "\nCars in race: " + this.entities.filter(x => !x.IsDisqualified()).length +
+         "\nTimer: " + (this.currentSessionTimer|0) + "s";
     }
 
     Tick(){
