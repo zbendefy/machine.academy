@@ -25,7 +25,7 @@
         </div>
 
         <div class="textblock">
-            <p class="details" onclick="toggleDetails()" >Details</p>
+            <p class="details" onclick="toggleDetails()" onmouseover="this.style.color='#ffff00';" onmouseout="this.style.color='#ffcc00';"> Details</p>
             <div  id="expandable">
                 <p class="textcontent">
                     This is a simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
@@ -46,13 +46,17 @@
                             </ul>
                         </li>
                     </ul>  
+                </p>
+                <p class="textcontent">
                     This neural network is driving each vehicle by choosing its speed and the direction.
                     In each generation 60 cars start racing. Cars get rewards for driven distance, and for passing checkpoints around the track.
                     At the end of a generation the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
                     Before starting the new generation all 60 of the are mutated by applying a small random vector to their neural networks weights and biases.
+                    <br>
                 </p>
             </div>
         </div>
+
 
         <div id="loading" class="loadingbackground">
             <p class="loadingtext">Loading...</h2>
@@ -94,6 +98,8 @@
                 let expandable = document.getElementById('expandable');
                 expandable.style.display = isDetailExpanded ? "block" : "none";
             }
+
+            expandable.style.display = isDetailExpanded ? "block" : "none";
         </script>
 
 
