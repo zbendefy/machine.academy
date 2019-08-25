@@ -41,16 +41,16 @@
                         <li>Hidden layer of 64 neurons</li>
                         <li>Output layer of 2 neurons
                             <ul>
-                                <li>Gas/brake input</li>
+                                <li>Gas/brake pedal input</li>
                                 <li>Steering wheel input</li>
                             </ul>
                         </li>
                     </ul>  
                 </p>
                 <p class="textcontent">
-                    This neural network is driving each vehicle by choosing its speed and the direction.
+                    Each neural network drives its vehicle by choosing its speed and direction.
                     In each generation 60 cars start racing. Cars get rewards for driven distance, and for passing checkpoints around the track.
-                    At the end of a generation the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
+                    At the end of a generation - that is after all cars crashed into the tracks borders - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
                     Before starting the new generation all 60 of the are mutated by applying a small random vector to their neural networks weights and biases.
                     <br>
                 </p>
