@@ -2,10 +2,11 @@
 
 class EvoDrawing
 {
-    constructor(canvas, imgName, resultsName){
+    constructor(canvas, imgName, resultsName, networkoutputName){
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
 
+        this.networkoutputName = networkoutputName;
         this.paused=false;
         this.resultsLabelName = resultsName;
         this.trackImageName = imgName;
@@ -60,6 +61,12 @@ class EvoDrawing
         }
 
         this.entities.sort( function(a,b){ return b.reward-a.reward; } ); //Sort by descending order
+
+        if ( this.networkoutputName  != undefined ){
+            let networkAsString = this.entities[0].brain.GetNetworkAsJSON();
+            document.getElementById(this.networkoutputName).innerHTML = "//Generation " + this.currentGeneration + ", Reward: " + (this.entities[0].reward|0)
+             +"\n\n" +  networkAsString;
+        }
 
         this.entities = this.entities.slice(0, this.entities.length * this.generationSurvivorPercentage);
         

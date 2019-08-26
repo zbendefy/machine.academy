@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="utf-8" lang="en">
         <title>Hungaroring genetic algorithm</title>
         <link rel="stylesheet" type="text/css" href="main.css"></link>
     </head>
@@ -54,6 +55,13 @@
                     Before starting the new generation all 60 of the are mutated by applying a small random vector to their neural networks weights and biases.
                     <br>
                 </p>
+                
+                <p class="textcontent">
+                    Here you can find the neural network of the last generation's top performer:                    
+                </p>
+                
+                <pre id="networkoutput" class="prettyprint networkoutput">>
+                </pre>
             </div>
         </div>
 
@@ -75,7 +83,7 @@
 
         <script>
             var isDetailExpanded = false;
-            var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results");
+            var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput");
 
             var checkboxSensors = document.getElementById("checkDrawSensors");
             checkboxSensors.onclick=function(){

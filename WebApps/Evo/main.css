@@ -119,6 +119,16 @@ html, body {
     padding-right: 20px;
 }
 
+.networkoutput{
+    padding: 20px;
+    margin:20px;
+    background-color: #ffffff;
+    font-size: 0.7em;
+    height: 400px;
+    overflow: scroll;
+    font-family: "Lucida Console", Monaco, monospace
+}
+
 #expandable{
     padding: 10px;
 }

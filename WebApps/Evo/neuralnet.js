@@ -57,6 +57,10 @@ class NeuralNetwork
         return new NeuralNetwork( JSON.parse( JSON.stringify( this.jsonData ) ) );
     }
 
+    GetNetworkAsJSON(){
+        return JSON.stringify(this.jsonData, null, 2);
+    }
+
     GetName(){ return this.jsonData.name; }
     
     GetDescription(){ return this.jsonData.description; }
