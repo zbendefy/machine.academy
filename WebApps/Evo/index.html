@@ -2,14 +2,14 @@
 <html>
     <head>
         <meta charset="utf-8" lang="en">
-        <title>Hungaroring genetic algorithm</title>
+        <title>Racecar trainer using a Genetic algorithm</title>
         <link rel="stylesheet" type="text/css" href="main.css"></link>
     </head>
 
     <body>
 
         <div class="headingBackground">
-            <p class="text heading">Hungaroring racing</p>
+            <p class="text heading">Racecar trainer using a Genetic algorithm</p>
         </div>
         
         <div class="flex-container main">
@@ -29,32 +29,28 @@
             <p class="details" onclick="toggleDetails()" onmouseover="this.style.color='#ffff00';" onmouseout="this.style.color='#ffcc00';"> Details</p>
             <div  id="expandable">
                 <p class="textcontent">
-                    This is a simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
-                    Each car has a neural network - a brain - that is initialized to a default random network with the following structure: 
-                    <ul>
-                        <li>Input layer of 9 neurons
-                            <ul>
-                                <li>Current speed and direction</li>
-                                <li>Current gas/brake and steering wheel position</li>
-                                <li>5 forward facing distance sensors that measure the distance between the car and the edge of the track in 5 directions.</li>
-                            </ul>
-                        </li>
-                        <li>Hidden layer of 64 neurons</li>
-                        <li>Output layer of 2 neurons
-                            <ul>
-                                <li>Gas/brake pedal input</li>
-                                <li>Steering wheel input</li>
-                            </ul>
-                        </li>
-                    </ul>  
+                    This is a genetic algorithm simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
+                    Each car has a neural network - a brain - that is initialized randomly. The network of each car has the following structure: 
                 </p>
+                
+                <img class="content" src="network.svg">
+                </img>
+
+                <p class="textcontent">
+                    The cars are equipped with 5 sensors that measure distance between the car and the edge of the track.
+                    This distance is then provided to the neural network along with the current speed, direction and the steering wheel and pedal values.
+                    All of this is is enough data for the network to be able to drive, now it only has to learn how to use it.
+                </p>
+
                 <p class="textcontent">
                     Each neural network drives its vehicle by choosing its speed and direction.
                     In each generation 60 cars start racing. Cars get rewards for driven distance, and for passing checkpoints around the track.
-                    At the end of a generation - that is after all cars crashed into the tracks borders - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
-                    Before starting the new generation all 60 of the are mutated by applying a small random vector to their neural networks weights and biases.
+                    The more distance a car drives and more checkpoints it hits, the higher the reward. If a car drives off the track it gets instantly disqualified.
+                    At the end of a generation - that is after all cars drove off the track - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
+                    After that all 60 of them are mutated by applying a small random vector to their neural networks weights and biases and then a new generation starts.
                     <br>
                 </p>
+
                 
                 <p class="textcontent">
                     Here you can find the neural network of the last generation's top performer:                    
