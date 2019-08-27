@@ -4,8 +4,8 @@ Neural network training library written in C# as a learning project.
 
 ## Demos:
 
-### [Handwritten digit recognizer web app](http://htmlpreview.github.io/?https://github.com/zbendefy/machine.academy/blob/master/WebApps/NumberRecognize/index.html)
-### [Car racing with Genetic algorithm](http://htmlpreview.github.io/?https://github.com/zbendefy/machine.academy/blob/master/WebApps/Evo/index.html)
+### [Handwritten digit recognizer web app](WebApps/NumberRecognize/index.html)
+### [Car racing with Genetic algorithm](WebApps/Evo/index.html)
 
 ## Features:
  * GPU acceleration (using OpenCL)
