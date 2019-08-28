@@ -45,7 +45,6 @@ class NeuralNetwork
 
             for (let i = 0; i < neuronCount; i++) {
                 for (let j = 0; j < weightsPerNeuron; j++) {
-                    let oldW = layer.weightMx[i][j];
                     layer.weightMx[i][j] += (Math.random()*2-1) * amount;
                 }
                 layer.biases[i] += (Math.random()*2-1) * amount;
