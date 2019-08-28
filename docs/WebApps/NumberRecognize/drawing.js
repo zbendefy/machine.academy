@@ -11,10 +11,10 @@ function loadFile(filePath) {
 }
 
 var networkFilenames = [ 
-    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network1.json",
-    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network2.json",
-    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network3.json",
-    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/WebApps/NumberRecognize/network4.json"
+    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/docs/WebApps/NumberRecognize/network1.json",
+    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/docs/WebApps/NumberRecognize/network2.json",
+    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/docs/WebApps/NumberRecognize/network3.json",
+    "https://raw.githubusercontent.com/zbendefy/machine.academy/master/docs/WebApps/NumberRecognize/network4.json"
     ];
 var networks = [];
 
