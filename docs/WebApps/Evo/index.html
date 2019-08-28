@@ -74,36 +74,35 @@
         <script src="drawing.js"> </script>
 
         <script>
-            document.getElementById("loading").hidden=true;
-        </script>
+            setTimeout(function(){
+                var isDetailExpanded = false;
+                var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput");
 
-        <script>
-            var isDetailExpanded = false;
-            var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput");
+                var checkboxSensors = document.getElementById("checkDrawSensors");
+                checkboxSensors.onclick=function(){
+                    drawSensorsGlobal = checkboxSensors.checked;
+                }
 
-            var checkboxSensors = document.getElementById("checkDrawSensors");
-            checkboxSensors.onclick=function(){
-                drawSensorsGlobal = checkboxSensors.checked;
-            }
+                var simSpeedSlider = document.getElementById("simspeedinput");
+                var simSpeedElement = document.getElementById("simspeed");
+                
+                simSpeedElement.innerHTML = simSpeedSlider.value|0;
+                drawing.SetSimulationSpeed(simSpeedSlider.value|0);
+                
+                simSpeedSlider.oninput = function() {
+                    simSpeedElement.innerHTML = this.value|0;
+                    drawing.SetSimulationSpeed(this.value|0);
+                }
 
-            var simSpeedSlider = document.getElementById("simspeedinput");
-            var simSpeedElement = document.getElementById("simspeed");
-            
-            simSpeedElement.innerHTML = simSpeedSlider.value|0;
-            drawing.SetSimulationSpeed(simSpeedSlider.value|0);
-            
-            simSpeedSlider.oninput = function() {
-                simSpeedElement.innerHTML = this.value|0;
-                drawing.SetSimulationSpeed(this.value|0);
-            }
+                function toggleDetails(){
+                    isDetailExpanded=!isDetailExpanded; 
+                    let expandable = document.getElementById('expandable');
+                    expandable.style.display = isDetailExpanded ? "block" : "none";
+                }
 
-            function toggleDetails(){
-                isDetailExpanded=!isDetailExpanded; 
-                let expandable = document.getElementById('expandable');
                 expandable.style.display = isDetailExpanded ? "block" : "none";
-            }
-
-            expandable.style.display = isDetailExpanded ? "block" : "none";
+                document.getElementById("loading").hidden=true;
+            }, 1000);
         </script>
 
 
