@@ -74,8 +74,16 @@
         <script src="drawing.js"> </script>
 
         <script>
+
+            var isDetailExpanded = false;
+            
+            function toggleDetails(){
+                isDetailExpanded=!isDetailExpanded; 
+                let expandable = document.getElementById('expandable');
+                expandable.style.display = isDetailExpanded ? "block" : "none";
+            }
+
             setTimeout(function(){
-                var isDetailExpanded = false;
                 var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput");
 
                 var checkboxSensors = document.getElementById("checkDrawSensors");
@@ -92,12 +100,6 @@
                 simSpeedSlider.oninput = function() {
                     simSpeedElement.innerHTML = this.value|0;
                     drawing.SetSimulationSpeed(this.value|0);
-                }
-
-                function toggleDetails(){
-                    isDetailExpanded=!isDetailExpanded; 
-                    let expandable = document.getElementById('expandable');
-                    expandable.style.display = isDetailExpanded ? "block" : "none";
                 }
 
                 expandable.style.display = isDetailExpanded ? "block" : "none";
