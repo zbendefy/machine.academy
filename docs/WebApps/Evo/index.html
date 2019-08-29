@@ -37,7 +37,7 @@
             <p class="details" onclick="toggleDetails()" onmouseover="this.style.color='#ffff00';" onmouseout="this.style.color='#ffcc00';"> Details</p>
             <div  id="expandable">
                 <p class="textcontent">
-                    This is a genetic algorithm simulator where racing cars are learning how to drive on the roads of the Hungaroring race track using a genetic algorithm.
+                    This is a simulator where racing cars are learning to drive on the Hungaroring race track using a genetic algorithm.
                     Each car has a neural network - a brain - that is initialized randomly. The network of each car has the following structure: 
                 </p>
                 
@@ -45,16 +45,16 @@
                 </img>
 
                 <p class="textcontent">
-                    The cars are equipped with 5 sensors that measure distance between the car and the edge of the track.
-                    This distance is then provided to the neural network along with the current speed, direction and the steering wheel and pedal values.
-                    All of this is is enough data for the network to be able to drive, now it only has to learn how to use it.
+                    The cars are equipped with an array of 5 sensors that measure distance between the itself and the edge of the track.
+                    This data is provided to the neural network along with the current speed, the direction, and the state of the steering wheel and the pedals.
+                    All of this should be enough data for the network to be able to drive, now it only has to learn how to do it.
                 </p>
 
                 <p class="textcontent">
-                    Each neural network drives its vehicle by choosing its speed and direction.
+                    Each neural network drives its vehicle by choosing its speed and direction every 50 milliseconds.
                     In each generation 60 cars start racing. Cars get rewards for driven distance, and for passing checkpoints around the track.
                     The further and faster a car drives the higher the reward. If a car drives off the track, or drives too slowly it gets disqualified.
-                    At the end of a generation - that is after all cars drove off the track or stop due to being slow - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
+                    At the end of a generation - that is after all cars drove off the track or stopped due to being slow - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
                     After that all 60 of them are mutated by applying a small random vector to their neural networks weights and biases and then a new generation starts.
                     <br>
                 </p>
