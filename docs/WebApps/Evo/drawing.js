@@ -49,9 +49,10 @@ class EvoDrawing
     }
 
     _MutateEntities(){
+        let mutationRate = this.learningRate;
         for(let entity of this.entities){
             let outlier = (Math.random() < this.outlierChance) ? this.outlierDelta : 0;
-            entity.Mutate(this.learningRate);
+            entity.Mutate(mutationRate);
         }
     }
 
@@ -68,7 +69,7 @@ class EvoDrawing
              +"\n\n" +  networkAsString;
         }
 
-        this.entities = this.entities.slice(0, this.entities.length * this.generationSurvivorPercentage);
+        this.entities = this.entities.slice(0, Math.floor(this.entities.length * this.generationSurvivorPercentage) );
         
         let survivorCount = this.entities.length;
         let currentEntityIdx = 0;
@@ -87,6 +88,7 @@ class EvoDrawing
         this.currentGeneration++;
     }
 
+    SetSurvivalRate(rate){ this.generationSurvivorPercentage = rate; }
 
     SetMutationRate(rate){ this.learningRate = rate; }
 

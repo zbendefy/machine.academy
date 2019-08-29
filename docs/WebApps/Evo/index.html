@@ -20,10 +20,13 @@
 
         <div class="controlpanel flex-container textctrl">
             <p>Simulation speed: <span id="simspeed">5</span>x</p>
-            <input type="range" min="0" max="50" value="5" class="slider" id="simspeedinput" ><br>
+            <input type="range" min="0" max="50" value="5" class="slider" id="simspeedinput" >
 
             <p>Mutation rate: <span id="learningratelbl">0.01</span></p>
-            <input type="range" min="0.001" step="0.001" max="0.02" value="0.01" class="slider" id="learningrateinput" ><br><br>
+            <input type="range" min="0.001" step="0.001" max="0.02" value="0.01" class="slider" id="learningrateinput" >
+
+            <p>Survivors: <span id="survivorlbl">20</span>%</p>
+            <input type="range" min="5" step="1" max="50" value="20" class="slider" id="survivorinput" ><br><br>
 
             <input type="checkbox" id="checkDrawSensors" />
             <label for="checkDrawSensors">Show car sensors</label>
@@ -117,6 +120,18 @@
                     mutationRateElement.innerHTML = this.value;
                     drawing.SetMutationRate(this.value);
                 }
+                
+                var survivorSlider = document.getElementById("survivorinput");
+                var survivorElement = document.getElementById("survivorlbl");
+                
+                survivorElement.innerHTML = survivorSlider.value;
+                drawing.SetSurvivalRate(survivorSlider.value * 0.01);
+
+                survivorSlider.oninput = function() {
+                    survivorElement.innerHTML = this.value;
+                    drawing.SetSurvivalRate(this.value * 0.01);
+                }
+
 
                 expandable.style.display = isDetailExpanded ? "block" : "none";
                 document.getElementById("loading").hidden=true;
