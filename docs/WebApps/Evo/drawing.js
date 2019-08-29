@@ -31,7 +31,7 @@ class EvoDrawing
         this.entityTimeoutS = 500;
         this.frameTimeS = 0.05; 
         this.generationSurvivorPercentage = 0.2;
-        this.learningRate = 0.01;
+        this.learningRate = 0.02;
         this.outlierChance = 0.1;
         this.outlierDelta = 20;
 
