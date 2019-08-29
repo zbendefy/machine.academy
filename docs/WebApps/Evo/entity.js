@@ -14,8 +14,8 @@ class Entity {
 
         this.thinkTimeS = 0.05;
 
-        this.carSteeringSpeed = 0.5;
-        this.carAcceleration = 10.0;
+        this.carSteeringSpeed = 0.25;
+        this.carAcceleration = 5.0;
         this.carBrakeStrength = 20.0;
         this.carAirResistance = 0.0001;
         
@@ -42,6 +42,7 @@ class Entity {
         this.input_speed = 0;
         this.input_steer = 0;
 
+        this.lowSpeedCounter = 0;
         this.timeSinceBeginning = 0;
         this.disqualified = false;
         this.x = 263;
@@ -66,7 +67,7 @@ class Entity {
 
         this._Simulate(dt);
 
-        if ( this._HasHitWall() ){
+        if ( this._HasHitWall() || this.lowSpeedCounter > 2.0 ){
             this.disqualified = true;
         }
 
@@ -100,6 +101,12 @@ class Entity {
         this.y += deltaY * this.speed * dt;
 
         this.reward += this.speed * this.speed * dt * 0.01;
+
+        if (this.speed < 0.3){
+            this.lowSpeedCounter += dt;
+        } else {
+            this.lowSpeedCounter = 0.0;
+        }
 
         let nextCheckpoint = this.checkpoints[this.checkpointId];
         if ( Math.abs( nextCheckpoint[0] - this.x ) < this.checkpointRadius && Math.abs( nextCheckpoint[1] - this.y ) < this.checkpointRadius ){

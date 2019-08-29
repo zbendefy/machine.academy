@@ -21,6 +21,10 @@
         <div class="controlpanel flex-container textctrl">
             <p>Simulation speed: <span id="simspeed">5</span>x</p>
             <input type="range" min="0" max="50" value="5" class="slider" id="simspeedinput" ><br>
+
+            <p>Mutation rate: 0.0<span id="learningratelbl">10</span>x</p>
+            <input type="range" min="10" max="30" value="10" class="slider" id="learningrateinput" ><br><br>
+
             <input type="checkbox" id="checkDrawSensors" />
             <label for="checkDrawSensors">Show car sensors</label>
             <p id="results"> </p>
@@ -46,8 +50,8 @@
                 <p class="textcontent">
                     Each neural network drives its vehicle by choosing its speed and direction.
                     In each generation 60 cars start racing. Cars get rewards for driven distance, and for passing checkpoints around the track.
-                    The more distance a car drives and more checkpoints it hits, the higher the reward. If a car drives off the track it gets instantly disqualified.
-                    At the end of a generation - that is after all cars drove off the track - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
+                    The further and faster a car drives the higher the reward. If a car drives off the track, or drives too slowly it gets disqualified.
+                    At the end of a generation - that is after all cars drove off the track or stop due to being slow - the best performing 12 cars will be selected for the next generation, and the remaining 48 places will be filled by their copies.
                     After that all 60 of them are mutated by applying a small random vector to their neural networks weights and biases and then a new generation starts.
                     <br>
                 </p>
@@ -97,10 +101,21 @@
                 
                 simSpeedElement.innerHTML = simSpeedSlider.value|0;
                 drawing.SetSimulationSpeed(simSpeedSlider.value|0);
-                
+
                 simSpeedSlider.oninput = function() {
                     simSpeedElement.innerHTML = this.value|0;
                     drawing.SetSimulationSpeed(this.value|0);
+                }
+                
+                var mutationRateSlider = document.getElementById("learningrateinput");
+                var mutationRateElement = document.getElementById("learningratelbl");
+                
+                mutationRateElement.innerHTML = mutationRateSlider.value|0;
+                drawing.SetMutationRate((mutationRateSlider.value * 0.001));
+
+                mutationRateSlider.oninput = function() {
+                    mutationRateElement.innerHTML = this.value|0;
+                    drawing.SetMutationRate(this.value*0.001);
                 }
 
                 expandable.style.display = isDetailExpanded ? "block" : "none";
