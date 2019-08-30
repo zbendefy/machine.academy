@@ -19,7 +19,7 @@ class Entity {
         this.carBrakeStrength = 20.0;
         this.carAirResistance = 0.0001;
         
-        this.sensor_spreadView = 0.45;
+        this.sensor_spreadView = 0.55;
 
         this.drawSensors = false;
         this.checkpointRadius = 15;
