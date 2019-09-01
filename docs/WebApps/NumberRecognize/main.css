@@ -24,3 +24,14 @@
 .networkbtn{
     flex-grow: 1;
 }
+
+
+.textblock{
+    position: relative;
+    top: 420px;
+    font-size: 1.3em;
+    margin-left: 30px;
+    margin-right: 30px;
+    background-color: #c7cee0 ;
+    margin-bottom: 10px;
+}

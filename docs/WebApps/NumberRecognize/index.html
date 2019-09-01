@@ -22,8 +22,41 @@
                 <button type="button" class="networkbtn" onclick="calculateNetwork('lblResult', 'lblResultCoM', 'lblResultDetails')">What did I draw?</button>
             </div>
             <p id="lblResult" class="text">Draw a number from 0 to 9!</p>
-            <p id="lblResultCoM" class="text small"></p>
-            <p id="lblResultDetails" class="text small"></p>
+        </div>
+
+        
+        <div class="textblock">
+            <p class="details" onclick="toggleDetails()" onmouseover="this.style.color='#ffff00';" onmouseout="this.style.color='#ffcc00';"> Details</p>
+            <div  id="expandable" class="detailsExpand" >
+                <p class="textcontent">
+                    This is a trained neural network recognizing your hand-writing. Draw a number between 0 and 9 and
+                    see if the network guessed it right!
+                </p>
+                <p class="textcontent">
+                    In the background there is a neural network that was trained on the <a href="http://yann.lecun.com/exdb/mnist/">MNIST dataset</a>. The dataset consists of
+                    60 000 + 10 000 images of hand-written numbers. All images have a size of 28x28 pixels, and an associated label that 
+                    tells which number is supposed to be drawn on the image.
+                </p>
+                
+                <img class="content small" src="MnistExamples.png">
+                </img>
+
+                <p class="textcontent">
+                    The MNIST dataset contains the images pre-processed, so that each image is centered inside the 28x28
+                    pixel region using its center of mass. To make sure that the network receives similiar inputs that it
+                    has learned on, your input is also centered using your drawings center of mass:
+                </p>
+
+                <p id="lblResultCoM" class="text small important">-</p>
+
+                <p class="textcontent">
+                    In this demo app there are actually 4 networks that were trained using this dataset, and once you draw a number
+                    all of them will take a vote. The number that most of the networks voted for gets picked as the result.
+                    You can see the result of the last voting here:
+                </p>
+
+                <p id="lblResultDetails" class="text small important">-</p>
+            </div>
         </div>
 
         <div id="loading" class="loadingbackground">
@@ -34,6 +67,15 @@
         <script src="drawing.js"> </script>
         
         <script>
+            var isDetailExpanded = false;
+
+            function toggleDetails(){
+                isDetailExpanded=!isDetailExpanded; 
+                let expandable = document.getElementById('expandable');
+                expandable.style.display = isDetailExpanded ? "block" : "none";
+            }
+            expandable.style.display = isDetailExpanded ? "block" : "none";
+
             document.getElementById("loading").hidden=true;
         </script>
 

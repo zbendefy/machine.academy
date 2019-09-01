@@ -298,8 +298,12 @@ function calculateNetwork(target, centerOfMassTarget, detailTarget)
     document.getElementById(centerOfMassTarget).innerHTML =
      "Center of mass correction: (" + xSignPrefix + xCorrection + ", " + ySignPrefix + yCorrection+")";
 
-    document.getElementById(detailTarget).innerHTML =
-    "Voting result: [" + voting.toString() + "]";
+     let votingDisplayStr = "Voting result:<br>";
+    for(let i = 0; i < voting.length; i++){
+        votingDisplayStr += i + ": " + voting[i] + "<br>";
+    }
+
+    document.getElementById(detailTarget).innerHTML = votingDisplayStr;
 }
 
 

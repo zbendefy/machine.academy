@@ -44,6 +44,7 @@
     width: 300px;
     height: 32px;
 }
+
 .hidecanvas
 {
     position: absolute;
@@ -78,11 +79,4 @@
 
 .networkbtn{
     flex-grow: 1;
-}
-
-.content{
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-    width: 80%;
 }
