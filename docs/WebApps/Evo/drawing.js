@@ -35,9 +35,9 @@ class EvoDrawing
         this.outlierChance = 0.1;
         this.outlierDelta = 20;
 
-        this.drawFpsTarget = 30;
-        this.drawFrameTimeTargetS  = 1 / this.drawFpsTarget;
-        this.drawingTimer = 0;
+        this.drawFpsTarget = 45;
+        this.drawFrameTimeTargetMs  = 1000 / this.drawFpsTarget;
+        this.lastFrameTime = Date.now();
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
@@ -142,10 +142,10 @@ class EvoDrawing
     Tick(){
         this.Simulate(this.frameTimeS);
 
-        this.drawingTimer -= this.tickRealTimeS;
-        if (this.drawingTimer <= 0){
+        let currentTime = Date.now();
+        if (currentTime - this.lastFrameTime >= this.drawFrameTimeTargetMs){
             this.Draw();
-            this.drawingTimer = Math.max( this.drawingTimer + this.drawFrameTimeTargetS, -this.drawFrameTimeTargetS );
+            this.lastFrameTime = currentTime;
         }
     }
 
