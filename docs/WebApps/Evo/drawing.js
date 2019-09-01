@@ -42,14 +42,15 @@ class EvoDrawing
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
         this.simulationSpeed = 1;
+        this.timerFnc = undefined;
         
         while( this.entities.length < this.entityCountTarget ){
             this.entities.push(new Entity(this.GetPixelAtPoint.bind(this)));
         }
         
         this._MutateEntities();
-        
-        this.timerFnc = setInterval(()=>{this.Tick()}, (this.frameTimeS * 1000) / this.simulationSpeed);
+
+        SetSimulationSpeed(this.simulationSpeed);
     }
 
     _MutateEntities(){
@@ -98,8 +99,11 @@ class EvoDrawing
 
     SetSimulationSpeed(speed){
         this.simulationSpeed = speed;
-        clearInterval(this.timerFnc);
-        this.timerFnc = setInterval(()=>{this.Tick()}, (this.frameTimeS * 1000) / this.simulationSpeed);
+        if (this.timerFnc)
+            clearInterval(this.timerFnc);
+        let tickTimeMs = (this.frameTimeS * 1000) / this.simulationSpeed;
+        this.timerFnc = setInterval(()=>{this.Tick()}, tickTimeMs);
+        this.tickRealTimeS = tickTimeMs / 1000;
         this.paused = speed == 0;
     }
 
@@ -138,7 +142,7 @@ class EvoDrawing
     Tick(){
         this.Simulate(this.frameTimeS);
 
-        this.drawingTimer -= this.frameTimeS;
+        this.drawingTimer -= this.tickRealTimeS;
         if (this.drawingTimer <= 0){
             this.Draw();
             this.drawingTimer = Math.max( this.drawingTimer + this.drawFrameTimeTargetS, -this.drawFrameTimeTargetS );
