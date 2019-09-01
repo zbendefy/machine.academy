@@ -36,7 +36,7 @@ class EvoDrawing
         this.outlierDelta = 20;
 
         this.drawFpsTarget = 30;
-        this.drawFrmeTimeTarget  = 1 / this.drawFpsTarget;
+        this.drawFrameTimeTargetS  = 1 / this.drawFpsTarget;
         this.drawingTimer = 0;
 
         this.currentSessionTimer = 0;
@@ -141,7 +141,7 @@ class EvoDrawing
         this.drawingTimer -= this.frameTimeS;
         if (this.drawingTimer <= 0){
             this.Draw();
-            this.drawingTimer = Math.max( this.drawingTimer + this.drawFrmeTimeTarget, -this.drawFrmeTimeTarget );
+            this.drawingTimer = Math.max( this.drawingTimer + this.drawFrameTimeTargetS, -this.drawFrameTimeTargetS );
         }
     }
 
