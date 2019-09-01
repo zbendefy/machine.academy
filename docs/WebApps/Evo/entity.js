@@ -17,7 +17,7 @@ class Entity {
         this.carSteeringSpeed = 0.22;
         this.carAcceleration = 4.0;
         this.carBrakeStrength = 20.0;
-        this.carAirResistance = 0.001;
+        this.carAirResistance = 0.0003;
         
         this.sensor_spreadView = 0.55;
 
@@ -100,7 +100,7 @@ class Entity {
         this.x += deltaX * this.speed * dt;
         this.y += deltaY * this.speed * dt;
 
-        this.reward += this.speed * this.speed * dt * 0.01;
+        this.reward += ( (this.speed+1) * (this.speed+1) ) * dt * 0.01;
 
         if (this.speed < 0.3){
             this.lowSpeedCounter += dt;
