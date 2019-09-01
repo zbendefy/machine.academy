@@ -36,7 +36,7 @@ class EvoDrawing
         this.outlierDelta = 20;
 
         this.drawFpsTarget = 30;
-        this.drawFrmeTimeTarget  = 1000 / this.drawFpsTarget;
+        this.drawFrmeTimeTarget  = 1 / this.drawFpsTarget;
         this.drawingTimer = 0;
 
         this.currentSessionTimer = 0;
