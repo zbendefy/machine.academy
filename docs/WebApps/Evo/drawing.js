@@ -103,10 +103,13 @@ class EvoDrawing
         this.simulationSpeed = speed;
         if (this.timerFnc)
             clearInterval(this.timerFnc);
-        let tickTimeMs = (this.frameTimeS * 1000) / this.simulationSpeed;
-        this.timerFnc = setInterval(()=>{this.Tick()}, tickTimeMs);
-        this.tickRealTimeS = tickTimeMs / 1000;
-        this.paused = speed == 0;
+        
+        if ( this.simulationSpeed > 0 ){
+            let tickTimeMs = (this.frameTimeS * 1000) / this.simulationSpeed;
+            this.timerFnc = setInterval(()=>{this.Tick()}, tickTimeMs);
+        }
+
+        this.paused = this.simulationSpeed == 0;
     }
 
     Simulate(dt) {

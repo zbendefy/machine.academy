@@ -15,10 +15,11 @@ class NeuralNetwork
         let neuronCount = layer.weightMx.length;
         let weightsPerNeuron = layer.weightMx[0].length;
 
-        for (let i = 0; i < neuronCount; i++) {
+        for (let i = 0; i < neuronCount; ++i) {
             let acc = 0;
-            for (let j = 0; j < weightsPerNeuron; j++) {
-                acc += layer.weightMx[i][j] * input[j];
+            let weightVector = layer.weightMx[i];
+            for (let j = 0; j < weightsPerNeuron; ++j) {
+                acc += weightVector[j] * input[j];
             }
             acc += layer.biases[i];
             ret[i] = this._Sigmoid( acc );
@@ -43,8 +44,8 @@ class NeuralNetwork
             let neuronCount = layer.weightMx.length;
             let weightsPerNeuron = layer.weightMx[0].length;
 
-            for (let i = 0; i < neuronCount; i++) {
-                for (let j = 0; j < weightsPerNeuron; j++) {
+            for (let i = 0; i < neuronCount; ++i) {
+                for (let j = 0; j < weightsPerNeuron; ++j) {
                     layer.weightMx[i][j] += (Math.random()*2-1) * amount;
                 }
                 layer.biases[i] += (Math.random()*2-1) * amount;
