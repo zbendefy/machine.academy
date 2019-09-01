@@ -1,59 +1,6 @@
-html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    width: 100%;
-    background-color: #dfe3ee ;
-}
-
-.headingBackground {
-    background-color: #3b5998 ;
-    width: 100%;
-    padding: 0px;
-    margin: 0px;
-    line-height: 1;
-    overflow: visible;
-}
-
-.loadingbackground{
-    position: fixed;
-    width:100%;
-    bottom:50%;
-    text-align: center;
-    background-color: #000000ee;
-}
-
-.loadingtext{
-    font-size: 3em;
-    color: #ffffffee
-}
-
-.fixed{
-    position: fixed;
-}
-
-.heading.text {
-    color: #f7f7f7;
-    font-size: 2em;
-    font-weight: bold;
-    padding: 2%;
-    font-family: 'Verdana';
-}
 
 .canvas {
     border: 1px solid rgb(121, 121, 121) !important;
-}
-
-.text {
-    font-family: 'Helvetica';
-    color: #18233b ;
-    font-size: 1.3em;
-}
-
-.text.small {
-    font-family: 'Helvetica';
-    color: #18233bce ;
-    font-size: 0.8em;
 }
 
 .flex-container.main{
@@ -71,12 +18,6 @@ html, body {
     justify-content: space-around;
     width: 300px;
     height: 32px;
-}
-.hidecanvas
-{
-    position: absolute;
-    overflow: hidden;
-    left: -100vw;
 }
 
 

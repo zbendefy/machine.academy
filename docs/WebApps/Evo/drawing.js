@@ -2,7 +2,7 @@
 
 class EvoDrawing
 {
-    constructor(canvas, imgName, resultsName, networkoutputName){
+    constructor(canvas, imgName, resultsName, networkoutputName, offscreenCanvasName){
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
 
@@ -11,7 +11,7 @@ class EvoDrawing
         this.resultsLabelName = resultsName;
         this.trackImageName = imgName;
         let img = document.getElementById(imgName);
-        this.offscreenCanvas = document.createElement('canvas');
+        this.offscreenCanvas = document.getElementById(offscreenCanvasName);
         this.imgWidth = img.width;
         this.offscreenCanvas.width = img.width;
         this.offscreenCanvas.height = img.height;
@@ -34,6 +34,10 @@ class EvoDrawing
         this.learningRate = 0.01;
         this.outlierChance = 0.1;
         this.outlierDelta = 20;
+
+        this.drawFpsTarget = 30;
+        this.drawFrmeTimeTarget  = 1000 / this.drawFpsTarget;
+        this.drawingTimer = 0;
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
@@ -133,7 +137,12 @@ class EvoDrawing
 
     Tick(){
         this.Simulate(this.frameTimeS);
-        this.Draw();
+
+        this.drawingTimer -= this.frameTimeS;
+        if (this.drawingTimer <= 0){
+            this.Draw();
+            this.drawingTimer = Math.max( this.drawingTimer + this.drawFrmeTimeTarget, -this.drawFrmeTimeTarget );
+        }
     }
 
     GetPixelAtPoint(x,y)

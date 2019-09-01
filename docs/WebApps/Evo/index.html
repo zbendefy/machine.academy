@@ -3,7 +3,8 @@
     <head>
         <meta charset="utf-8" lang="en">
         <title>Racecar trainer using a Genetic algorithm</title>
-        <link rel="stylesheet" type="text/css" href="main.css"></link>
+        <link rel="stylesheet" type="text/css" href="../common/common.css"></link>
+        <link rel="stylesheet" type="text/css" href="main.css">
     </head>
 
     <body>
@@ -14,6 +15,7 @@
         
         <div class="flex-container main">
             <canvas id="drawCanvas" class="canvas" width="512" height="512" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
+            <canvas id="offscreenCanvas" crossorigin="anonymous" class="canvas hidecanvas" width="512" height="512" style="border:1px solid #d3d3d3;"> Your browser does not support the HTML5 canvas tag.</canvas>
             <div class="flex-container controls" width="512" height="200">
             </div>
         </div>
@@ -35,7 +37,7 @@
 
         <div class="textblock">
             <p class="details" onclick="toggleDetails()" onmouseover="this.style.color='#ffff00';" onmouseout="this.style.color='#ffcc00';"> Details</p>
-            <div  id="expandable">
+            <div  id="expandable" class="detailsExpand" >
                 <p class="textcontent">
                     This is a simulator where racing cars are learning to drive on the Hungaroring race track using a genetic algorithm.
                     Each car has a neural network - a brain - that is initialized randomly. The network of each car has the following structure: 
@@ -74,7 +76,7 @@
             <p class="loadingtext">Loading...</h2>
         </div>
 
-        <img id="background" class="hide" src="hungaroring.png" />
+        <img id="background" crossorigin="anonymous"  class="hide" src="hungaroring.png"/>
 
         <script src="../common/neuralnet.js"> </script>
         <script src="initialNetwork.js"> </script>
@@ -92,7 +94,7 @@
             }
 
             setTimeout(function(){
-                var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput");
+                var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput", "offscreenCanvas");
 
                 var checkboxSensors = document.getElementById("checkDrawSensors");
                 checkboxSensors.onclick=function(){
