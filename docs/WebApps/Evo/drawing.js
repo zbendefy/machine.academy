@@ -50,7 +50,7 @@ class EvoDrawing
         
         this._MutateEntities();
 
-        SetSimulationSpeed(this.simulationSpeed);
+        this.SetSimulationSpeed(this.simulationSpeed);
     }
 
     _MutateEntities(){
