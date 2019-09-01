@@ -21,8 +21,8 @@
         </div>
 
         <div class="controlpanel flex-container textctrl">
-            <p>Simulation speed: <span id="simspeed">10</span>x</p>
-            <input type="range" min="0" max="50" value="10" class="slider" id="simspeedinput" >
+            <p>Simulation speed: <span id="simspeed">16</span>x</p>
+            <input type="range" min="0" max="16" value="4" class="slider" id="simspeedinput" >
 
             <p>Mutation rate: <span id="learningratelbl">0.02</span></p>
             <input type="range" min="0.001" step="0.001" max="0.03" value="0.02" class="slider" id="learningrateinput" >
@@ -104,12 +104,12 @@
                 var simSpeedSlider = document.getElementById("simspeedinput");
                 var simSpeedElement = document.getElementById("simspeed");
                 
-                simSpeedElement.innerHTML = simSpeedSlider.value|0;
-                drawing.SetSimulationSpeed(simSpeedSlider.value|0);
+                simSpeedElement.innerHTML = (simSpeedSlider.value*simSpeedSlider.value)|0;
+                drawing.SetSimulationSpeed(simSpeedSlider.value*simSpeedSlider.value)|0;
 
                 simSpeedSlider.oninput = function() {
-                    simSpeedElement.innerHTML = this.value|0;
-                    drawing.SetSimulationSpeed(this.value|0);
+                    simSpeedElement.innerHTML = (this.value*this.value)|0;
+                    drawing.SetSimulationSpeed((this.value*this.value)|0);
                 }
                 
                 var mutationRateSlider = document.getElementById("learningrateinput");

@@ -35,9 +35,10 @@ class EvoDrawing
         this.outlierChance = 0.02;
         this.outlierDelta = 20;
 
-        this.drawFpsTarget = 45;
+        this.drawFpsTarget = 60;
         this.drawFrameTimeTargetMs  = 1000 / this.drawFpsTarget;
         this.lastFrameTime = Date.now();
+        this.simsPerTick = 1;
 
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
@@ -104,8 +105,18 @@ class EvoDrawing
         if (this.timerFnc)
             clearInterval(this.timerFnc);
         
+        let setIntervalMsLimit = 10;
+
         if ( this.simulationSpeed > 0 ){
             let tickTimeMs = (this.frameTimeS * 1000) / this.simulationSpeed;
+            if ( tickTimeMs < setIntervalMsLimit )
+            {
+                this.simsPerTick = (setIntervalMsLimit / tickTimeMs)|0;
+                tickTimeMs = setIntervalMsLimit;
+            } else{
+                this.simsPerTick = 1;
+            }
+
             this.timerFnc = setInterval(()=>{this.Tick()}, tickTimeMs);
         }
 
@@ -145,7 +156,8 @@ class EvoDrawing
     }
 
     Tick(){
-        this.Simulate(this.frameTimeS);
+        for( let i = 0; i < this.simsPerTick; ++i)
+            this.Simulate(this.frameTimeS);
 
         let currentTime = Date.now();
         if (currentTime - this.lastFrameTime >= this.drawFrameTimeTargetMs){
