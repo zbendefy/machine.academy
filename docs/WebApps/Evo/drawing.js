@@ -106,7 +106,8 @@ class EvoDrawing
             clearInterval(this.timerFnc);
         
         let setIntervalMsLimit = 10;
-
+        this.paused = this.simulationSpeed == 0;
+        
         if ( this.simulationSpeed > 0 ){
             let tickTimeMs = (this.frameTimeS * 1000) / this.simulationSpeed;
             if ( tickTimeMs < setIntervalMsLimit )
@@ -118,9 +119,9 @@ class EvoDrawing
             }
 
             this.timerFnc = setInterval(()=>{this.Tick()}, tickTimeMs);
-        }
-
-        this.paused = this.simulationSpeed == 0;
+        } else {
+            this.timerFnc = setInterval(()=>{this.Tick()}, 250);
+		}
     }
 
     Simulate(dt) {
