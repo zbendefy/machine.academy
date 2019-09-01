@@ -32,7 +32,7 @@ class EvoDrawing
         this.frameTimeS = 0.05; 
         this.generationSurvivorPercentage = 0.2;
         this.learningRate = 0.01;
-        this.outlierChance = 0.1;
+        this.outlierChance = 0.02;
         this.outlierDelta = 20;
 
         this.drawFpsTarget = 45;
@@ -53,11 +53,13 @@ class EvoDrawing
         this.SetSimulationSpeed(this.simulationSpeed);
     }
 
-    _MutateEntities(){
-        let mutationRate = this.learningRate;
+    _MutateEntities(skipFirst = false) {
+        let elementCount = -1;
         for(let entity of this.entities){
-            let outlier = (Math.random() < this.outlierChance) ? this.outlierDelta : 0;
-            entity.Mutate(mutationRate);
+            elementCount++;
+            if (elementCount == 0 && skipFirst) 
+                continue;
+            entity.Mutate(this.learningRate);
         }
     }
 
@@ -83,7 +85,7 @@ class EvoDrawing
             currentEntityIdx = (currentEntityIdx+1)%survivorCount;
         }
 
-        this._MutateEntities();
+        this._MutateEntities(true);
 
         for(let entity of this.entities){
             entity.Reset();
