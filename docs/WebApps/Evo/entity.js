@@ -10,14 +10,14 @@ class Entity {
         this.imgWidth = 512;
         this.imgHeight = 512;
         
-        this.maxSeeingDistancePx = 150;
+        this.maxSeeingDistancePx = 120;
 
         this.thinkTimeS = 0.05;
 
-        this.carSteeringSpeed = 0.25;
-        this.carAcceleration = 5.0;
+        this.carSteeringSpeed = 0.22;
+        this.carAcceleration = 4.0;
         this.carBrakeStrength = 20.0;
-        this.carAirResistance = 0.0001;
+        this.carAirResistance = 0.001;
         
         this.sensor_spreadView = 0.55;
 
@@ -25,9 +25,9 @@ class Entity {
         this.checkpointRadius = 15;
         this.checkpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [167,400],
         [220,400], [244,384], [238,363], [202,347], [182,322], [165,238], [154,151], [116,123],
-        [91,81],
+        [91,81], [158,68], [231,112], [314,115], [426,205],
         [340,398],
-        [263,454] ];
+        [300,454] ];
         
         this.Reset();
     }
@@ -111,7 +111,7 @@ class Entity {
         let nextCheckpoint = this.checkpoints[this.checkpointId];
         if ( Math.abs( nextCheckpoint[0] - this.x ) < this.checkpointRadius && Math.abs( nextCheckpoint[1] - this.y ) < this.checkpointRadius ){
             this.checkpointId = (this.checkpointId+1) % this.checkpoints.length;
-            this.reward += 10000;
+            this.reward += 100000;
         }
     }
 
@@ -123,19 +123,19 @@ class Entity {
     _EyeDistanceScaled(relativeAngle){
         let testX = this.x;
         let testY = this.y;
-        
-        let deltaX = Math.cos(this.angle + relativeAngle);
-        let deltaY = -Math.sin(this.angle + relativeAngle);
 
         let ret = 1.0;
 
-        let step = 5;
+        let step = 3;
+        
+        let deltaX = Math.cos(this.angle + relativeAngle) * step;
+        let deltaY = -Math.sin(this.angle + relativeAngle) * step;
 
-        for(let i = 0; i <= this.maxSeeingDistancePx / step; i++){
-            testX += deltaX * step;
-            testY += deltaY * step;
-            if (this._HasHitWallAtPoint(testX, testY)){
-                ret = (i * step) / this.maxSeeingDistancePx;
+        for(let i = 0; i < this.maxSeeingDistancePx; i+=step){
+            testX += deltaX;
+            testY += deltaY;
+            if (this._GetImageValueAt(testX, testY)){
+                ret = i / this.maxSeeingDistancePx;
                 break;
             }
         }
@@ -148,8 +148,7 @@ class Entity {
     }
 
     _HasHitWallAtPoint(x, y){
-        let imgValue = this._GetImageValueAt(x, y);
-        return imgValue > 0.2;
+        return this._GetImageValueAt(x, y);
     }
 
     _GetSensorData(){
@@ -243,6 +242,6 @@ class Entity {
     }
 
     _GetImageValueAt(x, y) {
-        return this.pixelGetter(x, y) / 255.0;
+        return this.pixelGetter(x, y);
     }
 }

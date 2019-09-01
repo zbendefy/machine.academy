@@ -21,7 +21,7 @@ class EvoDrawing
         this.offscreenCanvasImage = [];
         for(let iy = 0; iy < img.height; iy++){
             for(let ix = 0; ix < img.width; ix++){
-                this.offscreenCanvasImage[iy * img.width + ix] = ( offscreenCanvasImageRGBA.data[(iy * img.width + ix)*4] );
+                this.offscreenCanvasImage[iy * img.width + ix] = ( offscreenCanvasImageRGBA.data[(iy * img.width + ix)*4] ) > 0.2 ? true : false;
             }   
         }
 
