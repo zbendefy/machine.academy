@@ -161,13 +161,14 @@ class EvoDrawing
     }
 
     Tick(){
-        for( let i = 0; i < this.simsPerTick; ++i)
+        for( let i = 0; i < this.simsPerTick; ++i){
             this.Simulate(this.frameTimeS);
 
-        let currentTime = Date.now();
-        if (currentTime - this.lastFrameTime >= this.drawFrameTimeTargetMs){
-            this.Draw();
-            this.lastFrameTime = currentTime;
+            let currentTime = Date.now();
+            if (currentTime - this.lastFrameTime >= this.drawFrameTimeTargetMs){
+                this.Draw();
+                this.lastFrameTime = currentTime;
+            }
         }
     }
 
