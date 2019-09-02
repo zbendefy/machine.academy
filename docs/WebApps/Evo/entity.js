@@ -1,4 +1,8 @@
 var drawSensorsGlobal = false;
+var EntityCheckpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [167,400],
+        [220,400], [244,384], [238,363], [202,347], [182,322], [165,238], [154,151], [116,123],
+        [91,81], [158,68], [231,112], [314,115], [426,205],
+        [340,398], [300,454], [263,454] ];
 
 class Entity {
     constructor(pixelGetter, neuralNetwork = null) {
@@ -23,11 +27,6 @@ class Entity {
 
         this.drawSensors = false;
         this.checkpointRadius = 15;
-        this.checkpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [167,400],
-        [220,400], [244,384], [238,363], [202,347], [182,322], [165,238], [154,151], [116,123],
-        [91,81], [158,68], [231,112], [314,115], [426,205],
-        [340,398],
-        [300,454] ];
         
         this.Reset();
     }
@@ -52,11 +51,15 @@ class Entity {
         this.nextThinkIn = this.thinkTimeS;
         this.reward = 0;
         this.checkpointId = 0;
+        this.bestLapS = 99999999;
+        this.currentLapTimeS = 0;
     }
 
     Process(dt) {
         if ( this.disqualified)
             return;
+
+        this.currentLapTimeS += dt;
 
         this.nextThinkIn -= dt;
         if (this.nextThinkIn <= 0)
@@ -108,10 +111,14 @@ class Entity {
             this.lowSpeedCounter = 0.0;
         }
 
-        let nextCheckpoint = this.checkpoints[this.checkpointId];
+        let nextCheckpoint = EntityCheckpoints[this.checkpointId];
         if ( Math.abs( nextCheckpoint[0] - this.x ) < this.checkpointRadius && Math.abs( nextCheckpoint[1] - this.y ) < this.checkpointRadius ){
-            this.checkpointId = (this.checkpointId+1) % this.checkpoints.length;
+            this.checkpointId = (this.checkpointId+1) % EntityCheckpoints.length;
             this.reward += 100000;
+            if ( this.checkpointId == 0 ){
+                this.bestLapS = Math.min( this.bestLapS, this.currentLapTimeS );
+                this.currentLapTimeS = 0;
+            }
         }
     }
 

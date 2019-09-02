@@ -151,9 +151,13 @@ class EvoDrawing
         
         var resultsPanel = document.getElementById(this.resultsLabelName);
 
+        let bestLapS = Math.max.apply( Math, this.entities.map( function(o){ return o.bestLapS; } ) );
+        let bestLapString = bestLapS > this.entityTimeoutS ? "---" : (bestLapS + "s");
+
         resultsPanel.innerText = "Generation: " + this.currentGeneration + 
          "\nCars in race: " + this.entities.filter(x => !x.IsDisqualified()).length +
-         "\nTimer: " + (this.currentSessionTimer|0) + "s";
+         "\nTimer: " + (this.currentSessionTimer|0) + "s" +
+         "\nBest lap: " + bestLapString;
     }
 
     Tick(){
