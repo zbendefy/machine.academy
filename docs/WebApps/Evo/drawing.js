@@ -151,7 +151,7 @@ class EvoDrawing
         
         var resultsPanel = document.getElementById(this.resultsLabelName);
 
-        let bestLapS = Math.max.apply( Math, this.entities.map( function(o){ return o.bestLapS; } ) );
+        let bestLapS = Math.min.apply( Math, this.entities.map( function(o){ return o.bestLapS; } ) );
         let bestLapString = bestLapS > this.entityTimeoutS ? "---" : (bestLapS + "s");
 
         resultsPanel.innerText = "Generation: " + this.currentGeneration + 
