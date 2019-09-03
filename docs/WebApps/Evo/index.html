@@ -68,6 +68,15 @@
                 
                 <pre id="networkoutput" class="prettyprint networkoutput">>
                 </pre>
+
+                <p class="textcontent">
+                    You can also save or load the top performer's network to and from the clipboard:
+                </p>
+                <button class="textcontent detailbtn" onclick="SaveToClipboardBtn()">Save to Clipboard</button>
+                <button class="textcontent detailbtn" onclick="navigator.clipboard.readText().then(clipText => loadNewNetwork(clipText));">Load from Clipboard</button>
+                <p class="textcontent clipboardfeedback" id="lblClipboardResult">
+                    No network loaded from clipboard!
+                </p>
             </div>
         </div>
 
@@ -84,8 +93,24 @@
         <script src="drawing.js"> </script>
 
         <script>
-
+            var drawing = null;
             var isDetailExpanded = false;
+
+            function SaveToClipboardBtn(){
+                navigator.clipboard.writeText(drawing.GetLastTopPerformerAsJSON()).then(function() {
+                    document.getElementById("lblClipboardResult").innerText = "Neural Network saved to clipboard!";
+                }, function(err) {
+                    document.getElementById("lblClipboardResult").innerText = "Couldn't write to clipboard! " + err;
+                });
+            }
+
+            function loadNewNetwork(clipboardContent){
+                try {
+                    drawing.LoadNetworkFromJSON(clipboardContent);
+                } catch (error) {
+                    document.getElementById("lblClipboardResult").innerText = "Couldn't parse JSON from clipboard text! (" + error + ")";
+                }
+            }
 
             function toggleDetails(){
                 isDetailExpanded=!isDetailExpanded; 
@@ -94,7 +119,7 @@
             }
 
             setTimeout(function(){
-                var drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput", "offscreenCanvas");
+                drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput", "offscreenCanvas");
 
                 var checkboxSensors = document.getElementById("checkDrawSensors");
                 checkboxSensors.onclick=function(){

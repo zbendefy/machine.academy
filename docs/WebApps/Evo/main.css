@@ -80,3 +80,11 @@
 .networkbtn{
     flex-grow: 1;
 }
+
+.detailbtn{
+    margin-left: 20px;
+}
+
+.clipboardfeedback{
+    font-size: 0.7em;
+}

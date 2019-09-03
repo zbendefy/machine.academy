@@ -44,10 +44,12 @@ class EvoDrawing
         this.currentGeneration = 1;
         this.simulationSpeed = 1;
         this.timerFnc = undefined;
+        this.loadNetworkInNextFrame = null;
         
         while( this.entities.length < this.entityCountTarget ){
             this.entities.push(new Entity(this.GetPixelAtPoint.bind(this)));
         }
+        this.prevTopPerformer = this.entities[0].brain.GetNetworkAsJSON();
         
         this._MutateEntities();
 
@@ -64,15 +66,20 @@ class EvoDrawing
         }
     }
 
+    GetLastTopPerformerAsJSON(){
+        return this.prevTopPerformer;
+    }
+
     _Timeout() {
         for(let entity of this.entities){
             entity.GenerationEnd();
         }
 
         this.entities.sort( function(a,b){ return b.reward-a.reward; } ); //Sort by descending order
-
+        
+        this.prevTopPerformer = this.entities[0].brain.GetNetworkAsJSON();
         if ( this.networkoutputName  != undefined ){
-            let networkAsString = this.entities[0].brain.GetNetworkAsJSON();
+            let networkAsString = this.prevTopPerformer;
             document.getElementById(this.networkoutputName).innerHTML = "//Generation " + this.currentGeneration + ", Reward: " + (this.entities[0].reward|0)
              +"\n\n" +  networkAsString;
         }
@@ -94,6 +101,11 @@ class EvoDrawing
         
         this.currentSessionTimer = 0;
         this.currentGeneration++;
+    }
+
+    LoadNetworkFromJSON(jsonStr){
+        let nnObj = JSON.parse(jsonStr);
+        this.loadNetworkInNextFrame = new NeuralNetwork(nnObj);
     }
 
     SetSurvivalRate(rate){ this.generationSurvivorPercentage = rate; }
@@ -161,6 +173,10 @@ class EvoDrawing
     }
 
     Tick(){
+        if (this.loadNetworkInNextFrame){
+            this._LoadPendingNetwork();
+        }
+
         for( let i = 0; i < this.simsPerTick; ++i){
             this.Simulate(this.frameTimeS);
 
@@ -175,6 +191,23 @@ class EvoDrawing
     GetPixelAtPoint(x,y)
     {
         return this.offscreenCanvasImage[(y|0)*this.imgWidth+(x|0)];
+    }
+
+    _LoadPendingNetwork(){
+        try {
+            let newEntities = [ new Entity( this.GetPixelAtPoint.bind(this), this.loadNetworkInNextFrame) ];
+            
+            while(newEntities.length < this.entityCountTarget){
+                newEntities.push(newEntities[0].DeepCopy());
+            }
+
+            this.entities = newEntities;
+            this._MutateEntities(true);
+            document.getElementById("lblClipboardResult").innerHTML = "Loaded network from clipboard!";
+            this.loadNetworkInNextFrame = null;
+        } catch (error) {
+            this.loadNetworkInNextFrame = null;
+        }
     }
 }
 
