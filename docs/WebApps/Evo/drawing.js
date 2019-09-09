@@ -2,28 +2,19 @@
 
 class EvoDrawing
 {
-    constructor(canvas, imgName, resultsName, networkoutputName, offscreenCanvasName){
+    constructor(canvas, imgNames, resultsName, networkoutputName, offscreenCanvasName){
         this.canvas = canvas;
         this.context = canvas.getContext("2d");
 
         this.networkoutputName = networkoutputName;
         this.paused=false;
         this.resultsLabelName = resultsName;
-        this.trackImageName = imgName;
-        let img = document.getElementById(imgName);
-        this.offscreenCanvas = document.getElementById(offscreenCanvasName);
-        this.imgWidth = img.width;
-        this.offscreenCanvas.width = img.width;
-        this.offscreenCanvas.height = img.height;
-        this.offscreenCanvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
-        this.offscreenCanvasContext = this.offscreenCanvas.getContext('2d');
-        let offscreenCanvasImageRGBA = this.offscreenCanvasContext.getImageData(0, 0, img.width, img.height);
-        this.offscreenCanvasImage = [];
-        for(let iy = 0; iy < img.height; iy++){
-            for(let ix = 0; ix < img.width; ix++){
-                this.offscreenCanvasImage[iy * img.width + ix] = ( offscreenCanvasImageRGBA.data[(iy * img.width + ix)*4] ) > 0.2 ? true : false;
-            }   
-        }
+        this.trackImageNames = imgNames;
+        this.offscreenCanvasName = offscreenCanvasName;
+
+        this._SwitchToImage(0);
+
+        this.switchToImgAtNextGen = -1;
 
         this.entities = [];
 
@@ -54,6 +45,32 @@ class EvoDrawing
         this._MutateEntities();
 
         this.SetSimulationSpeed(this.simulationSpeed);
+    }
+
+    SwitchImageAtNextGeneration(idx)
+    {
+        this.switchToImgAtNextGen = idx;
+    }
+
+    _SwitchToImage(idx)
+    {
+        this.currentImageIndex = idx % this.trackImageNames.length;
+        let img = document.getElementById(this.trackImageNames[idx].imageName);
+        EntityCheckpoints = this.trackImageNames[idx].checkpoints;
+        EntityDefaultState = this.trackImageNames[idx].defaultState;
+        this.offscreenCanvas = document.getElementById(this.offscreenCanvasName);
+        this.imgWidth = img.width;
+        this.offscreenCanvas.width = img.width;
+        this.offscreenCanvas.height = img.height;
+        this.offscreenCanvas.getContext('2d').drawImage(img, 0, 0, img.width, img.height);
+        this.offscreenCanvasContext = this.offscreenCanvas.getContext('2d');
+        let offscreenCanvasImageRGBA = this.offscreenCanvasContext.getImageData(0, 0, img.width, img.height);
+        this.offscreenCanvasImage = [];
+        for(let iy = 0; iy < img.height; iy++){
+            for(let ix = 0; ix < img.width; ix++){
+                this.offscreenCanvasImage[iy * img.width + ix] = ( offscreenCanvasImageRGBA.data[(iy * img.width + ix)*4] ) > 0.2 ? true : false;
+            }   
+        }
     }
 
     _MutateEntities(skipFirst = false) {
@@ -94,6 +111,14 @@ class EvoDrawing
         }
 
         this._MutateEntities(true);
+
+        if (this.switchToImgAtNextGen >= 0) {
+            this._SwitchToImage(this.switchToImgAtNextGen);
+            for(let entity of this.entities){
+                entity.ResetBestLap();
+            }
+            this.switchToImgAtNextGen = -1;
+        }
 
         for(let entity of this.entities){
             entity.Reset();
@@ -154,7 +179,7 @@ class EvoDrawing
     }
 
     Draw() {
-        var img = document.getElementById(this.trackImageName);
+        var img = document.getElementById(this.trackImageNames[this.currentImageIndex].imageName);
         this.context.drawImage(img, 0, 0);
         
         for(let entity of this.entities){

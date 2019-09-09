@@ -33,6 +33,9 @@
             <input type="checkbox" id="checkDrawSensors" />
             <label for="checkDrawSensors">Show car sensors</label>
             <p id="results"> </p>
+            <p>Select track:</p>
+            <button class="textcontent trackbtn" onclick="SwitchTrack(0)">Hungaroring</button>
+            <button class="textcontent trackbtn" onclick="SwitchTrack(1)">A1 Ring</button>
         </div>
 
         <div class="textblock">
@@ -86,6 +89,7 @@
         </div>
 
         <img id="background" crossorigin="anonymous"  class="hide" src="hungaroring.png"/>
+        <img id="background_a1ring" crossorigin="anonymous"  class="hide" src="a1ring.png"/>
 
         <script src="../common/neuralnet.js"> </script>
         <script src="initialNetwork.js"> </script>
@@ -112,6 +116,10 @@
                 }
             }
 
+            function SwitchTrack(idx){
+                drawing.SwitchImageAtNextGeneration(idx);
+            }
+
             function toggleDetails(){
                 isDetailExpanded=!isDetailExpanded; 
                 let expandable = document.getElementById('expandable');
@@ -119,7 +127,22 @@
             }
 
             setTimeout(function(){
-                drawing = new EvoDrawing(document.getElementById("drawCanvas"), "background", "results", "networkoutput", "offscreenCanvas");
+                let imageList = [];
+                imageList.push({imageName:"background",
+                                checkpoints: [ [200,451], [170,451], [109,442], [105,416], [126,402], [167,400],
+                                [220,400], [244,384], [238,363], [202,347], [182,322], [165,238], [154,151], [116,123],
+                                [91,81], [158,68], [231,112], [314,115], [426,205],
+                                [340,398], [300,454], [263,454] ],
+                                defaultState: {x:263, y:454, angle:Math.PI}
+                });
+
+                imageList.push({imageName:"background_a1ring",
+                                checkpoints: [ [202,281], [255,255], [400,240], [477,260], [480,330], [227,393], [100,200],[72,105],
+                                [322,144], [171,187], [164,225] ],
+                                defaultState: {x:173, y:245, angle:Math.PI*1.8}
+                });
+
+                drawing = new EvoDrawing(document.getElementById("drawCanvas"), imageList, "results", "networkoutput", "offscreenCanvas");
 
                 var checkboxSensors = document.getElementById("checkDrawSensors");
                 checkboxSensors.onclick=function(){

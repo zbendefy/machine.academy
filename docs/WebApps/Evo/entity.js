@@ -1,8 +1,6 @@
 var drawSensorsGlobal = false;
-var EntityCheckpoints = [ [200,451], [170,451], [109,442], [105,416], [126,402], [167,400],
-        [220,400], [244,384], [238,363], [202,347], [182,322], [165,238], [154,151], [116,123],
-        [91,81], [158,68], [231,112], [314,115], [426,205],
-        [340,398], [300,454], [263,454] ];
+var EntityCheckpoints = [[0,0]];
+var EntityDefaultState={x:0,y:0,angle:0};
 
 class Entity {
     constructor(pixelGetter, neuralNetwork = null) {
@@ -44,15 +42,19 @@ class Entity {
         this.lowSpeedCounter = 0;
         this.timeSinceBeginning = 0;
         this.disqualified = false;
-        this.x = 263;
-        this.y = 454;
-        this.angle = Math.PI;
+        this.x = EntityDefaultState.x;// 263;
+        this.y = EntityDefaultState.y; //454;
+        this.angle = EntityDefaultState.angle;//Math.PI;
         this.speed = 0;
         this.nextThinkIn = this.thinkTimeS;
         this.reward = 0;
         this.checkpointId = 0;
-        this.bestLapS = 99999999;
+        this.ResetBestLap();
         this.currentLapTimeS = 0;
+    }
+
+    ResetBestLap(){
+        this.bestLapS = 99999999;
     }
 
     Process(dt) {
