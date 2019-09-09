@@ -27,6 +27,7 @@ class Entity {
         this.checkpointRadius = 15;
         
         this.Reset();
+        this.ResetBestLap();
     }
     
     IsDisqualified()
@@ -49,7 +50,6 @@ class Entity {
         this.nextThinkIn = this.thinkTimeS;
         this.reward = 0;
         this.checkpointId = 0;
-        this.ResetBestLap();
         this.currentLapTimeS = 0;
     }
 
