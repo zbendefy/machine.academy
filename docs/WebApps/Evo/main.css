@@ -91,6 +91,11 @@
 
 .trackbtn{
     width:80%;
+    display:block;
     margin-left: auto;
     margin-right: auto;
+}
+
+.smallfont{
+    font-size: 0.6em;
 }

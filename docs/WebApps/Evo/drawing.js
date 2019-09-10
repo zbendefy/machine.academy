@@ -31,6 +31,7 @@ class EvoDrawing
         this.lastFrameTime = Date.now();
         this.simsPerTick = 1;
 
+        this.bestLapS = this.entityTimeoutS;
         this.currentSessionTimer = 0;
         this.currentGeneration = 1;
         this.simulationSpeed = 1;
@@ -54,6 +55,8 @@ class EvoDrawing
 
     _SwitchToImage(idx)
     {
+        this.bestLapS = this.entityTimeoutS;
+
         this.currentImageIndex = idx % this.trackImageNames.length;
         let img = document.getElementById(this.trackImageNames[idx].imageName);
         EntityCheckpoints = this.trackImageNames[idx].checkpoints;
@@ -168,7 +171,7 @@ class EvoDrawing
         let allEntitiesDisqualified = this.entities.every( (entity)=>{return entity.IsDisqualified()} );
 
         this.currentSessionTimer += dt;
-        if ( this.currentSessionTimer > this.entityTimeoutS || allEntitiesDisqualified){
+        if ( this.currentSessionTimer >= this.entityTimeoutS || allEntitiesDisqualified){
             this._Timeout();
         }
 
@@ -188,8 +191,9 @@ class EvoDrawing
         
         var resultsPanel = document.getElementById(this.resultsLabelName);
 
-        let bestLapS = Math.min.apply( Math, this.entities.map( function(o){ return o.bestLapS; } ) );
-        let bestLapString = bestLapS > this.entityTimeoutS ? "---" : (bestLapS + "s");
+        let bestLapSEntities = Math.min.apply( Math, this.entities.map( function(o){ return o.bestLapS; } ) );
+        this.bestLapS = Math.min(this.bestLapS, bestLapSEntities);
+        let bestLapString = this.bestLapS >= this.entityTimeoutS ? "---" : (this.bestLapS.toFixed(2) + "s");
 
         resultsPanel.innerText = "Generation: " + this.currentGeneration + 
          "\nCars in race: " + this.entities.filter(x => !x.IsDisqualified()).length +
