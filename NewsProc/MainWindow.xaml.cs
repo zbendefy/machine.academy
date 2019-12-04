@@ -123,6 +123,65 @@ namespace NewsProc
                 return;
 
             var testFileContent = OpenFileWithDialog("Open news test data");
+
+            var testInputs = testFileContent.Split(";newline_marker\r\n").Where(article => article.Length > 3).Select( article => {
+                var ret = article; 
+                if (article.StartsWith('\"')) { ret = ret.Substring(1); }
+                if (article.EndsWith('\"')) { ret = ret.Substring(0, ret.Length-1); }
+                return CleanText(ret);
+            }).ToArray();
+
+            var calculator = GetCalculator(cmbComputeDevice.SelectedIndex);
+
+            foreach (var item in testInputs)
+            {
+                var result = network.Compute(GenerateInputFromCleanedArticle(item,network.GetLayerConfig()[0]), calculator);
+
+                int currMaxId = 0;
+                float currMaxValue = 0;
+                for (int i = 0; i < result.Length; i++)
+                {
+                    if (result[i] > currMaxValue)
+                    {
+                        currMaxValue = result[i];
+                        currMaxId = i;
+                    }
+                }
+            }
+
+            Console.WriteLine("alma");
+        }
+
+        private static float[] GenerateInputFromCleanedArticle(string cleanedArticle, int maxInput) 
+        {
+            var numValidCharsDivisor = (float)(validCharacters.Length - 1);
+            var ret = new float[maxInput];
+            float spacePos = ((float)validCharacters.IndexOf(' ')) / numValidCharsDivisor;
+            for (int i = 0; i < maxInput ; i++)
+            {
+                if (i >= cleanedArticle.Length)
+                    ret[i] = ((float)validCharacters.IndexOf(cleanedArticle[i])) / numValidCharsDivisor;
+                else
+                    ret[i] = spacePos;
+            }
+            return ret;
+        }
+
+        private static string validCharacters = " abcdefghijklmnopqrstuvwxyz,;-.?!%#&$()0123456789'\"\n";
+
+        private static string CleanText(string text)
+        {
+            var ret = "";
+            text = text.ToLower();
+            for(int i = 0; i < text.Length; ++i)
+            {
+                if (validCharacters.Contains(text[i]))
+                {
+                    ret += text[i];
+                }
+            }
+
+            return ret;
         }
 
         private void Button_Click_2(object sender, RoutedEventArgs e)
@@ -132,6 +191,8 @@ namespace NewsProc
 
             //Test news fragment
             var newsFragment = txtNewsFragment.Text;
+
+
 
             lblNewsFragmentResult.Content = "not yet implemented";
         }
