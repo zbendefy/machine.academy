@@ -1,0 +1,40 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "TestConsole",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/TestConsole/bin/Debug/netcoreapp3.1/TestConsole.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/TestConsole",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "internalConsoleOptions": "openOnFirstSessionStart"
+        },
+        {
+            "name": "SandboxApp",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build",
+            "program": "${workspaceFolder}/SandboxApp/bin/Debug/netcoreapp3.1/TestConsole.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/SandboxApp",
+            "console": "integratedTerminal",
+            "stopAtEntry": false,
+            "externalConsole": false,
+            "internalConsoleOptions": "openOnFirstSessionStart"
+        },
+        {
+            "name": ".NET Core Attach",
+            "type": "coreclr",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        }
+    ]
+}

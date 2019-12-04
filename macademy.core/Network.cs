@@ -187,7 +187,7 @@ namespace Macademy
                     }
 
                     int trainingDataBegin = 0;
-                    int trainingDataEnd = trainingSuite.config.UseMinibatches() ? trainingSuite.config.miniBatchSize : trainingSuite.trainingData.Count;
+                    int trainingDataEnd = trainingSuite.config.UseMinibatches() ? Math.Min( trainingSuite.config.miniBatchSize, trainingSuite.trainingData.Count) : trainingSuite.trainingData.Count;
 
                     while (true)
                     {
