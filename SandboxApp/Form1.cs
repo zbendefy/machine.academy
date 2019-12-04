@@ -2,12 +2,6 @@
 using Macademy.OpenCL;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SandboxApp
@@ -27,11 +21,11 @@ namespace SandboxApp
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            List<int> layerConfig = new List<int>( new int[]{ 5, 1, 1, 5 });
+            List<int> layerConfig = new List<int>(new int[] { 5, 32, 32, 5 });
 
             solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
 
-            calculator = new Calculator( null );
+            calculator = new Calculator(null);
 
             comboBox1.Items.Add("Use CPU calculation");
             comboBox1.SelectedIndex = 0;
@@ -106,7 +100,7 @@ namespace SandboxApp
             if (comboBox1.SelectedIndex == 0)
                 calculator = new Calculator();
             else
-                calculator = new Calculator(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1] );
+                calculator = new Calculator(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1]);
         }
 
         private void label1_Click(object sender, EventArgs e)
@@ -123,7 +117,7 @@ namespace SandboxApp
                 if (trainingPromise.IsReady())
                 {
                     var period = DateTime.Now.Subtract(trainingBegin);
-                    label2.Text = "Training done in " + period.TotalSeconds+"s";
+                    label2.Text = "Training done in " + period.TotalSeconds + "s";
 
 
                     timer1.Stop();
@@ -133,7 +127,7 @@ namespace SandboxApp
             {
                 timer1.Stop();
             }
-               
+
         }
 
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)

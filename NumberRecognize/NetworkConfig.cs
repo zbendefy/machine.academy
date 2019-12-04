@@ -65,7 +65,7 @@ namespace NumberRecognize
 
             }
 
-            numericUpDown1.Value = 2;
+            numericUpDown1.Value = 1;
         }
 
         public List<int> GetLayerConfig() { return layerconfig; }
@@ -100,7 +100,7 @@ namespace NumberRecognize
                 NumericUpDown num = new NumericUpDown();
                 num.Minimum= 1;
                 num.Maximum= 65536;
-                num.Value = 32;
+                num.Value = 64;
                 num.ValueChanged += Num_ValueChanged;
                 num.Tag = i+1;
                 panel1.Controls.Add(num);

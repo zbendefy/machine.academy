@@ -1,11 +1,11 @@
 # machine.academy
 
-Neural network training library written in C# as a learning project.
+Neural network training library written in C# (.net Core 3.1) as a learning project.
 
 ## Demos:
 
 ### [Handwritten digit recognizer web app](https://zbendefy.github.io/machine.academy/WebApps/NumberRecognize/index.html)
-### [Car racing with Genetic algorithm](https://zbendefy.github.io/machine.academy/WebApps/Evo/index.html)
+### [Car racing with Evolutional algorithm](https://zbendefy.github.io/machine.academy/WebApps/Evo/index.html)
 
 ## Features:
  * GPU acceleration (using OpenCL)
@@ -77,29 +77,41 @@ trainingPromise.Await();
 
 The neural network library
 
-### NumberRecognizer
+### OpenCl.DotNetCore.Interop
 
-A sample app that can load the MNIST digit dataset and trains a network.
-
-### Sandbox
-
-A test app with no specific purpose but to try our some features using a ui
+Part of the following library: https://github.com/lecode-official/opencl-dotnet. Used for OpenCL access from .net core
 
 ### Testing
 
 Tests for the library
 
-### WebApps/NumberRecognizer
+### TestConsole
 
-An HTML web application that uses an already trained network to recognize a drawn number
+A console command line for testing
+
+### NumberRecognizer (uses WinForms)
+
+A sample app that can load the MNIST digit dataset and trains a network.
+
+### Sandbox (uses WinForms)
+
+A test app for development with no specific purpose but to try our some features using a ui.
+
+### docs/WebApps/NumberRecognizer
+
+An HTML web application that uses an already trained network to recognize a drawn number.
+
+### docs/WebApps/Evo
+
+An HTML web application that uses neural networks and an evolutional algorithm for training racecars to learn driving on various racetracks.
 
 ## Dependencies
-All dependencies are set up in nuget.
-* OpenCL.Net
+The following dependencies are set up in nuget:
 * Newtonsoft.Json
 
+This project also includes the `opencl-dotnet`: https://github.com/lecode-official/opencl-dotnet
+
 ## Future plans:
- * .NET Core port
  * Optimize memory layout (to reduce number of buffer copies)
  * New features: Dropout, Softmax layers
  * More activation functions

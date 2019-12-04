@@ -45,6 +45,7 @@
             this.button8 = new System.Windows.Forms.Button();
             this.numericUpDown2 = new System.Windows.Forms.NumericUpDown();
             this.panel1 = new System.Windows.Forms.Panel();
+            this.button9 = new System.Windows.Forms.Button();
             this.lblnetcfg = new System.Windows.Forms.Label();
             this.label10 = new System.Windows.Forms.Label();
             this.label9 = new System.Windows.Forms.Label();
@@ -119,7 +120,7 @@
             // 
             this.button4.Location = new System.Drawing.Point(3, 283);
             this.button4.Name = "button4";
-            this.button4.Size = new System.Drawing.Size(274, 23);
+            this.button4.Size = new System.Drawing.Size(242, 23);
             this.button4.TabIndex = 4;
             this.button4.Text = "Train network";
             this.button4.UseVisualStyleBackColor = true;
@@ -240,6 +241,7 @@
             // 
             // panel1
             // 
+            this.panel1.Controls.Add(this.button9);
             this.panel1.Controls.Add(this.lblnetcfg);
             this.panel1.Controls.Add(this.label10);
             this.panel1.Controls.Add(this.label9);
@@ -262,6 +264,16 @@
             this.panel1.Name = "panel1";
             this.panel1.Size = new System.Drawing.Size(280, 309);
             this.panel1.TabIndex = 14;
+            // 
+            // button9
+            // 
+            this.button9.Location = new System.Drawing.Point(251, 283);
+            this.button9.Name = "button9";
+            this.button9.Size = new System.Drawing.Size(19, 23);
+            this.button9.TabIndex = 31;
+            this.button9.Text = "Train network";
+            this.button9.UseVisualStyleBackColor = true;
+            this.button9.Click += new System.EventHandler(this.Button9_Click);
             // 
             // lblnetcfg
             // 
@@ -366,10 +378,10 @@
             this.numLambda.Size = new System.Drawing.Size(115, 20);
             this.numLambda.TabIndex = 22;
             this.numLambda.Value = new decimal(new int[] {
-            1,
+            15,
             0,
             0,
-            0});
+            65536});
             // 
             // label6
             // 
@@ -399,7 +411,7 @@
             this.numLearningRate.Size = new System.Drawing.Size(115, 20);
             this.numLearningRate.TabIndex = 20;
             this.numLearningRate.Value = new decimal(new int[] {
-            25,
+            15,
             0,
             0,
             131072});
@@ -418,7 +430,7 @@
             // 
             this.numMiniBatchSize.Location = new System.Drawing.Point(151, 66);
             this.numMiniBatchSize.Maximum = new decimal(new int[] {
-            10000,
+            100000,
             0,
             0,
             0});
@@ -470,7 +482,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1029, 325);
+            this.ClientSize = new System.Drawing.Size(1025, 325);
             this.Controls.Add(this.panel1);
             this.Controls.Add(this.numericUpDown2);
             this.Controls.Add(this.button8);
@@ -538,6 +550,7 @@
         private System.Windows.Forms.ComboBox comboCostFunction;
         private System.Windows.Forms.Label lblnetcfg;
         private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.Button button9;
     }
 }
 
