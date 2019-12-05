@@ -5,12 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:NewsAnalyzer"
         mc:Ignorable="d"
-        Title="TrainingDialog" Height="120" Width="480" WindowStyle="SingleBorderWindow" ResizeMode="NoResize">
+        Title="TrainingDialog" Height="140" Width="480">
     <Grid>
         <Label Content="Training in progress..." HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-        <Label Name="lblDisp" Content="Epochs done: 0, Time elapsed: 0:00" HorizontalAlignment="Left" Margin="10,68,0,0" VerticalAlignment="Top"/>
-        <Button Click="Button_Click" Content="Stop" HorizontalAlignment="Left" Margin="430,74,0,0" VerticalAlignment="Top"/>
-        <ProgressBar x:Name="progressBar" Margin="21,47,22,41"/>
+        <Label Name="lblDisp" Content="Epochs done: 0, Time elapsed: 0:00" HorizontalAlignment="Left" Margin="10,68,0,0" Height="26" VerticalAlignment="Top"/>
+        <Button Click="Button_Click" Content="Stop" Margin="0,74,22,0" HorizontalAlignment="Right" Width="28" Height="20" VerticalAlignment="Top"/>
+        <ProgressBar x:Name="progressBar" Margin="22,47,22,0" Height="16" VerticalAlignment="Top"/>
 
     </Grid>
 </Window>

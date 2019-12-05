@@ -47,7 +47,7 @@ namespace NewsAnalyzer
 
             progressBar.Value = trainingPromise.GetTotalProgress() * 100.0f;
 
-            lblDisp.Content = "Epochs done: " + trainingPromise.GetEpochsDone() + " (" + percentageDone + "%)   Time elapsed: " + dispMinutes + ":" + dispSeconds;
+            lblDisp.Content = "Epochs done: " + trainingPromise.GetEpochsDone() + " (" + percentageDone + "%)   Time elapsed: " + dispMinutes + ":" + dispSeconds.ToString("00");
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

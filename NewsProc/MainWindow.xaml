@@ -23,7 +23,7 @@
                 <ComboBoxItem>None</ComboBoxItem>
                 <ComboBoxItem>L1</ComboBoxItem>
                 <ComboBoxItem>L2</ComboBoxItem>
-        </ComboBox>
+            </ComboBox>
         </StackPanel>
         <Label Content="Regularization lambda:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,196,0,0"/>
         <TextBox Name="txtRegularizationLambda" HorizontalAlignment="Left" Margin="178,200,0,0" Text="1,5" TextWrapping="Wrap" VerticalAlignment="Top" Width="163"/>
@@ -35,13 +35,17 @@
                 <ComboBoxItem>Mean squared</ComboBoxItem>
             </ComboBox>
         </StackPanel>
-        <Label Content="Network config:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,267,0,0"/>
-        <TextBox Name="txtLayerConf" HorizontalAlignment="Left" Margin="178,271,0,0" Text="40x128x128x4" TextWrapping="Wrap" VerticalAlignment="Top" Width="163"/>
-        <Button Click="Button_Click" Content="Train" HorizontalAlignment="Left" Margin="17,307,0,0" VerticalAlignment="Top" Height="31" Width="103"/>
-        <Button Click="Button_Click_1" Content="Test" HorizontalAlignment="Left" Margin="125,307,0,0" VerticalAlignment="Top" Height="31" Width="103"/>
+        <Label Content="Change Network config:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,267,0,0"/>
+        <TextBox Name="txtLayerConf" HorizontalAlignment="Left" Margin="178,271,0,0" Text="7000x128x128x4" TextWrapping="Wrap" VerticalAlignment="Top" Width="163"/>
+        <Button Click="Button_Click" Content="Train" HorizontalAlignment="Left" Margin="13,321,0,0" VerticalAlignment="Top" Height="31" Width="103"/>
+        <Button Click="Button_Click_1" Content="Test" HorizontalAlignment="Left" Margin="121,321,0,0" VerticalAlignment="Top" Height="31" Width="103"/>
         <TextBox Name="txtNewsFragment" Margin="0,76,10,0" Text="fake news" TextWrapping="Wrap" VerticalAlignment="Top" Height="175" HorizontalAlignment="Right" Width="400"/>
         <Button Content="Test news fragment" Click="Button_Click_2" Margin="0,257,10,0" VerticalAlignment="Top" HorizontalAlignment="Right" Width="400"/>
         <Label Name="lblNewsFragmentResult" Content="...no process yet" HorizontalAlignment="Left" Margin="870,282,0,0" VerticalAlignment="Top"/>
         <Button Content="Recreate network" Click="Button_Click_3" HorizontalAlignment="Left" Margin="348,269,0,0" VerticalAlignment="Top"/>
+        <Label Name="lblActiveNetworkConfig" Content="no-network-created" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="178,290,0,0"/>
+        <Label Content="Active network config:" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,290,0,0"/>
+        <Button Click="Button_Click_4" Content="Save network" HorizontalAlignment="Left" Margin="229,321,0,0" VerticalAlignment="Top" Height="31" Width="103"/>
+        <Button Click="Button_Click_5" Content="Load network" HorizontalAlignment="Left" Margin="337,321,0,0" VerticalAlignment="Top" Height="31" Width="103"/>
     </Grid>
 </Window>

@@ -152,6 +152,24 @@ namespace Macademy
         }
 
         /// <summary>
+        /// Returns the element count of the networks expected input
+        /// </summary>
+        /// <returns>The element count of the networks input</returns>
+        public int GetInputSize() 
+        {
+            return layers.First().GetWeightsPerNeuron();
+        }
+
+        /// <summary>
+        /// Returns the element count of the networks output
+        /// </summary>
+        /// <returns>The element count of the networks output</returns>
+        public int GetOutputSize()
+        {
+            return layers.Last().GetNeuronCount();
+        }
+
+        /// <summary>
         /// Trains the network using the given training suite and calculator
         /// The functions returns immediately with a promise object that can be used to monitor progress.
         /// Note: Using the network during training is not permitted.
