@@ -3,17 +3,19 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29519.181
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Macademy", "macademy.core\Macademy.csproj", "{71C4FF05-559D-4C2B-B8BB-65D1DAE39310}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Macademy", "macademy.core\Macademy.csproj", "{71C4FF05-559D-4C2B-B8BB-65D1DAE39310}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "OpenCl.DotNetCore.Interop", "OpenCl.DotNetCore.Interop\OpenCl.DotNetCore.Interop.csproj", "{EF6DD86F-F205-4A3E-9224-A089EA652F88}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestConsole", "TestConsole\TestConsole.csproj", "{578D89BF-5485-402B-92CD-8A70F816DECB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TestConsole", "TestConsole\TestConsole.csproj", "{578D89BF-5485-402B-92CD-8A70F816DECB}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "Testing\Testing.csproj", "{7C334463-184D-4FDC-BB6B-93082E3AA330}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Testing", "Testing\Testing.csproj", "{7C334463-184D-4FDC-BB6B-93082E3AA330}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SandboxApp", "SandboxApp\SandboxApp.csproj", "{9C70B73F-65F5-4D9B-A24D-EE1BA1088D3C}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SandboxApp", "SandboxApp\SandboxApp.csproj", "{9C70B73F-65F5-4D9B-A24D-EE1BA1088D3C}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NumberRecognize", "NumberRecognize\NumberRecognize.csproj", "{B080D057-48B9-40E6-9D74-A1046DB82859}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NumberRecognize", "NumberRecognize\NumberRecognize.csproj", "{B080D057-48B9-40E6-9D74-A1046DB82859}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsAnalyzer", "NewsProc\NewsAnalyzer.csproj", "{71B91933-1460-4D92-AE11-EC3A5E60D7A6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -45,6 +47,10 @@ Global
 		{B080D057-48B9-40E6-9D74-A1046DB82859}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B080D057-48B9-40E6-9D74-A1046DB82859}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{B080D057-48B9-40E6-9D74-A1046DB82859}.Release|Any CPU.Build.0 = Release|Any CPU
+		{71B91933-1460-4D92-AE11-EC3A5E60D7A6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{71B91933-1460-4D92-AE11-EC3A5E60D7A6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{71B91933-1460-4D92-AE11-EC3A5E60D7A6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{71B91933-1460-4D92-AE11-EC3A5E60D7A6}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
