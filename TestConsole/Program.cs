@@ -13,97 +13,104 @@ namespace TestConsole
 
             while (true)
             {
-                Console.WriteLine("");
-                string rawCommand = Console.ReadLine().Trim();
-                var commands = rawCommand.Split(' ');
-                if (commands.Length == 0)
-                    continue;
+                try
+                {
+                    Console.WriteLine("");
+                    string rawCommand = Console.ReadLine().Trim();
+                    var commands = rawCommand.Split(' ');
+                    if (commands.Length == 0)
+                        continue;
 
-                var nextCommand = commands[0];
+                    var nextCommand = commands[0];
 
-                if (nextCommand == "exit")
-                {
-                    break;
-                }
-                else if (nextCommand == "help")
-                {
-                    Console.WriteLine("help       - Displays this help message");
-                    Console.WriteLine("devices    - Displays available devices");
-                    Console.WriteLine("select (n) - Selectes the devices with the given id");
-                    Console.WriteLine("info       - Displays information about the selected device");
-                    Console.WriteLine("test       - Performs a quick test on the selected device");
-                    Console.WriteLine("exit       - Exits the app");
-                }
-                else if (nextCommand == "devices")
-                {
-                    var devices = ComputeDevice.GetDevices();
-                    System.Console.WriteLine(String.Format("Found a total of {0} OpenCL devices!", devices.Count));
-                    int i = 0;
-                    Console.WriteLine("0 - CPU Fallback device");
-                    foreach (var dev in devices)
+                    if (nextCommand == "exit")
                     {
-                        Console.WriteLine(String.Format((++i).ToString() + " - {0}", dev.ToString()));
+                        break;
                     }
-                }
-                else if (nextCommand.StartsWith("select"))
-                {
-                    if (commands.Length >= 2)
+                    else if (nextCommand == "help")
+                    {
+                        Console.WriteLine("help       - Displays this help message");
+                        Console.WriteLine("devices    - Displays available devices");
+                        Console.WriteLine("select (n) - Selectes the devices with the given id");
+                        Console.WriteLine("info       - Displays information about the selected device");
+                        Console.WriteLine("test       - Performs a quick test on the selected device");
+                        Console.WriteLine("exit       - Exits the app");
+                    }
+                    else if (nextCommand == "devices")
                     {
                         var devices = ComputeDevice.GetDevices();
-
-                        int selectedDeviceId = 0;
-                        if (int.TryParse(commands[1], out selectedDeviceId))
+                        System.Console.WriteLine(String.Format("Found a total of {0} OpenCL devices!", devices.Count));
+                        int i = 0;
+                        Console.WriteLine("0 - CPU Fallback device");
+                        foreach (var dev in devices)
                         {
-                            if (selectedDeviceId < 0 || selectedDeviceId >= devices.Count + 1)
-                            {
-                                Console.WriteLine("No such device: " + selectedDeviceId);
-                                continue;
-                            }
+                            Console.WriteLine(String.Format((++i).ToString() + " - {0}", dev.ToString()));
+                        }
+                    }
+                    else if (nextCommand.StartsWith("select"))
+                    {
+                        if (commands.Length >= 2)
+                        {
+                            var devices = ComputeDevice.GetDevices();
 
-                            if (selectedDeviceId == 0)
+                            int selectedDeviceId = 0;
+                            if (int.TryParse(commands[1], out selectedDeviceId))
                             {
-                                selectedDevice = null;
-                                Console.WriteLine("Selected device: CPU Fallback device");
+                                if (selectedDeviceId < 0 || selectedDeviceId >= devices.Count + 1)
+                                {
+                                    Console.WriteLine("No such device: " + selectedDeviceId);
+                                    continue;
+                                }
+
+                                if (selectedDeviceId == 0)
+                                {
+                                    selectedDevice = null;
+                                    Console.WriteLine("Selected device: CPU Fallback device");
+                                }
+                                else
+                                {
+                                    int openClDeviceId = selectedDeviceId - 1;
+                                    selectedDevice = devices[openClDeviceId];
+                                    Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
+                                }
                             }
                             else
                             {
-                                int openClDeviceId = selectedDeviceId - 1;
-                                selectedDevice = devices[openClDeviceId];
-                                Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
+                                Console.WriteLine("Invalid device id given!");
                             }
                         }
                         else
                         {
-                            Console.WriteLine("Invalid device id given!");
+                            Console.WriteLine("No device id given!");
                         }
                     }
-                    else
+                    else if (nextCommand == "test")
                     {
-                        Console.WriteLine("No device id given!");
+                        string devString = "CPU Fallback device";
+                        if (selectedDevice != null)
+                            devString = selectedDevice.GetName();
+                        Console.WriteLine("Testing on device: " + devString );
+                        TestDevice(selectedDevice);
+                    }
+                    else if (nextCommand == "info")
+                    {
+                        if (selectedDevice != null)
+                        {
+                            Console.WriteLine("Vendor: " + selectedDevice.GetVendor());
+                            Console.WriteLine("Device name: " + selectedDevice.GetName());
+                            Console.WriteLine("OpenCL platform/device id: " + selectedDevice.GetPlatformID() + ":" + selectedDevice.GetDeviceID());
+                            Console.WriteLine("Device type: " + selectedDevice.GetDeviceType().ToString());
+                            Console.WriteLine("Global memory size: " + selectedDevice.GetGlobalMemorySize());
+                        }
+                        else
+                        {
+                            Console.WriteLine("CPU Fallback device is selected!");
+                        }
                     }
                 }
-                else if (nextCommand == "test")
+                catch (System.Exception exc)
                 {
-                    string devString = "CPU Fallback device";
-                    if (selectedDevice != null)
-                        devString = selectedDevice.GetName();
-                    Console.WriteLine("Testing on device: " + devString );
-                    TestDevice(selectedDevice);
-                }
-                else if (nextCommand == "info")
-                {
-                    if (selectedDevice != null)
-                    {
-                        Console.WriteLine("Vendor: " + selectedDevice.GetVendor());
-                        Console.WriteLine("Device name: " + selectedDevice.GetName());
-                        Console.WriteLine("OpenCL platform/device id: " + selectedDevice.GetPlatformID() + ":" + selectedDevice.GetDeviceID());
-                        Console.WriteLine("Device type: " + selectedDevice.GetDeviceType().ToString());
-                        Console.WriteLine("Global memory size: " + selectedDevice.GetGlobalMemorySize());
-                    }
-                    else
-                    {
-                        Console.WriteLine("CPU Fallback device is selected!");
-                    }
+                    Console.WriteLine("An error occured when running the command! " + exc.ToString());
                 }
             }
         }
