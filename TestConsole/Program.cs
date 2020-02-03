@@ -21,74 +21,81 @@ namespace TestConsole
 
                 var nextCommand = commands[0];
 
-                if (nextCommand == "exit")
+                try
                 {
-                    break;
-                }
-                else if (nextCommand == "help")
-                {
-                    Console.WriteLine("help       - Displays this help message");
-                    Console.WriteLine("devices    - Displays available devices");
-                    Console.WriteLine("select (n) - Selectes the devices with the given id");
-                    Console.WriteLine("info       - Displays information about the selected device");
-                    Console.WriteLine("test       - Performs a quick test on the selected device");
-                    Console.WriteLine("exit       - Exits the app");
-                }
-                else if (nextCommand == "devices")
-                {
-                    var devices = ComputeDeviceUtil.GetComputeDevices();
-                    System.Console.WriteLine(String.Format("Found a total of {0} devices!", devices.Count));
-                    int i = 0;
-                    foreach (var dev in devices)
+                    if (nextCommand == "exit")
                     {
-                        Console.WriteLine(String.Format((i++).ToString() + ": [{0}] {1}", dev.GetDeviceAccessType(), dev.GetDeviceName() ));
+                        break;
                     }
-                }
-                else if (nextCommand.StartsWith("select"))
-                {
-                    if (commands.Length >= 2)
+                    else if (nextCommand == "help")
+                    {
+                        Console.WriteLine("help       - Displays this help message");
+                        Console.WriteLine("devices    - Displays available devices");
+                        Console.WriteLine("select (n) - Selectes the devices with the given id");
+                        Console.WriteLine("info       - Displays information about the selected device");
+                        Console.WriteLine("test       - Performs a quick test on the selected device");
+                        Console.WriteLine("exit       - Exits the app");
+                    }
+                    else if (nextCommand == "devices")
                     {
                         var devices = ComputeDeviceUtil.GetComputeDevices();
-
-                        int selectedDeviceId = 0;
-                        if (int.TryParse(commands[1], out selectedDeviceId))
+                        System.Console.WriteLine(String.Format("Found a total of {0} devices!", devices.Count));
+                        int i = 0;
+                        foreach (var dev in devices)
                         {
-                            if (selectedDeviceId < 0 || selectedDeviceId >= devices.Count)
-                            {
-                                Console.WriteLine("No such device: " + selectedDeviceId);
-                                continue;
-                            }
+                            Console.WriteLine(String.Format((i++).ToString() + ": [{0}] {1}", dev.GetDeviceAccessType(), dev.GetDeviceName() ));
+                        }
+                    }
+                    else if (nextCommand.StartsWith("select"))
+                    {
+                        if (commands.Length >= 2)
+                        {
+                            var devices = ComputeDeviceUtil.GetComputeDevices();
 
-                            selectedDevice = ComputeDeviceUtil.CreateComputeDevice( devices[selectedDeviceId] );
-                            Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
+                            int selectedDeviceId = 0;
+                            if (int.TryParse(commands[1], out selectedDeviceId))
+                            {
+                                if (selectedDeviceId < 0 || selectedDeviceId >= devices.Count)
+                                {
+                                    Console.WriteLine("No such device: " + selectedDeviceId);
+                                    continue;
+                                }
+
+                                selectedDevice = ComputeDeviceUtil.CreateComputeDevice( devices[selectedDeviceId] );
+                                Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
+                            }
+                            else
+                            {
+                                Console.WriteLine("Invalid device id given!");
+                            }
                         }
                         else
                         {
-                            Console.WriteLine("Invalid device id given!");
+                            Console.WriteLine("No device id given!");
                         }
                     }
-                    else
+                    else if (nextCommand == "test")
                     {
-                        Console.WriteLine("No device id given!");
+                        Console.WriteLine("Testing on device: " + selectedDevice.GetName() );
+                        TestDevice(selectedDevice);
+                    }
+                    else if (nextCommand == "info")
+                    {
+                        if (selectedDevice != null)
+                        {
+                            Console.WriteLine("Device Name: " + selectedDevice.GetName());
+                            Console.WriteLine("Device Access: " + selectedDevice.GetDeviceAccessMode());
+                            Console.WriteLine("Core count: " + selectedDevice.GetDeviceCoreCount());
+                        }
+                        else
+                        {
+                            Console.WriteLine("CPU Fallback device is selected!");
+                        }
                     }
                 }
-                else if (nextCommand == "test")
+                catch (System.Exception exc)
                 {
-                    Console.WriteLine("Testing on device: " + selectedDevice.GetName() );
-                    TestDevice(selectedDevice);
-                }
-                else if (nextCommand == "info")
-                {
-                    if (selectedDevice != null)
-                    {
-                        Console.WriteLine("Device Name: " + selectedDevice.GetName());
-                        Console.WriteLine("Device Access: " + selectedDevice.GetDeviceAccessMode());
-                        Console.WriteLine("Core count: " + selectedDevice.GetDeviceCoreCount());
-                    }
-                    else
-                    {
-                        Console.WriteLine("CPU Fallback device is selected!");
-                    }
+                    Console.WriteLine("An error occured when running the command! " + exc.ToString());
                 }
             }
         }
