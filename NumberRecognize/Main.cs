@@ -14,7 +14,7 @@ namespace NumberRecognize
 {
     public partial class Main : Form
     {
-        private Calculator calculator = null;
+        private ComputeDevice calculator = null;
         private Network network = null;
         Bitmap bitmap;
         Bitmap bitmapDownscaled;
@@ -37,20 +37,19 @@ namespace NumberRecognize
             comboRegularization.SelectedIndex = 2;
             comboCostFunction.SelectedIndex = 1;
 
-            calculator = new Calculator(null);
+            calculator = ComputeDeviceUtil.CreateFallbackComputeDevice();
 
             bitmap = new Bitmap(targetWidth, targetHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
             bitmapDownscaled = new Bitmap(downScaleWidth, downScaleHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
             ClearBitmap();
             pictureBox1.Image = bitmap;
 
-            comboBox1.Items.Add("Use CPU calculation");
-            comboBox1.SelectedIndex = 0;
-            foreach (var device in ComputeDevice.GetDevices())
+            foreach (var device in ComputeDeviceUtil.GetComputeDevices())
             {
-                string item = "[" + device.GetPlatformID() + ":" + device.GetDeviceID() + ", " + device.GetDeviceType().ToString() + "] " + device.GetName().Trim() + " " + (device.GetGlobalMemorySize() / (1024*1024) ) + "MB";
+                string item = device.GetDeviceAccessType() + " - " + device.GetDeviceName();
                 comboBox1.Items.Add(item);
             }
+            comboBox1.SelectedIndex = 0;
 
             trainingtimer.Interval = 300;
             trainingtimer.Tick += Trainingtimer_Tick;
@@ -88,10 +87,8 @@ namespace NumberRecognize
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (comboBox1.SelectedIndex == 0)
-                calculator = new Calculator();
-            else
-                calculator = new Calculator(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1]);
+            var devices = ComputeDeviceUtil.GetComputeDevices();
+            calculator = ComputeDeviceUtil.CreateComputeDevice(devices[comboBox1.SelectedIndex]);
         }
 
         private void button3_Click(object sender, EventArgs e)

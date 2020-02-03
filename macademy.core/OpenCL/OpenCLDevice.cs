@@ -1,20 +1,57 @@
-﻿using Macademy;
-using Macademy.OpenCL;
-using OpenCl.DotNetCore.Interop.Memory;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using OpenCl.DotNetCore.Interop;
+using OpenCl.DotNetCore.Interop.Devices;
+using OpenCl.DotNetCore.Interop.Memory;
+using OpenCl.DotNetCore.Interop.Platforms;
 using static Macademy.OpenCL.ComputeFramework;
 
-namespace Macademy
+namespace Macademy.OpenCL
 {
-    /// <summary>
-    /// A Calculator class providing neural network calculations using the given OpenCL device, or using the CPU
-    /// </summary>
-    public class Calculator
+    internal class OpenCLComputeDeviceDesc : ComputeDeviceDesc
     {
+        internal IntPtr platform;
+        internal IntPtr device;
+        internal int platformId;
+        internal int deviceId;
+
+        public override ComputeDevice CreateDevice()
+        {
+            return OpenCLDevice.CreateDevice(this);
+        }
+
+        public override string GetDeviceAccessType()
+        {
+            return "OpenCL";
+        }
+
+        public override int GetDeviceCoreCount()
+        {
+            return OpenCLDevice.GetDeviceInformation<int>(device, DeviceInformation.MaximumComputeUnits);
+        }
+
+        public override long GetDeviceMemorySize()
+        {
+            return (long)OpenCLDevice.GetDeviceInformation<ulong>(device, DeviceInformation.GlobalMemorySize);
+        }
+
+        public override string GetDeviceName()
+        {
+            return OpenCLDevice.GetDeviceInformation<string>(device, DeviceInformation.Name);
+        }
+    }
+
+    /// <summary>
+    /// An OpenCL Computing device.
+    /// </summary>
+    internal class OpenCLDevice : ComputeDevice
+    {
+        IntPtr platform;
+        IntPtr device;
+        int platformId;
+        int deviceId;
+
         private ComputeFramework computeFramework = null;
         private DeviceConfig deviceConfig;
         private static readonly string calcLayerKernel = "calcSingleLayer";
@@ -40,58 +77,218 @@ namespace Macademy
             }
         }
 
-        /// <summary>
-        /// Constructs a new calculator instance.
-        /// </summary>
-        /// <param name="clDevice">The OpenCL device to use. If null, a software fallback will be used running on the CPU</param>
-        /// <param name="_deviceConfig">Device specific configuration. If null, a default configuration will be used.</param>
-        public Calculator(ComputeDevice clDevice = null, DeviceConfig _deviceConfig = null)
+        internal static ComputeDevice CreateDevice(OpenCLComputeDeviceDesc desc, DeviceConfig deviceConfig = null)
         {
-            deviceConfig = _deviceConfig;
-            if (deviceConfig == null)
-                deviceConfig = new DeviceConfig();
-
-            if (clDevice != null)
-                computeFramework = new ComputeFramework(clDevice, new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel }, deviceConfig.compileOptions);
+            return new OpenCLDevice(desc.platform, desc.device, desc.platformId, desc.deviceId, deviceConfig);
         }
 
-        /// <summary>
-        /// Extends the global work size to the nearest upper multiple of the localSize
-        /// </summary>
-        /// <param name="desiredGlobalSize"></param>
-        /// <param name="localSize"></param>
-        /// <returns></returns>
+        public enum ComputeDeviceType { CPU, GPU, Accelerator, Unknown };
+
         private int ExtendGlobalWorkSize(int desiredGlobalSize, int localSize)
         {
             return ((desiredGlobalSize % localSize) == 0) ? desiredGlobalSize : (desiredGlobalSize + (localSize - (desiredGlobalSize % localSize)));
         }
 
-        private bool HasComputeFramework() { return computeFramework != null; }
-
-        public Calculator Clone()
+        internal OpenCLDevice(IntPtr platform, IntPtr device, int platformId, int deviceId, DeviceConfig _deviceConfig)
         {
-            return new Calculator(HasComputeFramework() ? computeFramework.GetOpenCLDevice() : null);
+            this.platform = platform;
+            this.device = device;
+            this.platformId = platformId;
+            this.deviceId = deviceId;
+            this.deviceConfig = _deviceConfig == null ? new DeviceConfig() : _deviceConfig;
+
+            computeFramework = new ComputeFramework(GetDevice(), new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel }, deviceConfig.compileOptions);
         }
 
-        internal unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
-        {
-            if (!HasComputeFramework()) //CPU fallback
-            {
-                float[] ret = new float[weightMx.GetLength(0)];
-                for (int m = 0; m < weightMx.GetLength(0); m++)
-                {
-                    float acc = 0.0f;
-                    for (int k = 0; k < weightMx.GetLength(1); k++)
-                    {
-                        acc += weightMx[m, k] * prevActivations[k];
-                    }
-                    acc += bias[m];
+        internal IntPtr GetPlatform() { return platform; }
 
-                    ret[m] = sigmoidFunction.Calculate(acc);
-                }
-                return ret;
+        internal IntPtr GetDevice() { return device; }
+
+
+        /// <summary>
+        /// Retrieves the specified information about the device.
+        /// </summary>
+        /// <typeparam name="T">The type of the data that is to be returned.</param>
+        /// <param name="deviceInformation">The kind of information that is to be retrieved.</param>
+        /// <exception cref="OpenClException">If the information could not be retrieved, then an <see cref="OpenClException"/> is thrown.</exception>
+        /// <returns>Returns the specified information.</returns>
+        internal static T GetDeviceInformation<T>(IntPtr device, DeviceInformation deviceInformation)
+        {
+            // Retrieves the size of the return value in bytes, this is used to later get the full information
+            UIntPtr returnValueSize;
+            Result result = DevicesNativeApi.GetDeviceInformation(device, deviceInformation, UIntPtr.Zero, null, out returnValueSize);
+            if (result != Result.Success)
+                throw new OpenClException("The device information could not be retrieved.", result);
+            
+            // Allocates enough memory for the return value and retrieves it
+            byte[] output = new byte[returnValueSize.ToUInt32()];
+            result = DevicesNativeApi.GetDeviceInformation(device, deviceInformation, new UIntPtr((uint)output.Length), output, out returnValueSize);
+            if (result != Result.Success)
+                throw new OpenClException("The device information could not be retrieved.", result);
+
+            // Returns the output
+            return InteropConverter.To<T>(output);
+        }
+
+        /// <summary>
+        /// Returns the type of the device (CPU, GPU, Accelerator)
+        /// </summary>
+        /// <returns>The type of the device, or Unknown if it cannot be determined</returns>
+        public ComputeDeviceType GetDeviceType()
+        {
+            try {
+                DeviceType result = (DeviceType)GetDeviceInformation<ulong>(device, DeviceInformation.Type);
+
+                if ( ((int)result & (int)DeviceType.Accelerator) != 0 )
+                    return ComputeDeviceType.Accelerator; 
+                else if ( ((int)result & (int)DeviceType.Gpu) != 0 )
+                    return ComputeDeviceType.GPU;
+                else if ( ((int)result & (int)DeviceType.Cpu) != 0 )
+                    return ComputeDeviceType.CPU;
+            }
+            catch (System.Exception) {
             }
 
+            return ComputeDeviceType.Unknown;
+        }
+
+        /// <summary>
+        /// The name of the device as visible from OpenCL 
+        /// </summary>
+        /// <returns>The device's name</returns>
+        public override string GetName()
+        {
+            try {
+                return GetDeviceInformation<string>(device, DeviceInformation.Name);
+            } catch (System.Exception) {
+                return "unknown";
+            }
+        }
+
+        /// <summary>
+        /// The vendor of the device
+        /// </summary>
+        /// <returns>The vendor's name</returns>
+        public String GetVendor()
+        {
+            try {
+                return GetDeviceInformation<string>(device, DeviceInformation.Vendor);
+            } catch (System.Exception) {
+                return "unknown";
+            }
+        }
+
+        /// <summary>
+        /// The size of the global memory in bytes
+        /// </summary>
+        /// <returns>Global memory size in bytes</returns>
+        public long GetGlobalMemorySize()
+        {
+            try {
+                return (long)GetDeviceInformation<ulong>(device, DeviceInformation.GlobalMemorySize);
+            } catch (System.Exception) {
+                return 0L;
+            }
+        }
+
+        /// <summary>
+        /// Provides a list of available OpenCL devices on the system
+        /// </summary>
+        /// <returns>A list of OpenCL devices</returns>
+        public static List<ComputeDeviceDesc> GetDevices()
+        {
+            List<ComputeDeviceDesc> ret = new List<ComputeDeviceDesc>();
+
+            // Gets the number of available platforms
+            uint numberOfAvailablePlatforms;
+            Result result = PlatformsNativeApi.GetPlatformIds(0, null, out numberOfAvailablePlatforms);
+            if (result != Result.Success)
+                throw new OpenClException("The number of platforms could not be queried.", result);
+            
+            // Gets pointers to all the platforms
+            IntPtr[] platformPointers = new IntPtr[numberOfAvailablePlatforms];
+            result = PlatformsNativeApi.GetPlatformIds(numberOfAvailablePlatforms, platformPointers, out numberOfAvailablePlatforms);
+            if (result != Result.Success)
+                throw new OpenClException("The platforms could not be retrieved.", result);
+
+            // Converts the pointers to platform objects
+            int platformId = 0;
+            foreach (IntPtr platformPointer in platformPointers){
+                ++platformId;
+
+                // Gets the number of available devices of the specified type
+                uint numberOfAvailableDevices;
+                Result result_d = DevicesNativeApi.GetDeviceIds(platformPointer, DeviceType.All, 0, null, out numberOfAvailableDevices);
+                if (result_d != Result.Success)
+                    throw new OpenClException("The number of available devices could not be queried.", result_d);
+
+                // Gets the pointers to the devices of the specified type
+                IntPtr[] devicePointers = new IntPtr[numberOfAvailableDevices];
+                result_d = DevicesNativeApi.GetDeviceIds(platformPointer, DeviceType.All, numberOfAvailableDevices, devicePointers, out numberOfAvailableDevices);
+                if (result_d != Result.Success)
+                    throw new OpenClException("The devices could not be retrieved.", result_d);
+
+                // Converts the pointer to device objects
+                int deviceId = 0;
+                foreach (IntPtr devicePointer in devicePointers){
+                    ++deviceId;
+
+                    OpenCLComputeDeviceDesc devDesc = new OpenCLComputeDeviceDesc();
+                    devDesc.platform = platformPointer;
+                    devDesc.device = devicePointer;
+                    devDesc.platformId= platformId;
+                    devDesc.deviceId = deviceId;
+                    ret.Add(devDesc);
+                }
+            }
+
+            return ret;
+        }
+
+        /// <summary>
+        /// The OpenCL platform id
+        /// </summary>
+        /// <returns>The OpenCL platform id</returns>
+        public int GetPlatformID()
+        {
+            return platformId;
+        }
+
+        /// <summary>
+        /// The OpenCL device id in the platform it is in
+        /// </summary>
+        /// <returns>The OpenCL device id</returns>
+        public int GetDeviceID()
+        {
+            return deviceId;
+        }
+
+        public override string GetDeviceAccessMode()
+        {
+            return "OpenCL";
+        }
+
+        public override int GetDeviceCoreCount()
+        {
+            try
+            {
+                return GetDeviceInformation<int>(device, DeviceInformation.MaximumComputeUnits);
+            }
+            catch (System.Exception)
+            {
+                return 0;
+            }
+        }
+
+
+        public override void FlushWorkingCache()
+        {
+            computeFramework.FlushWorkingCache();
+        }
+
+
+        public override unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
+        {
             int matrixRows = weightMx.GetLength(0);
             float[] output = new float[matrixRows];
             int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ sigmoidFunction.GetOpenCLFunctionId() };
@@ -130,109 +327,15 @@ namespace Macademy
             return output;
         }
 
-        /// <summary>
-        /// Uninitializes the calculator. This instance cannot be used after this call
-        /// </summary>
-        internal void Uninitialize()
+        public override void Uninitialize()
         {
-            if (computeFramework != null)
-                computeFramework.CleanupCLResources();
+            computeFramework.CleanupCLResources();
         }
 
-        private void CalculateGradientForSingleTrainingExample(Network network, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
-        {
-            List<float[]> activations = new List<float[]>();
-            List<float[]> zValues = new List<float[]>();
-            network.Compute(this, trainingInput, ref activations, ref zValues, false); //dont flush working cache
-
-            var lastLayerGradient = intermediateResults.Last();
-            List<float> delta_k_holder = new List<float>();
-            CalculateOutputLayerGradient(network, errorFunction, ref lastLayerGradient, ref delta_k_holder, activations, trainingInput, zValues, trainingDesiredOutput);
-
-            for (int i = network.layers.Count - 2; i >= 0; --i)
-            {
-                var layerGradient = intermediateResults[i];
-                CalculateHiddenLayerGradient(network, i, ref layerGradient, ref delta_k_holder, i == 0 ? trainingInput : activations[i - 1], zValues);
-            }
-        }
-
-        private void CalculateOutputLayerGradient(Network network, IErrorFunction errorFunction, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, List<float[]> activations, float[] trainingInput, List<float[]> zValues, float[] desiredOutput)
-        {
-            var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
-            int lastLayerWeightCount = network.layers.Last().GetWeightsPerNeuron();
-            int lastLayerNeuronCount = network.layers.Last().GetNeuronCount();
-            for (int i = 0; i < lastLayerNeuronCount; i++)
-            {
-                float outputValue = activations.Last()[i];
-                float delta_k = errorFunction.CalculateDelta(zValues.Last()[i], outputValue, desiredOutput[i], network.activationFunction);
-
-                var gradientDataItem = gradientData[i];
-                //Assert(gradientData[i].weights.Length == prevActivations.Length);
-                for (int j = 0; j < lastLayerWeightCount; j++)
-                {
-                    gradientDataItem.weights[j] += delta_k * prevActivations[j];
-                }
-                gradientDataItem.bias += delta_k;
-                delta_k_vector.Add(delta_k);
-            }
-        }
-        private void CalculateHiddenLayerGradient(Network network, int L, ref List<NeuronData> gradientData, ref List<float> delta_k_vector, float[] prevLayerActivations, List<float[]> zValues)
-        {
-            List<float> newGammak = new List<float>();
-            int layerWeightCount = network.layers[L].GetWeightsPerNeuron();
-            int layerNeuronCount = network.layers[L].GetNeuronCount();
-
-            for (int i = 0; i < layerNeuronCount; ++i)
-            {
-                float deltak = 0;
-                //Assert(delta_k_vector.Count == layers[L + 1].weightMx.GetLength(0));
-                for (int k = 0; k < delta_k_vector.Count; ++k)
-                {
-                    deltak += delta_k_vector[k] * network.layers[L + 1].weightMx[k, i];
-                }
-                deltak *= network.activationFunction.CalculatePrime(zValues[L][i]);
-                newGammak.Add(deltak);
-
-                //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);
-                var gradientDataItem = gradientData[i];
-                for (int j = 0; j < layerWeightCount; ++j)
-                {
-                    gradientDataItem.weights[j] += deltak * (prevLayerActivations[j]);
-                }
-                gradientDataItem.bias += deltak;
-            }
-
-            delta_k_vector = newGammak;
-        }
-
-        internal void FlushWorkingCache()
-        {
-            if (HasComputeFramework())
-                computeFramework.FlushWorkingCache();
-        }
-
-        /// <summary>
-        /// Runs backpropagation
-        /// </summary>
-        /// <param name="network"></param>
-        /// <param name="suite"></param>
-        /// <param name="trainingDataBegin"></param>
-        /// <param name="trainingDataEnd"></param>
-        /// <returns></returns>
-        internal unsafe List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
+        public override unsafe List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
         {
             int trainingSamples = trainingDataEnd - trainingDataBegin;
             var ret = Utils.CreateGradientVector(network);
-
-            if (!HasComputeFramework()) //CPU fallback
-            {
-                for (int i = trainingDataBegin; i < trainingDataEnd; i++)
-                {
-                    CalculateGradientForSingleTrainingExample(network, suite.config.costFunction, ref ret, suite.trainingData[i].input, suite.trainingData[i].desiredOutput);
-                }
-                return ret;
-            }
-
 
             int[] networkConfigParams = null;
             int totalWeightAndBiasCount = 0;
@@ -325,7 +428,7 @@ namespace Macademy
                         layerIndexBuffer[i] = i;
 
                     var localWorkGroupSize = new IntPtr[] { new IntPtr(deviceConfig.idealWorkgroupSizeX), new IntPtr(deviceConfig.idealWorkgroupSizeY) };
-                    var globalWorkSize = new IntPtr[] { new IntPtr(0) , new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
+                    var globalWorkSize = new IntPtr[] { new IntPtr(0), new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
 
                     #region Forward pass
                     for (int i = 0; i < network.layers.Count; ++i)
@@ -388,36 +491,8 @@ namespace Macademy
                 }
             }
 
-            /*float error = _Debug_CalculateErrorOfOpenCLGradient(network, suite, trainingDataBegin, trainingDataEnd, ret);
-            if (error > 0.001)
-                return null; */
-
             return ret;
         }
 
-
-        private float _Debug_CalculateErrorOfOpenCLGradient(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd, List<List<NeuronData>> openclResults)
-        {
-            var tempcomp = computeFramework;
-            computeFramework = null;
-            var retCPU = this.CalculateAccumulatedGradientForMinibatch(network, suite, trainingDataBegin, trainingDataEnd);
-            computeFramework = tempcomp;
-            double error = 0;
-            double divisor = 0;
-            for (int i = 0; i < retCPU.Count; i++)
-            {
-                for (int j = 0; j < retCPU[i].Count; j++)
-                {
-                    for (int k = 0; k < retCPU[i][j].weights.Length; k++)
-                    {
-                        error += retCPU[i][j].weights[k] - openclResults[i][j].weights[k];
-                    }
-                    error += retCPU[i][j].bias - openclResults[i][j].bias;
-                    divisor += retCPU[i][j].weights.Length + 1;
-                }
-            }
-
-            return (float)(error / divisor);
-        }
     }
 }

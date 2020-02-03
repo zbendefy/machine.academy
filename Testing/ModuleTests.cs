@@ -53,12 +53,12 @@ namespace ModuleTests
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
-            Calculator cpuCalculator = new Calculator();
-            Calculator openCLCalculator = new Calculator(ComputeDevice.GetDevices()[0]);
+            ComputeDevice cpuCalculator = ComputeDeviceUtil.CreateFallbackComputeDevice();
+            ComputeDevice openCLCalculator = Utils.GetFirstOpenCLDevice();
 
             float[] testInput = new float[layerConfig[0]];
             var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
-            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
+            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, openCLCalculator);
 
             Utils.CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }

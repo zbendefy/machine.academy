@@ -15,7 +15,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SandboxApp", "SandboxApp\Sa
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NumberRecognize", "NumberRecognize\NumberRecognize.csproj", "{B080D057-48B9-40E6-9D74-A1046DB82859}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NewsAnalyzer", "NewsProc\NewsAnalyzer.csproj", "{71B91933-1460-4D92-AE11-EC3A5E60D7A6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NewsAnalyzer", "NewsProc\NewsAnalyzer.csproj", "{71B91933-1460-4D92-AE11-EC3A5E60D7A6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

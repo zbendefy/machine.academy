@@ -56,7 +56,7 @@ namespace Macademy.OpenCL
 
         private object lockObj = new object();
         private IntPtr clContext;
-        private ComputeDevice clDevice = null;
+        private IntPtr clDevice;
         private IntPtr commandQueue;
         private IntPtr clProgram;
         private Dictionary<String, IntPtr> kernels = new Dictionary<string, IntPtr>();
@@ -64,9 +64,7 @@ namespace Macademy.OpenCL
         private List<MemoryAllocation> freeMemoryAllocations = new List<MemoryAllocation>();
         private List<MemoryAllocation> usedMemoryAllocations = new List<MemoryAllocation>();
 
-        public ComputeDevice GetOpenCLDevice() { return clDevice; }
-
-        public ComputeFramework(ComputeDevice clDevice, String[] kernelSource, String[] kernelNames, string compileArguments)
+        public ComputeFramework(IntPtr clDevice, String[] kernelSource, String[] kernelNames, string compileArguments)
         {
             this.clDevice = clDevice;
             InitCL(kernelSource, kernelNames, compileArguments);
@@ -307,21 +305,21 @@ namespace Macademy.OpenCL
                 if (!hasClInitialized && clDevice != null)
                 {
                     Result err;
-                    var devicesArray = new IntPtr[] { clDevice.GetDevice() };
+                    var devicesArray = new IntPtr[] { clDevice };
                     clContext = ContextsNativeApi.CreateContext(IntPtr.Zero, 1, devicesArray, IntPtr.Zero, IntPtr.Zero, out err);
                     if (err != Result.Success) throw new OpenClException("Failed to create context!", err);
 
-                    commandQueue = CommandQueuesNativeApi.CreateCommandQueue(clContext, clDevice.GetDevice(), CommandQueueProperty.None, out err);
+                    commandQueue = CommandQueuesNativeApi.CreateCommandQueue(clContext, clDevice, CommandQueueProperty.None, out err);
                     if (err != Result.Success) throw new OpenClException("Failed to create command queue!", err);
 
                     IntPtr[] sourceList = kernelSource.Select(source => Marshal.StringToHGlobalAnsi(source)).ToArray();
                     clProgram =  ProgramsNativeApi.CreateProgramWithSource(clContext, 1, sourceList, null, out err);
                     if (err != Result.Success) throw new OpenClException("Failed to create program!", err);
 
-                    err = ProgramsNativeApi.BuildProgram(clProgram, 1, new IntPtr[] { clDevice.GetDevice() }, compileArguments, IntPtr.Zero, IntPtr.Zero);
+                    err = ProgramsNativeApi.BuildProgram(clProgram, 1, new IntPtr[] { clDevice }, compileArguments, IntPtr.Zero, IntPtr.Zero);
                     if (err != Result.Success)
                     {
-                        var infoBuffer = GetProgramBuildInformation<string>(clProgram, clDevice.GetDevice(), ProgramBuildInformation.Log);
+                        var infoBuffer = GetProgramBuildInformation<string>(clProgram, clDevice, ProgramBuildInformation.Log);
                         if (err != Result.Success) throw new OpenClException("Failed to build program! " + (infoBuffer == null ? "?" : infoBuffer.ToString()), err);
                     }
 

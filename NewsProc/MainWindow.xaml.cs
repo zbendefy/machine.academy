@@ -31,11 +31,10 @@ namespace NewsProc
             InitializeComponent();
             RecreateNetwork();
 
-            var deviceList = Macademy.OpenCL.ComputeDevice.GetDevices();
-            cmbComputeDevice.Items.Add("CPU Fallback Device");
+            var deviceList = ComputeDeviceUtil.GetComputeDevices();
             foreach (var device in deviceList)
             {
-                string item = "[" + device.GetPlatformID() + ":" + device.GetDeviceID() + ", " + device.GetDeviceType().ToString() + "] " + device.GetName().Trim() + " " + (device.GetGlobalMemorySize() / (1024 * 1024)) + "MB";
+                string item = device.GetDeviceAccessType() + " - " + device.GetDeviceName();
                 cmbComputeDevice.Items.Add(item);
             }
             cmbComputeDevice.SelectedIndex = 0;
@@ -76,11 +75,9 @@ namespace NewsProc
             return Network.CreateNetworkInitRandom(layers, new SigmoidActivation());
         }
 
-        private static Calculator GetCalculator(int deviceId)
+        private static ComputeDevice GetCalculator(int deviceId)
         {
-            if (deviceId == 0)
-                return null;
-            return new Calculator(Macademy.OpenCL.ComputeDevice.GetDevices()[deviceId - 1]);
+            return ComputeDeviceUtil.GetComputeDeviceById(deviceId);
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)
@@ -204,20 +201,22 @@ namespace NewsProc
 
         private static float[] GenerateInputFromCleanedArticle(string cleanedArticle, int maxInput) 
         {
+            float spaceBias = 0.3f; //space and empty characters will occupy this much space on the range from 0.0 and 1.0. In other words, the first valid character starts at this value.
+            float spaceBiasInv = 1.0f - spaceBias;
             var numValidCharsDivisor = (float)(validCharacters.Length - 1);
             var ret = new float[maxInput];
-            float spacePos = ((float)validCharacters.IndexOf(' ')) / numValidCharsDivisor;
+            float spacePos = 0;
             for (int i = 0; i < maxInput ; i++)
             {
-                if (i < cleanedArticle.Length)
-                    ret[i] = ((float)validCharacters.IndexOf(cleanedArticle[i])) / numValidCharsDivisor;
+                if (i < cleanedArticle.Length && cleanedArticle[i] != ' ')
+                    ret[i] = spaceBias + spaceBiasInv * (((float)validCharacters.IndexOf(cleanedArticle[i])) / numValidCharsDivisor); 
                 else
                     ret[i] = spacePos;
             }
             return ret;
         }
 
-        private static string validCharacters = " abcdefghijklmnopqrstuvwxyz,;-.?!%#&$()0123456789'\"\n";
+        private static string validCharacters = " abcdefghijklmnopqrstuvwxyz";
 
         private static string CleanText(string text)
         {
@@ -244,13 +243,13 @@ namespace NewsProc
                 return;
 
             //Test news fragment
-            var newsFragment = txtNewsFragment.Text;
+            var newsFragment = CleanText( txtNewsFragment.Text );
 
             var output = network.Compute(GenerateInputFromCleanedArticle(newsFragment, network.GetInputSize()), GetCalculator(cmbComputeDevice.SelectedIndex));
 
             int resultId = EvaluateResult(output);
 
-            lblNewsFragmentResult.Content = "I think that's a " + ResultIdToString(resultId) + " (" + resultId + ")";
+            lblNewsFragmentResult.Content = "I think that's a " + ResultIdToString(resultId) + " (" + resultId + ") [" + string.Join("; ",output) + "]";
         }
 
         private static string ResultIdToString(int id)
