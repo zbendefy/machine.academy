@@ -177,13 +177,10 @@ namespace Macademy
         /// <param name="trainingSuite">The training suite to be used</param>
         /// <param name="calculator">The calculator (containing a compute device) to be used for calculations</param>
         /// <returns>A promise that can be used to check the </returns>
-        public TrainingPromise Train(TrainingSuite trainingSuite, ComputeDevice calculator = null)
+        public TrainingPromise Train(TrainingSuite trainingSuite, ComputeDevice calculator)
         {
             if (trainingPromise != null)
                 throw new Exception("Cannot perform operation while training is in progress!");
-
-            if (calculator == null)
-                calculator = new CPUComputeDevice(); //Use default calculator
 
             trainingPromise = new TrainingPromise();
 
@@ -312,14 +309,12 @@ namespace Macademy
         /// <param name="input">The input array. Must have the same number of elements as the input layer of the network</param>
         /// <param name="calculator">The calculator (containing a compute device) to use for calculations</param>
         /// <returns></returns>
-        public float[] Compute(float[] input, ComputeDevice calculator = null )
+        public float[] Compute(float[] input, ComputeDevice calculator )
         {
             if (trainingPromise != null)
                 throw new Exception("Cannot perform operation while training is in progress!");
             if ( input == null || input.Length != layers.First().GetWeightsPerNeuron() )
                 throw new Exception("Invalid input argument!");
-            if (calculator == null)
-                calculator = new CPUComputeDevice(); //Use default calculator
             List<float[]> doesntNeedActivations = null;
             List<float[]> doesntNeedZ = null;
             return Compute(calculator, input, ref doesntNeedActivations, ref doesntNeedZ, true);

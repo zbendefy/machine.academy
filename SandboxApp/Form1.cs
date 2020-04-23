@@ -25,9 +25,9 @@ namespace SandboxApp
 
             solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
 
-            calculator = ComputeDeviceUtil.CreateFallbackComputeDevice();
+            calculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
 
-            foreach (var device in ComputeDeviceUtil.GetComputeDevices())
+            foreach (var device in ComputeDeviceFactory.GetComputeDevices())
             {
                 string item = device.GetDeviceAccessType() + " - " + device.GetDeviceName();
                 comboBox1.Items.Add(item);
@@ -96,8 +96,8 @@ namespace SandboxApp
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var devices = ComputeDeviceUtil.GetComputeDevices();
-            calculator = ComputeDeviceUtil.CreateComputeDevice( devices[comboBox1.SelectedIndex]);
+            var devices = ComputeDeviceFactory.GetComputeDevices();
+            calculator = ComputeDeviceFactory.CreateComputeDevice( devices[comboBox1.SelectedIndex]);
         }
 
         private void label1_Click(object sender, EventArgs e)

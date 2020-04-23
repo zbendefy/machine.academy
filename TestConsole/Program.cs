@@ -9,7 +9,7 @@ namespace TestConsole
         static void Main(string[] args)
         {
             Console.WriteLine(" ### macademy test console ");
-            ComputeDevice selectedDevice = ComputeDeviceUtil.CreateFallbackComputeDevice();
+            ComputeDevice selectedDevice = ComputeDeviceFactory.CreateFallbackComputeDevice();
 
             while (true)
             {
@@ -38,7 +38,7 @@ namespace TestConsole
                     }
                     else if (nextCommand == "devices")
                     {
-                        var devices = ComputeDeviceUtil.GetComputeDevices();
+                        var devices = ComputeDeviceFactory.GetComputeDevices();
                         System.Console.WriteLine(String.Format("Found a total of {0} devices!", devices.Count));
                         int i = 0;
                         foreach (var dev in devices)
@@ -50,7 +50,7 @@ namespace TestConsole
                     {
                         if (commands.Length >= 2)
                         {
-                            var devices = ComputeDeviceUtil.GetComputeDevices();
+                            var devices = ComputeDeviceFactory.GetComputeDevices();
 
                             int selectedDeviceId = 0;
                             if (int.TryParse(commands[1], out selectedDeviceId))
@@ -61,7 +61,7 @@ namespace TestConsole
                                     continue;
                                 }
 
-                                selectedDevice = ComputeDeviceUtil.CreateComputeDevice( devices[selectedDeviceId] );
+                                selectedDevice = ComputeDeviceFactory.CreateComputeDevice( devices[selectedDeviceId] );
                                 Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
                             }
                             else
@@ -86,6 +86,7 @@ namespace TestConsole
                             Console.WriteLine("Device Name: " + selectedDevice.GetName());
                             Console.WriteLine("Device Access: " + selectedDevice.GetDeviceAccessMode());
                             Console.WriteLine("Core count: " + selectedDevice.GetDeviceCoreCount());
+                            Console.WriteLine("Memory: " + selectedDevice.GetDeviceMemorySize());
                         }
                         else
                         {

@@ -13,11 +13,11 @@ namespace ModuleTests
     {
         public static ComputeDevice GetFirstOpenCLDevice()
         {
-            foreach (var item in ComputeDeviceUtil.GetComputeDevices())
+            foreach (var item in ComputeDeviceFactory.GetComputeDevices())
             {
                 if (item.GetDeviceAccessType().ToLower() == "opencl")
                 {
-                    return ComputeDeviceUtil.CreateComputeDevice(item);
+                    return ComputeDeviceFactory.CreateComputeDevice(item);
                 }
             }
             return null;
@@ -55,13 +55,13 @@ namespace ModuleTests
             suite.config.regularizationLambda = regularizationLambda;
             suite.config.learningRate = learningRate;
 
-            var promise = network.Train(suite, ComputeDeviceUtil.CreateFallbackComputeDevice());
+            var promise = network.Train(suite, ComputeDeviceFactory.CreateFallbackComputeDevice());
 
             promise.Await();
             #endregion
 
             float[] testInput = new float[] { 0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
-            var result = network.Compute(testInput, ComputeDeviceUtil.CreateFallbackComputeDevice());
+            var result = network.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
             
             Utils.CheckNetworkError(referenceOutput, result);
         }
@@ -81,7 +81,7 @@ namespace ModuleTests
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
-            var cpuCalculator = ComputeDeviceUtil.CreateFallbackComputeDevice();
+            var cpuCalculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
             var openCLCalculator = GetFirstOpenCLDevice();
 
             var rnd = new Random();

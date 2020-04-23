@@ -31,7 +31,7 @@ namespace NewsProc
             InitializeComponent();
             RecreateNetwork();
 
-            var deviceList = ComputeDeviceUtil.GetComputeDevices();
+            var deviceList = ComputeDeviceFactory.GetComputeDevices();
             foreach (var device in deviceList)
             {
                 string item = device.GetDeviceAccessType() + " - " + device.GetDeviceName();
@@ -77,7 +77,7 @@ namespace NewsProc
 
         private static ComputeDevice GetCalculator(int deviceId)
         {
-            return ComputeDeviceUtil.GetComputeDeviceById(deviceId);
+            return ComputeDeviceFactory.GetComputeDeviceById(deviceId);
         }
 
         private void Button_Click(object sender, RoutedEventArgs e)

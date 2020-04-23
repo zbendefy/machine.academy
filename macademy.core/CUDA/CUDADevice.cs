@@ -10,7 +10,7 @@ namespace Macademy
     {
         public override ComputeDevice CreateDevice()
         {
-            return new CUDADevice();
+            return new CUDADevice(this);
         }
 
         public override string GetDeviceAccessType()
@@ -36,6 +36,10 @@ namespace Macademy
 
     internal class CUDADevice : ComputeDevice
     {
+        public CUDADevice(ComputeDeviceDesc descriptor) : base(descriptor)
+        {
+        }
+
         public override List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
         {
             throw new NotImplementedException();
@@ -48,21 +52,6 @@ namespace Macademy
 
         public override void FlushWorkingCache()
         {
-        }
-
-        public override string GetDeviceAccessMode()
-        {
-            return "CUDA";
-        }
-
-        public override int GetDeviceCoreCount()
-        {
-            throw new NotImplementedException();
-        }
-
-        public override string GetName()
-        {
-            throw new NotImplementedException();
         }
 
         public override void Uninitialize()

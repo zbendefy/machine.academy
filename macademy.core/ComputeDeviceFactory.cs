@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Macademy
 {
-    public static class ComputeDeviceUtil
+    public static class ComputeDeviceFactory
     {
         public static ComputeDevice GetComputeDeviceById(int id)
         {
@@ -28,7 +28,7 @@ namespace Macademy
 
         public static ComputeDevice CreateFallbackComputeDevice()
         {
-            return new CPUComputeDevice();
+            return CreateComputeDevice(CPUComputeDevice.GetDevices()[0]);
         }
     }
 }

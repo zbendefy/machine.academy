@@ -47,11 +47,6 @@ namespace Macademy.OpenCL
     /// </summary>
     internal class OpenCLDevice : ComputeDevice
     {
-        IntPtr platform;
-        IntPtr device;
-        int platformId;
-        int deviceId;
-
         private ComputeFramework computeFramework = null;
         private DeviceConfig deviceConfig;
         private static readonly string calcLayerKernel = "calcSingleLayer";
@@ -77,9 +72,11 @@ namespace Macademy.OpenCL
             }
         }
 
+        private OpenCLComputeDeviceDesc GetDeviceDesc() { return descriptor as OpenCLComputeDeviceDesc; }
+
         internal static ComputeDevice CreateDevice(OpenCLComputeDeviceDesc desc, DeviceConfig deviceConfig = null)
         {
-            return new OpenCLDevice(desc.platform, desc.device, desc.platformId, desc.deviceId, deviceConfig);
+            return new OpenCLDevice(desc, deviceConfig);
         }
 
         public enum ComputeDeviceType { CPU, GPU, Accelerator, Unknown };
@@ -89,20 +86,17 @@ namespace Macademy.OpenCL
             return ((desiredGlobalSize % localSize) == 0) ? desiredGlobalSize : (desiredGlobalSize + (localSize - (desiredGlobalSize % localSize)));
         }
 
-        internal OpenCLDevice(IntPtr platform, IntPtr device, int platformId, int deviceId, DeviceConfig _deviceConfig)
+        internal OpenCLDevice(OpenCLComputeDeviceDesc desc, DeviceConfig _deviceConfig)
+            : base(desc)
         {
-            this.platform = platform;
-            this.device = device;
-            this.platformId = platformId;
-            this.deviceId = deviceId;
             this.deviceConfig = _deviceConfig == null ? new DeviceConfig() : _deviceConfig;
 
             computeFramework = new ComputeFramework(GetDevice(), new string[] { CLSourceProvider.ReadSourceFile() }, new string[] { calcLayerKernel, forwardPass, backwardPassKernel }, deviceConfig.compileOptions);
         }
 
-        internal IntPtr GetPlatform() { return platform; }
+        internal IntPtr GetPlatform() { return GetDeviceDesc().platform; }
 
-        internal IntPtr GetDevice() { return device; }
+        internal IntPtr GetDevice() { return GetDeviceDesc().device; }
 
 
         /// <summary>
@@ -137,7 +131,7 @@ namespace Macademy.OpenCL
         public ComputeDeviceType GetDeviceType()
         {
             try {
-                DeviceType result = (DeviceType)GetDeviceInformation<ulong>(device, DeviceInformation.Type);
+                DeviceType result = (DeviceType)GetDeviceInformation<ulong>(GetDeviceDesc().device, DeviceInformation.Type);
 
                 if ( ((int)result & (int)DeviceType.Accelerator) != 0 )
                     return ComputeDeviceType.Accelerator; 
@@ -153,26 +147,13 @@ namespace Macademy.OpenCL
         }
 
         /// <summary>
-        /// The name of the device as visible from OpenCL 
-        /// </summary>
-        /// <returns>The device's name</returns>
-        public override string GetName()
-        {
-            try {
-                return GetDeviceInformation<string>(device, DeviceInformation.Name);
-            } catch (System.Exception) {
-                return "unknown";
-            }
-        }
-
-        /// <summary>
         /// The vendor of the device
         /// </summary>
         /// <returns>The vendor's name</returns>
         public String GetVendor()
         {
             try {
-                return GetDeviceInformation<string>(device, DeviceInformation.Vendor);
+                return GetDeviceInformation<string>(GetDeviceDesc().device, DeviceInformation.Vendor);
             } catch (System.Exception) {
                 return "unknown";
             }
@@ -185,7 +166,7 @@ namespace Macademy.OpenCL
         public long GetGlobalMemorySize()
         {
             try {
-                return (long)GetDeviceInformation<ulong>(device, DeviceInformation.GlobalMemorySize);
+                return (long)GetDeviceInformation<ulong>(GetDeviceDesc().device, DeviceInformation.GlobalMemorySize);
             } catch (System.Exception) {
                 return 0L;
             }
@@ -251,7 +232,7 @@ namespace Macademy.OpenCL
         /// <returns>The OpenCL platform id</returns>
         public int GetPlatformID()
         {
-            return platformId;
+            return GetDeviceDesc().platformId;
         }
 
         /// <summary>
@@ -260,26 +241,8 @@ namespace Macademy.OpenCL
         /// <returns>The OpenCL device id</returns>
         public int GetDeviceID()
         {
-            return deviceId;
+            return GetDeviceDesc().deviceId;
         }
-
-        public override string GetDeviceAccessMode()
-        {
-            return "OpenCL";
-        }
-
-        public override int GetDeviceCoreCount()
-        {
-            try
-            {
-                return GetDeviceInformation<int>(device, DeviceInformation.MaximumComputeUnits);
-            }
-            catch (System.Exception)
-            {
-                return 0;
-            }
-        }
-
 
         public override void FlushWorkingCache()
         {
@@ -493,6 +456,5 @@ namespace Macademy.OpenCL
 
             return ret;
         }
-
     }
 }

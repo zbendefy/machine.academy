@@ -15,11 +15,20 @@ namespace Macademy
 
     public abstract class ComputeDevice
     {
-        public abstract string GetDeviceAccessMode();
+        protected ComputeDeviceDesc descriptor;
 
-        public abstract int GetDeviceCoreCount();
+        protected ComputeDevice(ComputeDeviceDesc descriptor)
+        {
+            this.descriptor = descriptor;
+        }
 
-        public abstract string GetName();
+        public string GetDeviceAccessMode() { return descriptor.GetDeviceAccessType(); }
+
+        public  long GetDeviceMemorySize() { return descriptor.GetDeviceMemorySize(); }
+
+        public  int GetDeviceCoreCount() { return descriptor.GetDeviceCoreCount(); }
+
+        public  string GetName() { return descriptor.GetDeviceName(); }
 
         public abstract unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction);
 

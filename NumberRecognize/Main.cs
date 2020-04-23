@@ -37,14 +37,14 @@ namespace NumberRecognize
             comboRegularization.SelectedIndex = 2;
             comboCostFunction.SelectedIndex = 1;
 
-            calculator = ComputeDeviceUtil.CreateFallbackComputeDevice();
+            calculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
 
             bitmap = new Bitmap(targetWidth, targetHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
             bitmapDownscaled = new Bitmap(downScaleWidth, downScaleHeight, System.Drawing.Imaging.PixelFormat.Format16bppRgb565);
             ClearBitmap();
             pictureBox1.Image = bitmap;
 
-            foreach (var device in ComputeDeviceUtil.GetComputeDevices())
+            foreach (var device in ComputeDeviceFactory.GetComputeDevices())
             {
                 string item = device.GetDeviceAccessType() + " - " + device.GetDeviceName();
                 comboBox1.Items.Add(item);
@@ -87,8 +87,8 @@ namespace NumberRecognize
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            var devices = ComputeDeviceUtil.GetComputeDevices();
-            calculator = ComputeDeviceUtil.CreateComputeDevice(devices[comboBox1.SelectedIndex]);
+            var devices = ComputeDeviceFactory.GetComputeDevices();
+            calculator = ComputeDeviceFactory.CreateComputeDevice(devices[comboBox1.SelectedIndex]);
         }
 
         private void button3_Click(object sender, EventArgs e)

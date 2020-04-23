@@ -10,7 +10,7 @@ namespace Macademy
     {
         public override ComputeDevice CreateDevice()
         {
-            return new CPUComputeDevice();
+            return new CPUComputeDevice(this);
         }
 
         public override string GetDeviceAccessType()
@@ -25,7 +25,7 @@ namespace Macademy
 
         public override long GetDeviceMemorySize()
         {
-            return 0;
+            return 0L;
         }
 
         public override string GetDeviceName()
@@ -36,6 +36,10 @@ namespace Macademy
 
     internal class CPUComputeDevice : ComputeDevice
     {
+        internal CPUComputeDevice(ComputeDeviceDesc desc) : base(desc)
+        {
+        }
+
         public override List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd)
         {
             int trainingSamples = trainingDataEnd - trainingDataBegin;
@@ -66,21 +70,6 @@ namespace Macademy
 
         public override void FlushWorkingCache()
         {
-        }
-
-        public override string GetDeviceAccessMode()
-        {
-            return "Software";
-        }
-
-        public override int GetDeviceCoreCount()
-        {
-            return 1;
-        }
-
-        public override string GetName()
-        {
-            return "Generic CPU";
         }
 
         private void CalculateGradientForSingleTrainingExample(Network network, IErrorFunction errorFunction, ref List<List<NeuronData>> intermediateResults, float[] trainingInput, float[] trainingDesiredOutput)
