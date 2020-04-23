@@ -11,6 +11,18 @@ namespace ModuleTests
 {
     public static class Utils
     {
+        public static ComputeDevice GetFirstOpenCLDevice()
+        {
+            foreach (var item in ComputeDeviceFactory.GetComputeDevices())
+            {
+                if (item.GetDeviceAccessType().ToLower() == "opencl")
+                {
+                    return ComputeDeviceFactory.CreateComputeDevice(item);
+                }
+            }
+            return null;
+        }
+
         public static void TestTraining( Network network, float[] referenceOutput, IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
         {
             List<int> layerConfig = new List<int>();
@@ -43,13 +55,13 @@ namespace ModuleTests
             suite.config.regularizationLambda = regularizationLambda;
             suite.config.learningRate = learningRate;
 
-            var promise = network.Train(suite, new Calculator());
+            var promise = network.Train(suite, ComputeDeviceFactory.CreateFallbackComputeDevice());
 
             promise.Await();
             #endregion
 
             float[] testInput = new float[] { 0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
-            var result = network.Compute(testInput, new Calculator());
+            var result = network.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
             
             Utils.CheckNetworkError(referenceOutput, result);
         }
@@ -69,8 +81,8 @@ namespace ModuleTests
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
-            Calculator cpuCalculator = new Calculator();
-            Calculator openCLCalculator = new Calculator(ComputeDevice.GetDevices()[0]);
+            var cpuCalculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
+            var openCLCalculator = GetFirstOpenCLDevice();
 
             var rnd = new Random();
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();

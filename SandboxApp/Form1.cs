@@ -9,7 +9,7 @@ namespace SandboxApp
     public partial class Form1 : Form
     {
         Network solver = null;
-        Calculator calculator = null;
+        ComputeDevice calculator = null;
         Network.TrainingPromise trainingPromise = null;
         DateTime trainingBegin;
         List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
@@ -25,15 +25,14 @@ namespace SandboxApp
 
             solver = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation(), new DefaultWeightInitializer());
 
-            calculator = new Calculator(null);
+            calculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
 
-            comboBox1.Items.Add("Use CPU calculation");
-            comboBox1.SelectedIndex = 0;
-            foreach (var device in ComputeDevice.GetDevices())
+            foreach (var device in ComputeDeviceFactory.GetComputeDevices())
             {
-                string item = "[" + device.GetPlatformID() + ":" + device.GetDeviceID() + ", " + device.GetDeviceType().ToString() + "] " + device.GetName();
+                string item = device.GetDeviceAccessType() + " - " + device.GetDeviceName();
                 comboBox1.Items.Add(item);
             }
+            comboBox1.SelectedIndex = 0;
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -97,10 +96,8 @@ namespace SandboxApp
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (comboBox1.SelectedIndex == 0)
-                calculator = new Calculator();
-            else
-                calculator = new Calculator(ComputeDevice.GetDevices()[comboBox1.SelectedIndex - 1]);
+            var devices = ComputeDeviceFactory.GetComputeDevices();
+            calculator = ComputeDeviceFactory.CreateComputeDevice( devices[comboBox1.SelectedIndex]);
         }
 
         private void label1_Click(object sender, EventArgs e)

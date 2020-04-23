@@ -40,12 +40,14 @@ string json = network.ExportToJSON();
 
 ### Calculating an output to a given input:
 ```
-float[] input = { ...};
-float[] results = network.Compute( input, new Calculator() );
+float[] input = { ... };
+ComputeDevice computeDevice = ComputeDeviceFactory.GetFirstOpenCLDevice(); //Get an OpenCL device
+float[] results = network.Compute( input, computeDevice );
 ```
 
 ### Training
 ```
+ComputeDevice computeDevice = ComputeDeviceFactory.GetFirstOpenCLDevice(); //Get an OpenCL device
 List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
 
 //Set up training examples
@@ -67,7 +69,7 @@ trainingSuite.config.costFunction = new CrossEntropyErrorFunction();
 trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
 trainingSuite.config.regularizationLambda = 0.5f;
 
-var trainingPromise = network.Train( trainingSuite, new Calculator() );
+var trainingPromise = network.Train( trainingSuite, computeDevice );
 
 trainingPromise.Await();
 ```
@@ -79,7 +81,7 @@ The neural network library
 
 ### OpenCl.DotNetCore.Interop
 
-Part of the following library: https://github.com/lecode-official/opencl-dotnet. Used for OpenCL access from .net core
+Part of the following library: https://github.com/lecode-official/opencl-dotnet. Used for OpenCL access from .net Core
 
 ### Testing
 
@@ -109,7 +111,7 @@ An HTML web application that uses neural networks and an evolutional algorithm f
 The following dependencies are set up in nuget:
 * Newtonsoft.Json
 
-This project also includes the `opencl-dotnet`: https://github.com/lecode-official/opencl-dotnet
+This project also includes parts of `opencl-dotnet`: https://github.com/lecode-official/opencl-dotnet
 
 ## Future plans:
  * Optimize memory layout (to reduce number of buffer copies)

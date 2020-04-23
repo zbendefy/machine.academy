@@ -17,7 +17,7 @@ namespace ModuleTests
 
             var network = Network.CreateNetworkInitRandom(referenceLayerConf, new SigmoidActivation());
 
-            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f });
+            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, ComputeDeviceFactory.CreateFallbackComputeDevice() );
             Assert.AreEqual( referenceLayerConf[referenceLayerConf.Length-1], result.Length);
         }
 
@@ -33,7 +33,7 @@ namespace ModuleTests
             Assert.AreEqual(5, network.GetLayerConfig()[2]);
             Assert.AreEqual(4, network.GetLayerConfig()[3]);
 
-            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f });
+            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, ComputeDeviceFactory.CreateFallbackComputeDevice());
             Assert.AreEqual(referenceLayerConf[referenceLayerConf.Length - 1], result.Length);
         }
 
@@ -53,12 +53,12 @@ namespace ModuleTests
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
 
-            Calculator cpuCalculator = new Calculator();
-            Calculator openCLCalculator = new Calculator(ComputeDevice.GetDevices()[0]);
+            ComputeDevice cpuCalculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
+            ComputeDevice openCLCalculator = Utils.GetFirstOpenCLDevice();
 
             float[] testInput = new float[layerConfig[0]];
             var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
-            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
+            var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, openCLCalculator);
 
             Utils.CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
@@ -176,8 +176,8 @@ namespace ModuleTests
             Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
             Network networkFromJSON = Network.CreateNetworkFromJSON(networkReference.ExportToJSON());
 
-            float[] outputRef = networkReference.Compute(testInput);
-            float[] outputJS = networkFromJSON.Compute(testInput);
+            float[] outputRef = networkReference.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
+            float[] outputJS = networkFromJSON.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
 
             Utils.CheckNetworkError(outputRef, outputJS, 0.00000001);
         }

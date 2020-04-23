@@ -9,20 +9,20 @@ namespace TestConsole
         static void Main(string[] args)
         {
             Console.WriteLine(" ### macademy test console ");
-            ComputeDevice selectedDevice = null;
+            ComputeDevice selectedDevice = ComputeDeviceFactory.CreateFallbackComputeDevice();
 
             while (true)
             {
+                Console.WriteLine("");
+                string rawCommand = Console.ReadLine().Trim();
+                var commands = rawCommand.Split(' ');
+                if (commands.Length == 0)
+                    continue;
+
+                var nextCommand = commands[0];
+
                 try
                 {
-                    Console.WriteLine("");
-                    string rawCommand = Console.ReadLine().Trim();
-                    var commands = rawCommand.Split(' ');
-                    if (commands.Length == 0)
-                        continue;
-
-                    var nextCommand = commands[0];
-
                     if (nextCommand == "exit")
                     {
                         break;
@@ -38,41 +38,31 @@ namespace TestConsole
                     }
                     else if (nextCommand == "devices")
                     {
-                        var devices = ComputeDevice.GetDevices();
-                        System.Console.WriteLine(String.Format("Found a total of {0} OpenCL devices!", devices.Count));
+                        var devices = ComputeDeviceFactory.GetComputeDevices();
+                        System.Console.WriteLine(String.Format("Found a total of {0} devices!", devices.Count));
                         int i = 0;
-                        Console.WriteLine("0 - CPU Fallback device");
                         foreach (var dev in devices)
                         {
-                            Console.WriteLine(String.Format((++i).ToString() + " - {0}", dev.ToString()));
+                            Console.WriteLine(String.Format((i++).ToString() + ": [{0}] {1}", dev.GetDeviceAccessType(), dev.GetDeviceName() ));
                         }
                     }
                     else if (nextCommand.StartsWith("select"))
                     {
                         if (commands.Length >= 2)
                         {
-                            var devices = ComputeDevice.GetDevices();
+                            var devices = ComputeDeviceFactory.GetComputeDevices();
 
                             int selectedDeviceId = 0;
                             if (int.TryParse(commands[1], out selectedDeviceId))
                             {
-                                if (selectedDeviceId < 0 || selectedDeviceId >= devices.Count + 1)
+                                if (selectedDeviceId < 0 || selectedDeviceId >= devices.Count)
                                 {
                                     Console.WriteLine("No such device: " + selectedDeviceId);
                                     continue;
                                 }
 
-                                if (selectedDeviceId == 0)
-                                {
-                                    selectedDevice = null;
-                                    Console.WriteLine("Selected device: CPU Fallback device");
-                                }
-                                else
-                                {
-                                    int openClDeviceId = selectedDeviceId - 1;
-                                    selectedDevice = devices[openClDeviceId];
-                                    Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
-                                }
+                                selectedDevice = ComputeDeviceFactory.CreateComputeDevice( devices[selectedDeviceId] );
+                                Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
                             }
                             else
                             {
@@ -86,21 +76,17 @@ namespace TestConsole
                     }
                     else if (nextCommand == "test")
                     {
-                        string devString = "CPU Fallback device";
-                        if (selectedDevice != null)
-                            devString = selectedDevice.GetName();
-                        Console.WriteLine("Testing on device: " + devString );
+                        Console.WriteLine("Testing on device: " + selectedDevice.GetName() );
                         TestDevice(selectedDevice);
                     }
                     else if (nextCommand == "info")
                     {
                         if (selectedDevice != null)
                         {
-                            Console.WriteLine("Vendor: " + selectedDevice.GetVendor());
-                            Console.WriteLine("Device name: " + selectedDevice.GetName());
-                            Console.WriteLine("OpenCL platform/device id: " + selectedDevice.GetPlatformID() + ":" + selectedDevice.GetDeviceID());
-                            Console.WriteLine("Device type: " + selectedDevice.GetDeviceType().ToString());
-                            Console.WriteLine("Global memory size: " + selectedDevice.GetGlobalMemorySize());
+                            Console.WriteLine("Device Name: " + selectedDevice.GetName());
+                            Console.WriteLine("Device Access: " + selectedDevice.GetDeviceAccessMode());
+                            Console.WriteLine("Core count: " + selectedDevice.GetDeviceCoreCount());
+                            Console.WriteLine("Memory: " + selectedDevice.GetDeviceMemorySize());
                         }
                         else
                         {
@@ -127,7 +113,7 @@ namespace TestConsole
             CheckResults(5, network.GetLayerConfig()[2], () => { ++errorCount; } );
             CheckResults(4, network.GetLayerConfig()[3], () => { ++errorCount; } );
 
-            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, new Calculator(selectedDevice));
+            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, selectedDevice);
             CheckResults(referenceLayerConf[referenceLayerConf.Length - 1], result.Length, () => { ++errorCount; });
             Console.WriteLine("Test finished with " + errorCount + " error(s)!");
         }
