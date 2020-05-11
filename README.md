@@ -8,7 +8,7 @@ Neural network training library written in C# (.net Core 3.1) as a learning proj
 ### [Car racing with Evolutional algorithm](https://zbendefy.github.io/machine.academy/WebApps/Evo/index.html)
 
 ## Features:
- * GPU acceleration (using OpenCL)
+ * GPU accelerated Backpropagation (using OpenCL)
  * Cost functions: 
     * Mean-Squared
     * Cross-entropy
