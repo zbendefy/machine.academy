@@ -5,7 +5,13 @@ Neural network training library written in C# (.net Core 3.1) as a learning proj
 ## Demos:
 
 ### [Handwritten digit recognizer web app](https://zbendefy.github.io/machine.academy/WebApps/NumberRecognize/index.html)
+
+Recognizes digits between 0 and 9. Trained on the MNIST handwritten digit dataset.
+
+
 ### [Car racing with Evolutional algorithm](https://zbendefy.github.io/machine.academy/WebApps/Evo/index.html)
+
+Uses evolutional selection to evolve the neural network in the racecars, so they learn how to drive around racetracks.
 
 ## Features:
  * GPU accelerated Backpropagation (using OpenCL)
