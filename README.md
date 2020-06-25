@@ -1,6 +1,6 @@
 # machine.academy
 
-Neural network training library written in C# (.net Core 3.1) as a learning project.
+Neural network training library written in C# (.net Core 3.1) as a learning project. Also available as a [nuget package](https://www.nuget.org/packages/Macademy/).
 
 ## Demos:
 
