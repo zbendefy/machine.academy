@@ -38,6 +38,8 @@
             <button class="textcontent trackbtn" onclick="SwitchTrack(1)">Austria Ring</button>
             <button class="textcontent trackbtn" onclick="SwitchTrack(2)">Oval circuit</button>
             <p class="smallfont">*: Will be applied for the next generation</p>
+            <p> </p>
+            <button class="textcontent detailbtn" onclick="loadNewNetwork(JSON.stringify(GetTrainedNetwork()));">Load a pretrained network</button>
         </div>
 
         <div class="textblock">
@@ -111,9 +113,9 @@
                 });
             }
 
-            function loadNewNetwork(clipboardContent){
+            function loadNewNetwork(networkJson){
                 try {
-                    drawing.LoadNetworkFromJSON(clipboardContent);
+                    drawing.LoadNetworkFromJSON(networkJson);
                 } catch (error) {
                     document.getElementById("lblClipboardResult").innerText = "Couldn't parse JSON from clipboard text! (" + error + ")";
                 }
