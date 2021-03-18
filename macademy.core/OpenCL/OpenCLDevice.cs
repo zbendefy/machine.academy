@@ -250,11 +250,11 @@ namespace Macademy.OpenCL
         }
 
 
-        public override unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
+        public override unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
         {
             int matrixRows = weightMx.GetLength(0);
             float[] output = new float[matrixRows];
-            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ sigmoidFunction.GetOpenCLFunctionId() };
+            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ activationFunction.GetOpenCLFunctionId() };
 
             fixed (int* configPtr = configParams)
             {

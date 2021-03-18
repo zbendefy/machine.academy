@@ -11,6 +11,8 @@ namespace Macademy
         {
             if (type == new SigmoidActivation().GetSerializedName())
                 return new SigmoidActivation();
+            if (type == new ReLUActivation().GetSerializedName())
+                return new ReLUActivation();
             throw new Exception("Could not create activation function: " + type);
         }
 

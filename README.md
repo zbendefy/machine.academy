@@ -20,6 +20,7 @@ Uses evolutional selection to evolve the neural network in the racecars, so they
     * Cross-entropy
  * Activation functions:
     * Sigmoid
+    * ReLU
  * Optional L1 and L2 regularization
  * Xavier weight initialization
  * Stochastic gradient descent with shuffled mini-batches
