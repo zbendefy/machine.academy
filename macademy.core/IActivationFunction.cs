@@ -50,4 +50,22 @@ namespace Macademy
             return 1;
         }
     }
+
+    public sealed class ReLUActivation : IActivationFunction
+    {
+        public override float Calculate(float x)
+        {
+            return x < 0.0f ? 0.0f : x;
+        }
+
+        public override float CalculatePrime(float x)
+        {
+            return x < 0.0f ? 0.0f : 1.0f;
+        }
+
+        public override int GetOpenCLFunctionId()
+        {
+            return 2;
+        }
+    }
 }

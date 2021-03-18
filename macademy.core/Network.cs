@@ -281,12 +281,12 @@ namespace Macademy
         internal float[] Compute(ComputeDevice mathLib, float[] input, ref List<float[]> activations, ref List<float[]> zValues, bool flushMathlibWorkingCache)
         {
             var current = input;
-            bool applySigmoid = zValues == null;
-            PasstroughActivation passtroughActivation = applySigmoid ? null : new PasstroughActivation();
+            bool applyActivationFunction = zValues == null;
+            PasstroughActivation passtroughActivation = applyActivationFunction ? null : new PasstroughActivation();
 
             foreach(var layer in layers)
             {
-                current = layer.Compute(mathLib, current, applySigmoid ? activationFunction : passtroughActivation);
+                current = layer.Compute(mathLib, current, applyActivationFunction ? activationFunction : passtroughActivation);
                 if (zValues != null)
                 {
                     zValues.Add((float[])current.Clone());

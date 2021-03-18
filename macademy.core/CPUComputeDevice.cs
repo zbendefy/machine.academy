@@ -51,7 +51,7 @@ namespace Macademy
             return ret;
         }
 
-        public override float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
+        public override float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
         {
             float[] ret = new float[weightMx.GetLength(0)];
             for (int m = 0; m < weightMx.GetLength(0); m++)
@@ -63,7 +63,7 @@ namespace Macademy
                 }
                 acc += bias[m];
 
-                ret[m] = sigmoidFunction.Calculate(acc);
+                ret[m] = activationFunction.Calculate(acc);
             }
             return ret;
         }
