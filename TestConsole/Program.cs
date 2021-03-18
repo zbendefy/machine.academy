@@ -1,11 +1,14 @@
 ﻿using Macademy;
 using Macademy.OpenCL;
 using System;
+using System.Diagnostics;
 
 namespace TestConsole
 {
     class Program
     {
+        static Network reference_network = null;
+        
         static void Main(string[] args)
         {
             Console.WriteLine(" ### macademy test console ");
@@ -29,12 +32,13 @@ namespace TestConsole
                     }
                     else if (nextCommand == "help")
                     {
-                        Console.WriteLine("help       - Displays this help message");
-                        Console.WriteLine("devices    - Displays available devices");
-                        Console.WriteLine("select (n) - Selectes the devices with the given id");
-                        Console.WriteLine("info       - Displays information about the selected device");
-                        Console.WriteLine("test       - Performs a quick test on the selected device");
-                        Console.WriteLine("exit       - Exits the app");
+                        Console.WriteLine("help          - Displays this help message");
+                        Console.WriteLine("devices       - Displays available devices");
+                        Console.WriteLine("select (n)    - Selectes the devices with the given id");
+                        Console.WriteLine("info          - Displays information about the selected device");
+                        Console.WriteLine("test          - Performs a quick test on the selected device");
+                        Console.WriteLine("benchmark (n) - Performs a benchmark on the selected device, on the given difficulty (1-10)");
+                        Console.WriteLine("exit          - Exits the app");
                     }
                     else if (nextCommand == "devices")
                     {
@@ -79,6 +83,23 @@ namespace TestConsole
                         Console.WriteLine("Testing on device: " + selectedDevice.GetName() );
                         TestDevice(selectedDevice);
                     }
+                    else if (nextCommand == "benchmark")
+                    {
+                        int level = 2;
+
+                        if (commands.Length >= 2)
+                        {
+                            try
+                            {
+                                level = Math.Max(Math.Min(10, Int32.Parse(commands[1])), 1);
+                            }
+                            catch (System.Exception)
+                            {
+                            }
+                        }
+
+                        BenchmarkDevice(selectedDevice, level);
+                    }
                     else if (nextCommand == "info")
                     {
                         if (selectedDevice != null)
@@ -105,17 +126,36 @@ namespace TestConsole
         {
             int[] referenceLayerConf = new int[] { 3, 7, 5, 4 };
 
-            var network = Network.CreateNetworkInitRandom(referenceLayerConf, new SigmoidActivation());
+            if(reference_network == null)
+            {
+                reference_network = Network.CreateNetworkInitRandom(referenceLayerConf, new SigmoidActivation());
+            }
 
             int errorCount = 0;
-            CheckResults(3, network.GetLayerConfig()[0], () => { ++errorCount; } );
-            CheckResults(7, network.GetLayerConfig()[1], () => { ++errorCount; } );
-            CheckResults(5, network.GetLayerConfig()[2], () => { ++errorCount; } );
-            CheckResults(4, network.GetLayerConfig()[3], () => { ++errorCount; } );
+            CheckResults(3, reference_network.GetLayerConfig()[0], () => { ++errorCount; } );
+            CheckResults(7, reference_network.GetLayerConfig()[1], () => { ++errorCount; } );
+            CheckResults(5, reference_network.GetLayerConfig()[2], () => { ++errorCount; } );
+            CheckResults(4, reference_network.GetLayerConfig()[3], () => { ++errorCount; } );
 
-            float[] result = network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, selectedDevice);
+            float[] result = reference_network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, selectedDevice);
             CheckResults(referenceLayerConf[referenceLayerConf.Length - 1], result.Length, () => { ++errorCount; });
             Console.WriteLine("Test finished with " + errorCount + " error(s)!");
+            Console.WriteLine("Result: " + String.Join(", ", result));
+        }
+
+        private static void BenchmarkDevice(ComputeDevice selectedDevice, int level)
+        {
+            int difficulty = (int)Math.Pow(2, 5+level);
+            Console.WriteLine("Preparing data...");
+            int[] referenceLayerConf = new int[] { 3, difficulty, difficulty, difficulty, difficulty, difficulty, difficulty, 16 };
+            var reference_benchmark_network = Network.CreateNetworkInitRandom(referenceLayerConf, new SigmoidActivation());
+            
+            Console.WriteLine("Starting benchmark on " + selectedDevice.GetName() + ", difficulty=" + level + " (" + difficulty + ")" );
+            Stopwatch sw = Stopwatch.StartNew();
+            float[] result = reference_benchmark_network.Compute(new float[] { 0.2f, 0.4f, 0.5f }, selectedDevice);
+            sw.Stop();
+
+            Console.WriteLine("Elapsed={0}ms",sw.Elapsed.TotalMilliseconds);
         }
 
         private static void CheckResults(int expected, int actual, Action onError )

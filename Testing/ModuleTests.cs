@@ -162,6 +162,14 @@ namespace ModuleTests
         }
 
         [TestMethod]
+        public void TestTrainingOpenCL_MixedActivationFunction()
+        {
+            Utils.TestOpenCLTrainingWithConfig(new MeanSquaredErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.01f, true);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.None, 0.0f, 0.1f, true);
+            Utils.TestOpenCLTrainingWithConfig(new CrossEntropyErrorFunction(), TrainingSuite.TrainingConfig.Regularization.L1, 0.1f, 0.0f, true);
+        }
+
+        [TestMethod]
         public void TestJSONExportImport()
         {
             List<int> layerConfig = new List<int>();

@@ -109,9 +109,9 @@ __kernel void trainingForwardPass(__constant const int* config,
                                   __global const float* weightsAndBiases) 
 {
     const int layerId = config[0]; //The layer's index to be calculated
-    //const int layerCount = config[1]; //number of layers in the network
-    const int numTrainingSamples = config[2]; //number of layers in the network
-    const int activationFunctionId = config[3]; //which activation function to use
+    const int activationFunctionId = config[1]; //which activation function to use
+    //const int layerCount = config[2]; //number of layers in the network
+    const int numTrainingSamples = config[3]; //number of layers in the network
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
     const int weightsPerNeuron = config[8 + layerId]; //number of weights per neurons on the current layer
     const int neuronsInLayer = config[9 + layerId]; //number of neurons in the current layer
@@ -154,9 +154,9 @@ __kernel void trainingBackwardPass(__constant const int* config,
                                    __global const float* weightsAndBiases) 
 {
     const int layerId = config[0]; //The layer's index to be calculated
-    const int layerCount = config[1]; //number of layers in the network
-    const int numTrainingSamples = config[2]; //number of layers in the network
-    const int activationFunctionId = config[3]; //which activation function to use
+    const int activationFunctionId = config[1]; //which activation function to use
+    const int layerCount = config[2]; //number of layers in the network
+    const int numTrainingSamples = config[3]; //number of layers in the network
     const int costFunctionId = config[4]; //which cost function to use
     const int totalActivationCount = config[5]; //How many activations are there in total in the network
     //const int totalWeightAndBiasCount = config[6]; //How many weights and biases are in the network in all layers

@@ -1,9 +1,9 @@
 {  
    "name":null,
    "description":null,
-   "activationFunctionName":"SigmoidActivation",
    "layers":[  
       {  
+         "activationFunction":"SigmoidActivation",
          "weightMx":[  
             [  
                3.490404,
@@ -274,6 +274,7 @@
          ]
       },
       {  
+         "activationFunction":"SigmoidActivation",
          "weightMx":[  
             [  
                -1.48278117,
@@ -712,6 +713,7 @@
          ]
       },
       {  
+         "activationFunction":"SigmoidActivation",
          "weightMx":[  
             [  
                4.342462,
@@ -1483,6 +1485,7 @@
          ]
       },
       {  
+         "activationFunction":"SigmoidActivation",
          "weightMx":[  
             [  
                3.47079134,

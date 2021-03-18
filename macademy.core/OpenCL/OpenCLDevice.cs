@@ -315,11 +315,11 @@ namespace Macademy.OpenCL
                 //0
                 networkConfigParamsList.Add(0); //layer index to be processed
                 //1
-                networkConfigParamsList.Add(network.layers.Count); //Layer count
+                networkConfigParamsList.Add(network.layers[0].activationFunction.GetOpenCLFunctionId()); //Activation function
                 //2
-                networkConfigParamsList.Add(trainingSamples); //numTrainingSamples
+                networkConfigParamsList.Add(network.layers.Count); //Layer count
                 //3
-                networkConfigParamsList.Add(network.activationFunction.GetOpenCLFunctionId()); //Activation function
+                networkConfigParamsList.Add(trainingSamples); //numTrainingSamples
                 //4
                 networkConfigParamsList.Add(suite.config.costFunction.GetOpenCLFunctionID()); //Cost function
                 //5
@@ -386,9 +386,14 @@ namespace Macademy.OpenCL
                     computeFramework.SetKernelArg(forwardPass, 2, mem_InputActivations);
                     computeFramework.SetKernelArg(forwardPass, 3, mem_weightsAndBiases);
 
-                    int[] layerIndexBuffer = new int[network.layers.Count];
-                    for (int i = 0; i < layerIndexBuffer.Length; ++i)
-                        layerIndexBuffer[i] = i;
+                    int[] dynamic_kernel_arguments = new int[network.layers.Count * 2];
+
+                    for (int i = 0; i < network.layers.Count; ++i)
+                    {
+                        dynamic_kernel_arguments[i*2] = i; //Layer index
+                        dynamic_kernel_arguments[i*2+1] = network.layers[i].activationFunction.GetOpenCLFunctionId(); //Layer's activation function
+                    }
+                    int num_dynamic_kernel_args = dynamic_kernel_arguments.Length / network.layers.Count;
 
                     var localWorkGroupSize = new IntPtr[] { new IntPtr(deviceConfig.idealWorkgroupSizeX), new IntPtr(deviceConfig.idealWorkgroupSizeY) };
                     var globalWorkSize = new IntPtr[] { new IntPtr(0), new IntPtr(ExtendGlobalWorkSize(trainingSamples, localWorkGroupSize[1].ToInt32())) };
@@ -398,7 +403,7 @@ namespace Macademy.OpenCL
                     {
                         if (i > 0)
                         {
-                            computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
+                            computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, i * num_dynamic_kernel_args, dynamic_kernel_arguments, false, num_dynamic_kernel_args);
                         }
 
                         globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
@@ -429,7 +434,9 @@ namespace Macademy.OpenCL
                     {
                         globalWorkSize[0] = new IntPtr(ExtendGlobalWorkSize(network.layers[i].GetNeuronCount(), localWorkGroupSize[0].ToInt32()));
                         if (i != network.layers.Count - 1)
-                            computeFramework.UploadToMemory(mem_NetworkConfigParams, i, layerIndexBuffer, false, 1); //Update layer index to be processed by the kernel
+                        {
+                            computeFramework.UploadToMemory(mem_NetworkConfigParams, 0, i * num_dynamic_kernel_args, dynamic_kernel_arguments, false, num_dynamic_kernel_args);
+                        }
                         computeFramework.EnqueueKernel(backwardPassKernel, globalWorkSize, localWorkGroupSize);
                     }
                     #endregion

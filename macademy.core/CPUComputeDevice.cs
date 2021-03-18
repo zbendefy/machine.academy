@@ -94,10 +94,11 @@ namespace Macademy
             var prevActivations = activations.Count <= 1 ? trainingInput : activations[activations.Count - 2];
             int lastLayerWeightCount = network.layers.Last().GetWeightsPerNeuron();
             int lastLayerNeuronCount = network.layers.Last().GetNeuronCount();
+            var activationFunction = network.layers.Last().activationFunction;
             for (int i = 0; i < lastLayerNeuronCount; i++)
             {
                 float outputValue = activations.Last()[i];
-                float delta_k = errorFunction.CalculateDelta(zValues.Last()[i], outputValue, desiredOutput[i], network.activationFunction);
+                float delta_k = errorFunction.CalculateDelta(zValues.Last()[i], outputValue, desiredOutput[i], activationFunction);
 
                 var gradientDataItem = gradientData[i];
                 //Assert(gradientData[i].weights.Length == prevActivations.Length);
@@ -123,7 +124,7 @@ namespace Macademy
                 {
                     deltak += delta_k_vector[k] * network.layers[L + 1].weightMx[k, i];
                 }
-                deltak *= network.activationFunction.CalculatePrime(zValues[L][i]);
+                deltak *= network.layers[L].activationFunction.CalculatePrime(zValues[L][i]);
                 newGammak.Add(deltak);
 
                 //Assert(gradientData[i].weights.Length == prevLayerActivations.Length);

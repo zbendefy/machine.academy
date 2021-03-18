@@ -66,17 +66,23 @@ namespace ModuleTests
             Utils.CheckNetworkError(referenceOutput, result);
         }
 
-        public static void TestOpenCLTrainingWithConfig(IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
+        public static void TestOpenCLTrainingWithConfig(IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate, bool mix_activations = false)
         {
-            List<int> layerConfig = new List<int>();
-            layerConfig.Add(10);
-            layerConfig.Add(512);
-            layerConfig.Add(12);
-            layerConfig.Add(3);
-            layerConfig.Add(51);
-            layerConfig.Add(30);
+            IActivationFunction alternateActivation = new SigmoidActivation();
+            if(mix_activations)
+            {
+                alternateActivation = new ReLUActivation();
+            }
 
-            Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
+            int input_neurons = 10;
+            var layer_config = new List<Tuple<IActivationFunction, int>>();
+            layer_config.Add(new Tuple<IActivationFunction, int>(new SigmoidActivation(), 512));
+            layer_config.Add(new Tuple<IActivationFunction, int>(alternateActivation, 12));
+            layer_config.Add(new Tuple<IActivationFunction, int>(new SigmoidActivation(), 3));
+            layer_config.Add(new Tuple<IActivationFunction, int>(alternateActivation, 51));
+            layer_config.Add(new Tuple<IActivationFunction, int>(new SigmoidActivation(), 30));
+
+            Network networkReference = Network.CreateNetworkInitRandom(input_neurons, layer_config);
             var jsonData = networkReference.ExportToJSON();
             Network networkCpuTrained = Network.CreateNetworkFromJSON(jsonData);
             Network networkOpenCLTrained = Network.CreateNetworkFromJSON(jsonData);
@@ -88,8 +94,8 @@ namespace ModuleTests
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
             for (int i = 0; i < 1000; i++)
             {
-                float[] input = new float[layerConfig[0]];
-                float[] output = new float[layerConfig[layerConfig.Count - 1]];
+                float[] input = new float[input_neurons];
+                float[] output = new float[layer_config.Last().Item2];
 
                 var idx = rnd.Next(0, input.Length);
                 input[rnd.Next(0, input.Length)] = 1.0f;
@@ -122,7 +128,7 @@ namespace ModuleTests
 
             Assert.IsTrue(promise1.IsReady() && promise2.IsReady());
 
-            float[] testInput = new float[layerConfig[0]];
+            float[] testInput = new float[input_neurons];
 
             var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
             var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);

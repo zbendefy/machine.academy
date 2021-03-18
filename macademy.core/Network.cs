@@ -91,35 +91,27 @@ namespace Macademy
         internal string name;
         internal string description;
         internal List<Layer> layers;
-        internal string activationFunctionName = "";
 
-        internal IActivationFunction activationFunction;
         internal TrainingPromise trainingPromise = null;
         private Thread trainingThread = null;
         private readonly object lockObj_gradientAccess = new object();
 
-        Network(List<Layer> layers, IActivationFunction activationFunction)
+        Network(List<Layer> layers)
         {
             this.layers = layers;
-            this.activationFunction = activationFunction;
-            this.activationFunctionName = activationFunction.GetSerializedName();
         }
 
         Network(SerializationInfo info, StreamingContext context)
         {
             name = (string)info.GetValue("name", typeof(string));
             description = (string)info.GetValue("description", typeof(string));
-            activationFunctionName = (string)info.GetValue("activationFunctionName", typeof(string));
             layers = (List<Layer>)info.GetValue("layers", typeof(List<Layer>));
-
-            activationFunction = Utils.GetActivationFunctionFromString(activationFunctionName);
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
             info.AddValue("name", name, typeof(string));
             info.AddValue("description", description, typeof(string));
-            info.AddValue("activationFunctionName", activationFunctionName, typeof(string));
             info.AddValue("layers", layers, typeof(List<Layer>));
         }
 
@@ -278,20 +270,44 @@ namespace Macademy
             return trainingPromise;
         }
 
+        public void ApplyRandomNudge(float nudge)
+        {
+            Random r = new Random();
+            for (int i = 0; i < layers.Count; ++i)
+            {
+                var weights = layers[i].weightMx;
+                var biases = layers[i].biases;
+
+                int len0 = weights.GetLength(0);
+                int len1 = weights.GetLength(1);
+                for(int j = 0; j < len1; ++j)
+                {
+                    for(int k = 0; k < len0; ++k)
+                    {
+                        weights[k, j] += (((float)r.NextDouble()) * 2.0f - 1.0f) * nudge;
+                    }    
+                }
+
+                for(int j = 0; j < biases.Length; ++j)
+                {
+                    biases[j] += (((float)r.NextDouble()) * 2.0f - 1.0f) * nudge;
+                }
+            }
+        }
+
         internal float[] Compute(ComputeDevice mathLib, float[] input, ref List<float[]> activations, ref List<float[]> zValues, bool flushMathlibWorkingCache)
         {
             var current = input;
             bool applyActivationFunction = zValues == null;
-            PasstroughActivation passtroughActivation = applyActivationFunction ? null : new PasstroughActivation();
 
             foreach(var layer in layers)
             {
-                current = layer.Compute(mathLib, current, applyActivationFunction ? activationFunction : passtroughActivation);
+                current = layer.Compute(mathLib, current, applyActivationFunction ? null : new PasstroughActivation());
                 if (zValues != null)
                 {
                     zValues.Add((float[])current.Clone());
                     for (int i = 0; i < current.Length; i++)
-                        current[i] = activationFunction.Calculate(current[i]);
+                        current[i] = layer.activationFunction.Calculate(current[i]);
                 }
                 if (activations != null)
                     activations.Add(current);
@@ -326,13 +342,13 @@ namespace Macademy
         /// <param name="inputLayers">A structure containing the weights and biases for each network</param>
         /// <param name="activationFunction">The activation function used by the network</param>
         /// <returns></returns>
-        public static Network CreateNetwork(List< List< Tuple< List<float>, float> > > inputLayers, IActivationFunction activationFunction)
+        public static Network CreateNetwork(List< Tuple< IActivationFunction, List< Tuple< List<float>, float> > > > inputLayers)
         {
             List<Layer> layers = new List<Layer>();
             foreach (var layerData in inputLayers)
             {
-                int neuronCountInLayer = layerData.Count;
-                int weightsPerNeuron = layerData[0].Item1.Count;
+                int neuronCountInLayer = layerData.Item2.Count;
+                int weightsPerNeuron = layerData.Item2[0].Item1.Count;
 
                 if ( layers.Count > 0)
                 {
@@ -349,15 +365,15 @@ namespace Macademy
                 {
                     for (int j = 0; j < weightsPerNeuron; ++j)
                     {
-                        weightMx[i, j] = layerData[i].Item1[j];
+                        weightMx[i, j] = layerData.Item2[i].Item1[j];
                     }
-                    biases[i] = layerData[i].Item2;
+                    biases[i] = layerData.Item2[i].Item2;
                 }
 
-                layers.Add( new Layer(weightMx, biases) ); 
+                layers.Add( new Layer(weightMx, biases, layerData.Item1) ); 
             }
 
-            return new Network(layers, activationFunction);
+            return new Network(layers);
         }
 
         /// <summary>
@@ -391,15 +407,33 @@ namespace Macademy
         /// <returns></returns>
         public static Network CreateNetworkInitRandom(int[] layerConfig, IActivationFunction activationFunction, IWeightInitializer weightInitializer = null)
         {
+            var initList = new List<Tuple<IActivationFunction, int>>();
+            for(int i = 1; i < layerConfig.Length; ++i)
+            {
+                initList.Add(new Tuple<IActivationFunction, int>(activationFunction, layerConfig[i]));
+            }
+            return CreateNetworkInitRandom(layerConfig[0], initList, weightInitializer);
+        }
+
+        /// <summary>
+        /// Create a network with random weights and biases
+        /// </summary>
+        /// <param name="input_layer">The neurons in the input layer</param>
+        /// <param name="hidden_and_output_layers">The layer configuration containing the activation function, and the number of neurons in each layer in this order: [1st hidden layer][2nd hidden layer]...[nth hidden layer][output layer]</param>
+        /// <param name="weightInitializer">The weight and bias initializer to use</param>
+        /// <returns></returns>
+        public static Network CreateNetworkInitRandom(int input_layer, List<Tuple<IActivationFunction, int>> hidden_and_output_layers, IWeightInitializer weightInitializer = null)
+        {
             if (weightInitializer == null)
                 weightInitializer = new DefaultWeightInitializer();
 
-            List<List<Tuple<List<float>, float>>> inputLayers = new List<List<Tuple<List<float>, float>>>();
+            var inputLayers = new List<Tuple<IActivationFunction, List<Tuple<List<float>, float>>>>();
 
-            for(int layId = 1; layId < layerConfig.Length; ++layId)
+            for(int layId = 0; layId < hidden_and_output_layers.Count; ++layId)
             {
-                int prevLayerSize = layerConfig[layId - 1];
-                int layerSize = layerConfig[layId];
+                int prevLayerSize = layId == 0 ? input_layer : hidden_and_output_layers[layId - 1].Item2;
+                int layerSize = hidden_and_output_layers[layId].Item2;
+                IActivationFunction activationFunction = hidden_and_output_layers[layId].Item1;
                 List<Tuple<List<float>, float>> neuronList = new List<Tuple<List<float>, float>>();
                 for (int i = 0; i < layerSize; i++)
                 {
@@ -410,10 +444,10 @@ namespace Macademy
                     }
                     neuronList.Add(new Tuple<List<float>, float>(weights, weightInitializer.GetRandomBias()));
                 }
-                inputLayers.Add(neuronList);
+                inputLayers.Add(new Tuple<IActivationFunction, List<Tuple<List<float>, float>>>(activationFunction, neuronList));
             }
 
-            return CreateNetwork(inputLayers, activationFunction);
+            return CreateNetwork(inputLayers);
         }
 
         public List<List<NeuronData>> __GetInternalConfiguration()

@@ -8,11 +8,13 @@ namespace Macademy
     {
         public float[,] weightMx;
         public float[] biases;
+        public IActivationFunction activationFunction;
 
-        public Layer(float[,] weightMx, float[] biases)
+        public Layer(float[,] weightMx, float[] biases, IActivationFunction activationFunction)
         {
             this.weightMx = weightMx;
             this.biases = biases;
+            this.activationFunction = activationFunction;
 
             if (weightMx.GetLength(0) != biases.GetLength(0))
                 throw new Exception("Invalid layer!");
@@ -27,6 +29,7 @@ namespace Macademy
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
+            info.AddValue("activationFunction", activationFunction.GetSerializedName(), typeof(string));
             info.AddValue("weightMx", weightMx);
             info.AddValue("biases", biases);
         }
@@ -35,11 +38,21 @@ namespace Macademy
         {
             weightMx = (float[,])info.GetValue("weightMx", typeof(float[,]));
             biases = (float[])info.GetValue("biases", typeof(float[]));
+
+            try
+            {
+                var activationFunctionName = (string)info.GetValue("activationFunction", typeof(string));
+                activationFunction = Utils.GetActivationFunctionFromString(activationFunctionName);
+            }
+            catch (System.Exception)
+            {
+                activationFunction = new SigmoidActivation(); //compatibility with old formats
+            }
         }
 
-        public float[] Compute(ComputeDevice calculator, float[] input, IActivationFunction activationFunction)
+        public float[] Compute(ComputeDevice calculator, float[] input, IActivationFunction override_activation_function = null)
         {
-            return calculator.CalculateLayer(weightMx, biases, input, activationFunction);
+            return calculator.CalculateLayer(weightMx, biases, input, override_activation_function == null ? activationFunction : override_activation_function);
         }
 
     }

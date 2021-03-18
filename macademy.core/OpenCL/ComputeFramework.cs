@@ -127,17 +127,17 @@ namespace Macademy.OpenCL
 
         public bool IsInitialized() { return hasClInitialized; }
 
-        public void UploadToMemory(MemoryAllocation mem, int offsetInBytes, int sizeInBytes, IntPtr data, bool IsBlocking)
+        public void UploadToMemory(MemoryAllocation mem, int mem_offset, int sizeInBytes, IntPtr data, bool IsBlocking)
         {
             IntPtr ev = IntPtr.Zero;
-            var errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? 1U : 0U, new UIntPtr((uint)offsetInBytes), new UIntPtr((uint)sizeInBytes), data, 0, null, out ev);
+            var errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? 1U : 0U, new UIntPtr((uint)mem_offset*4U), new UIntPtr((uint)sizeInBytes), data, 0, null, out ev);
             ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}", sizeInBytes, mem.bufferSizeInBytes));
 
             var errCodeEv = EventsNativeApi.ReleaseEvent(ev);
             ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer, UploadToMemory_1)"));
         }
 
-        public void UploadToMemory(MemoryAllocation mem, int offset, int[] data, bool IsBlocking, int size = -1)
+        public void UploadToMemory(MemoryAllocation mem, int mem_offset, int data_offset, int[] data, bool IsBlocking, int size = -1)
         {
             uint uploadSize = size < 0 ? ((uint)data.Length * 4U) : (uint)size * 4U;
             IntPtr ev = IntPtr.Zero;
@@ -146,16 +146,16 @@ namespace Macademy.OpenCL
             {
                 fixed (int* dataPtr = data)
                 {
-                    errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? 1U : 0U, UIntPtr.Zero, new UIntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out ev);
+                    errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? 1U : 0U, new UIntPtr((uint)mem_offset*4U), new UIntPtr(uploadSize), new IntPtr(dataPtr + data_offset), 0, null, out ev);
                 }
             }
-            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}, offset:{2}", uploadSize, mem.bufferSizeInBytes, offset*4));
+            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}, data_offset:{2}", uploadSize, mem.bufferSizeInBytes, data_offset*4));
 
             var errCodeEv = EventsNativeApi.ReleaseEvent(ev);
             ThrowOnError(errCodeEv, String.Format("Failed release event (EnqueueWriteBuffer, UploadToMemory_2)"));
         }
 
-        public void UploadToMemory(MemoryAllocation mem, int offset, float[] data, bool IsBlocking, int size = -1)
+        public void UploadToMemory(MemoryAllocation mem, int mem_offset, int data_offset, float[] data, bool IsBlocking, int size = -1)
         {
             uint uploadSize = size < 0 ? ((uint)data.Length * 4U) : (uint)size * 4U;
             IntPtr ev = IntPtr.Zero;
@@ -164,10 +164,10 @@ namespace Macademy.OpenCL
             {
                 fixed (float* dataPtr = data)
                 {
-                    errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? 1U : 0U, UIntPtr.Zero, new UIntPtr(uploadSize), new IntPtr(dataPtr + offset), 0, null, out ev);
+                    errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, mem.buffer, IsBlocking ? 1U : 0U, new UIntPtr((uint)mem_offset), new UIntPtr(uploadSize), new IntPtr(dataPtr + data_offset), 0, null, out ev);
                 }
             }
-            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}, offset:{2}", uploadSize, mem.bufferSizeInBytes, offset * 4));
+            ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}, data_offset:{2}", uploadSize, mem.bufferSizeInBytes, data_offset * 4));
 
             var errCodeEv = EventsNativeApi.ReleaseEvent(ev);
             ThrowOnError(errCodeEv, String.Format("Failed to release event (EnqueueWriteBuffer, UploadToMemory_3)"));
