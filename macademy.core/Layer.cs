@@ -10,6 +10,13 @@ namespace Macademy
         public float[] biases;
         public IActivationFunction activationFunction;
 
+        internal Layer(Layer o)
+        {
+            this.activationFunction = o.activationFunction;
+            this.weightMx = (float[,])o.weightMx.Clone();
+            this.biases = (float[])o.biases.Clone();
+        }
+
         public Layer(float[,] weightMx, float[] biases, IActivationFunction activationFunction)
         {
             this.weightMx = weightMx;

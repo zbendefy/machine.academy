@@ -23,7 +23,7 @@ namespace ModuleTests
             return null;
         }
 
-        public static void TestTraining( Network network, float[] referenceOutput, IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
+        public static void TestTraining( Network network, float[] referenceOutput, IErrorFunction errorFunc, TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
@@ -66,7 +66,7 @@ namespace ModuleTests
             Utils.CheckNetworkError(referenceOutput, result);
         }
 
-        public static void TestOpenCLTrainingWithConfig(IErrorFunction errorFunc, TrainingSuite.TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate, bool mix_activations = false)
+        public static void TestOpenCLTrainingWithConfig(IErrorFunction errorFunc, TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate, bool mix_activations = false)
         {
             IActivationFunction alternateActivation = new SigmoidActivation();
             if(mix_activations)

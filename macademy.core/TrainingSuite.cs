@@ -6,19 +6,18 @@ using System.Threading.Tasks;
 
 namespace Macademy
 {
-    /// <summary>
-    /// Contains all data and parameter required for training a network
-    /// </summary>
-    public class TrainingSuite
-    {
+
         /// <summary>
         /// Contains configurable aspects of the training procedure
         /// </summary>
-        public struct TrainingConfig
+        public class TrainingConfig
         {
             public static readonly int DontSubdivideBatches = -1;
 
+            public enum TrainingMode { Backpropagation, Evolution }
             public enum Regularization { None, L1, L2 }
+
+            public TrainingMode trainingMode = TrainingMode.Backpropagation;
 
             /// <summary>
             /// Size of the minibatch. 
@@ -27,7 +26,7 @@ namespace Macademy
             /// If "DontSubdivideBatches" is used, Stochastic gradient descent will not be used meaning 
             /// that an epoch will use all training datas to make a single gradient descent step.
             /// </summary>
-            public int miniBatchSize;
+            public int miniBatchSize = 1000;
 
             /// <summary>
             /// The learning rate
@@ -37,55 +36,50 @@ namespace Macademy
             /// Larger learningRate values make the network learn faster, but too high values 
             /// will cause the learning to overshoot small vallies
             /// </summary>
-            public float learningRate;
+            public float learningRate = 0.01f;
 
             /// <summary>
             /// How many epochs to train for
             /// </summary>
-            public int epochs;
+            public int epochs = 1;
 
             /// <summary>
             /// If true, the training examples will be shuffled before starting each epoch.
             /// If enabled, the network encounters a larger number of input combinations during a minibatch
             /// If disabled, the learning process will be more deterministic and reproducable
             /// </summary>
-            public bool shuffleTrainingData;
+            public bool shuffleTrainingData = true;
 
             /// <summary>
             /// The cost function to use on the network's output
             /// </summary>
-            public IErrorFunction costFunction;
+            public IErrorFunction costFunction = new CrossEntropyErrorFunction();
 
             /// <summary>
             /// Regularization techniques help the network learn numerically smaller weights and biases
             /// Smaller weights and biases can force the network to generalize about the data instead of
             /// learning about the test data peculiarities
             /// </summary>
-            public Regularization regularization;
+            public Regularization regularization = Regularization.L2;
 
             /// <summary>
             /// The lamdba to use if L1 or L2 regularization is enabled
             /// Larger values force the network more to prefer smaller weights and biases.
             /// </summary>
-            public float regularizationLambda;
+            public float regularizationLambda = 0.01f;
 
-            public static TrainingConfig CreateTrainingConfig()
-            {
-                var ret = new TrainingConfig();
-
-                ret.miniBatchSize = 1000;
-                ret.learningRate = 0.01f;
-                ret.epochs = 1;
-                ret.shuffleTrainingData = true;
-                ret.costFunction = new CrossEntropyErrorFunction();
-                ret.regularization = Regularization.L2;
-                ret.regularizationLambda = 0.01f;
-                return ret;
-            }
+            public int evolutionPopulationSize = 50;
+            public float evolutionSurvivalRate = 0.2f;
+            public float evolutionMutationRate = 0.1f;
 
             internal bool UseMinibatches() { return miniBatchSize != DontSubdivideBatches; }
         };
 
+    /// <summary>
+    /// Contains all data and parameter required for training a network
+    /// </summary>
+    public class TrainingSuite
+    {
         public class TrainingData
         {
             public float[] input;
@@ -106,7 +100,7 @@ namespace Macademy
         /// <summary>
         /// Configurable parameters of the training process
         /// </summary>
-        public TrainingConfig config = TrainingConfig.CreateTrainingConfig();
+        public TrainingConfig config = new TrainingConfig();
 
         internal List<TrainingData> trainingData;
 

@@ -96,6 +96,17 @@ namespace Macademy
         private Thread trainingThread = null;
         private readonly object lockObj_gradientAccess = new object();
 
+        private Network(Network o)
+        {
+            this.name = new string(o.name);
+            this.description = new string(o.description);
+            layers = new List<Layer>();
+            foreach(var layer in o.layers)
+            {
+                layers.Add(new Layer(layer));
+            }
+        }
+
         Network(List<Layer> layers)
         {
             this.layers = layers;
@@ -161,6 +172,87 @@ namespace Macademy
             return layers.Last().GetNeuronCount();
         }
 
+        public Network Copy()
+        {
+            return new Network(this);
+        }
+
+        private void TrainWithBackpropagation(TrainingSuite trainingSuite, int trainingDataBegin, int trainingDataEnd, ComputeDevice calculator)
+        {
+            //Calculate the accumulated gradient. Accumulated means, that the gradient has to be divided by the number of samples in the minibatch.
+            List<List<NeuronData>> accumulatedGradient = null;
+            accumulatedGradient = calculator.CalculateAccumulatedGradientForMinibatch(this, trainingSuite, trainingDataBegin, trainingDataEnd);
+            float sizeDivisor = (float)(trainingDataEnd - trainingDataBegin) / (float)trainingSuite.trainingData.Count;
+
+            //Calculate regularization terms based on the training configuration
+            float regularizationTerm1 = 1.0f;
+            float regularizationTerm2Base = 0.0f;
+            if (trainingSuite.config.regularization == TrainingConfig.Regularization.L2)
+            {
+                regularizationTerm1 = 1.0f - trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count);
+            }
+            else if (trainingSuite.config.regularization == TrainingConfig.Regularization.L1)
+            {
+                regularizationTerm2Base = -((trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count)));
+            }
+
+            bool applyRegularizationTerm2 = trainingSuite.config.regularization == TrainingConfig.Regularization.L1;
+
+            //Apply accumulated gradient to network (Gradient descent)
+            float sizeDivisorAndLearningRate = sizeDivisor * trainingSuite.config.learningRate;
+            for (int i = 0; i < layers.Count; ++i)
+            {
+                var layer = layers[i];
+                var weightsPerNeuron = layer.GetWeightsPerNeuron();
+                var layerNeuronCount = layer.GetNeuronCount();
+                var weightMx = layer.weightMx;
+                var biases = layer.biases;
+
+                for (int j = 0; j < layerNeuronCount; ++j)
+                {
+                    var layerGradientWeights = accumulatedGradient[i][j].weights;
+                    biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
+                    for (int w = 0; w < weightsPerNeuron; ++w)
+                    {
+                        weightMx[j, w] = regularizationTerm1 * weightMx[j, w] - layerGradientWeights[w] * sizeDivisorAndLearningRate;
+                        if (applyRegularizationTerm2)
+                            weightMx[j, w] -= regularizationTerm2Base * Utils.Sign(weightMx[j, w]);
+                    }
+                }
+            }
+        }
+
+
+        private void TrainWithEvolution(TrainingSuite trainingSuite, int trainingDataBegin, int trainingDataEnd, Network[] population, ComputeDevice calculator)
+        {
+            Dictionary<Network, float> error_acc = new Dictionary<Network, float>();
+            for(int i = 1; i < population.Length; ++i)
+            {
+                population[i].ApplyRandomNudge(trainingSuite.config.evolutionMutationRate);
+                error_acc.Add(population[i], 0);
+            }
+
+
+            for(int i = trainingDataBegin; i < trainingDataEnd; ++i)
+            {
+                foreach(var n in population)
+                {
+                    float[] result = n.Compute(trainingSuite.trainingData[i].input, calculator);
+                    float error = trainingSuite.config.costFunction.CalculateSummedError(result, trainingSuite.trainingData[i].desiredOutput);
+                    error_acc[n] += error;
+                }
+            }
+
+            Array.Sort(population, (a,b)=>{return error_acc[a].CompareTo(error_acc[b]);});
+
+            int population_cutoff = Math.Max(1, (int)((float)population.Length * trainingSuite.config.evolutionSurvivalRate));
+
+            for(int i = population_cutoff; i < population.Length; ++i)
+            {
+                population[i] = population[i % population_cutoff].Copy();
+            }
+        }
+
         /// <summary>
         /// Trains the network using the given training suite and calculator
         /// The functions returns immediately with a promise object that can be used to monitor progress.
@@ -183,6 +275,16 @@ namespace Macademy
             }
 
             trainingThread = new Thread(() => {
+                Network[] evolution_population = null;
+                if(trainingSuite.config.trainingMode == TrainingConfig.TrainingMode.Evolution)
+                {
+                    evolution_population = new Network[trainingSuite.config.evolutionPopulationSize];
+                    for(int i = 0; i < evolution_population.Length; ++i)
+                    {
+                        evolution_population[i] = new Network(this);
+                    }
+                }
+
                 for (int currentEpoch = 0; currentEpoch < trainingSuite.config.epochs; currentEpoch++)
                 {
                     if (trainingPromise.IsStopAtNextEpoch())
@@ -198,46 +300,17 @@ namespace Macademy
 
                     while (true)
                     {
-                        //Calculate the accumulated gradient. Accumulated means, that the gradient has to be divided by the number of samples in the minibatch.
-                        List<List<NeuronData>> accumulatedGradient = null;
-                        accumulatedGradient = calculator.CalculateAccumulatedGradientForMinibatch(this, trainingSuite, trainingDataBegin, trainingDataEnd);
-                        float sizeDivisor = (float)(trainingDataEnd - trainingDataBegin) / (float)trainingSuite.trainingData.Count;
-
-                        //Calculate regularization terms based on the training configuration
-                        float regularizationTerm1 = 1.0f;
-                        float regularizationTerm2Base = 0.0f;
-                        if (trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L2)
+                        switch(trainingSuite.config.trainingMode)
                         {
-                            regularizationTerm1 = 1.0f - trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count);
-                        }
-                        else if (trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L1)
-                        {
-                            regularizationTerm2Base = -((trainingSuite.config.learningRate * (trainingSuite.config.regularizationLambda / (float)trainingSuite.trainingData.Count)));
-                        }
-
-                        bool applyRegularizationTerm2 = trainingSuite.config.regularization == TrainingSuite.TrainingConfig.Regularization.L1;
-
-                        //Apply accumulated gradient to network (Gradient descent)
-                        float sizeDivisorAndLearningRate = sizeDivisor * trainingSuite.config.learningRate;
-                        for (int i = 0; i < layers.Count; ++i)
-                        {
-                            var layer = layers[i];
-                            var weightsPerNeuron = layer.GetWeightsPerNeuron();
-                            var layerNeuronCount = layer.GetNeuronCount();
-                            var weightMx = layer.weightMx;
-                            var biases = layer.biases;
-
-                            for (int j = 0; j < layerNeuronCount; ++j)
-                            {
-                                var layerGradientWeights = accumulatedGradient[i][j].weights;
-                                biases[j] -= accumulatedGradient[i][j].bias * sizeDivisorAndLearningRate;
-                                for (int w = 0; w < weightsPerNeuron; ++w)
-                                {
-                                    weightMx[j, w] = regularizationTerm1 * weightMx[j, w] - layerGradientWeights[w] * sizeDivisorAndLearningRate;
-                                    if (applyRegularizationTerm2)
-                                        weightMx[j, w] -= regularizationTerm2Base * Utils.Sign(weightMx[j, w]);
-                                }
-                            }
+                            case TrainingConfig.TrainingMode.Backpropagation:
+                            TrainWithBackpropagation(trainingSuite, trainingDataBegin, trainingDataEnd, calculator);
+                            break;
+                            case TrainingConfig.TrainingMode.Evolution:
+                            TrainWithEvolution(trainingSuite, trainingDataBegin, trainingDataEnd, evolution_population, calculator);
+                            break;
+                            default:
+                            //error
+                            break;
                         }
 
                         //Set up the next minibatch, or quit the loop if we're done.
@@ -259,6 +332,12 @@ namespace Macademy
                 }
 
                 calculator.FlushWorkingCache(); //Release any cache that the mathLib has built up.
+
+                if(trainingSuite.config.trainingMode == TrainingConfig.TrainingMode.Evolution)
+                {
+                    this.layers = evolution_population[0].layers; //move the best performing layer without copying
+                    evolution_population = null;
+                }
 
                 trainingPromise.SetProgress(1, trainingPromise.GetEpochsDone()); //Report that the training is finished
                 trainingPromise = null;

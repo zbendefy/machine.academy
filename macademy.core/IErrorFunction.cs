@@ -11,6 +11,16 @@ namespace Macademy
     /// </summary>
     public abstract class IErrorFunction
     {
+        public float CalculateSummedError(float[] output, float[] desiredOutput)
+        {
+            float err = 0;
+            for(int i = 0; i < output.Length; ++i)
+            {
+                err += CalculateError(output[i], desiredOutput[i]);
+            }
+            return err;
+        }
+
         public abstract float CalculateError(float output, float desiredOutput);
         public abstract float CalculateDelta(float z, float a, float desiredOutput, IActivationFunction activationFunction);
         public abstract int GetOpenCLFunctionID();
