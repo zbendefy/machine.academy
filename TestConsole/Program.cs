@@ -1,6 +1,7 @@
 ﻿using Macademy;
 using Macademy.OpenCL;
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 
 namespace TestConsole
@@ -8,6 +9,8 @@ namespace TestConsole
     class Program
     {
         static Network reference_network = null;
+        static Network target_network = null;
+        static Random random = new Random();
         
         static void Main(string[] args)
         {
@@ -36,7 +39,10 @@ namespace TestConsole
                         Console.WriteLine("devices       - Displays available devices");
                         Console.WriteLine("select (n)    - Selectes the devices with the given id");
                         Console.WriteLine("info          - Displays information about the selected device");
-                        Console.WriteLine("test          - Performs a quick test on the selected device");
+                        Console.WriteLine("quicktest     - Performs a quick test on the selected device");
+                        Console.WriteLine("generate      - Generates a new network");
+                        Console.WriteLine("train         - Trains the network");
+                        Console.WriteLine("eval (i)      - Evals the output of the network to the given input");
                         Console.WriteLine("benchmark (n) - Performs a benchmark on the selected device, on the given difficulty (1-10)");
                         Console.WriteLine("exit          - Exits the app");
                     }
@@ -78,10 +84,54 @@ namespace TestConsole
                             Console.WriteLine("No device id given!");
                         }
                     }
-                    else if (nextCommand == "test")
+                    else if (nextCommand == "quicktest")
                     {
                         Console.WriteLine("Testing on device: " + selectedDevice.GetName() );
                         TestDevice(selectedDevice);
+                    }
+                    else if (nextCommand == "train")
+                    {
+                        int epochs = 1;
+
+                        if (commands.Length >= 2)
+                        {
+                            int.TryParse(commands[1], out epochs);
+                        }
+
+                        Train(selectedDevice, epochs);
+                    }
+                    else if (nextCommand == "eval")
+                    {
+                        if (commands.Length < 2)
+                        {
+                            Console.WriteLine("No input given!");
+                            continue;
+                        }
+
+                        float input = 0;
+                        if (!float.TryParse(commands[1], out input))
+                        {
+                            Console.WriteLine("Invalid input given!");
+                            continue;
+                        }
+
+                        if(target_network == null)
+                        {
+                            Generate();
+                        }
+
+                        var result = target_network.Compute(new float[]{input}, selectedDevice);
+                        var transformed_result = result[0] * 2.0f - 1.0f;
+                        var expected_result = (float)Math.Sin((input - 0.5f) * 1000.0f);
+                        Console.WriteLine("Output is: "  + transformed_result);
+                        Console.WriteLine("   (from raw output: "  + string.Join(", ", result) + ")");
+
+                        Console.WriteLine("Expected result is: " + expected_result);
+                        Console.WriteLine("   Calculated error: " + (expected_result - transformed_result));
+                    }
+                    else if (nextCommand == "generate")
+                    {
+                        Generate();
                     }
                     else if (nextCommand == "benchmark")
                     {
@@ -122,6 +172,11 @@ namespace TestConsole
             }
         }
 
+        private static void Generate()
+        {
+            target_network = Network.CreateNetworkInitRandom(new int[]{1,512,512,512,32,1}, new SigmoidActivation());
+        }
+
         private static void TestDevice(ComputeDevice selectedDevice)
         {
             int[] referenceLayerConf = new int[] { 3, 7, 5, 4 };
@@ -141,6 +196,46 @@ namespace TestConsole
             CheckResults(referenceLayerConf[referenceLayerConf.Length - 1], result.Length, () => { ++errorCount; });
             Console.WriteLine("Test finished with " + errorCount + " error(s)!");
             Console.WriteLine("Result: " + String.Join(", ", result));
+        }
+
+        private static void Train(ComputeDevice selectedDevice, int epochs)
+        {
+            if(target_network == null)
+            {
+                Generate();
+            }
+
+            List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
+            for (int i = 0; i < 10000; i++)
+            {
+                float[] input = new float[1];
+                float[] desiredOutput = new float[1];
+
+                float rnd = 0.5f;//;(float)random.NextDouble();
+                input[0] = rnd;
+                desiredOutput[0] = (float)Math.Sin((rnd - 0.5f) * 1000.0f) * 0.5f + 0.5f;
+
+                trainingData.Add(new TrainingSuite.TrainingData(input, desiredOutput));
+            }
+
+            TrainingSuite suite = new TrainingSuite(trainingData);
+            suite.config.epochs = epochs;
+            suite.config.shuffleTrainingData = true;
+            suite.config.miniBatchSize = 100;
+
+            suite.config.costFunction = new CrossEntropyErrorFunction();
+            suite.config.regularization = TrainingConfig.Regularization.L2;
+            suite.config.regularizationLambda = 0.01f;
+            suite.config.learningRate = 0.01f;
+
+            Console.WriteLine("Running training for {0} epochs!",epochs);
+            Stopwatch sw = Stopwatch.StartNew();
+
+            var promise = target_network.Train(suite, ComputeDeviceFactory.CreateFallbackComputeDevice());
+            promise.Await();
+
+            sw.Stop();
+            Console.WriteLine("Training finished! Elapsed={0}ms",sw.Elapsed.TotalMilliseconds);
         }
 
         private static void BenchmarkDevice(ComputeDevice selectedDevice, int level)
