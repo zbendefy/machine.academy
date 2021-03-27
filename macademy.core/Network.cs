@@ -226,9 +226,12 @@ namespace Macademy
         private void TrainWithEvolution(TrainingSuite trainingSuite, int trainingDataBegin, int trainingDataEnd, Network[] population, ComputeDevice calculator)
         {
             Dictionary<Network, float> error_acc = new Dictionary<Network, float>();
-            for(int i = 1; i < population.Length; ++i)
+            for(int i = 0; i < population.Length; ++i)
             {
-                population[i].ApplyRandomNudge(trainingSuite.config.evolutionMutationRate);
+                if (i != 0) //Keep the best performer
+                {
+                    population[i].ApplyRandomNudge(trainingSuite.config.evolutionMutationRate);
+                }
                 error_acc.Add(population[i], 0);
             }
 
