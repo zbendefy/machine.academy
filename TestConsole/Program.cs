@@ -3,6 +3,7 @@ using Macademy.OpenCL;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 
 namespace TestConsole
 {
@@ -122,7 +123,7 @@ namespace TestConsole
 
                         var result = target_network.Compute(new float[]{input}, selectedDevice);
                         var transformed_result = result[0] * 2.0f - 1.0f;
-                        var expected_result = (float)Math.Sin((input - 0.5f) * 1000.0f);
+                        var expected_result = (float)Math.Sin((input - 0.5f) * 4.0f);
                         Console.WriteLine("Output is: "  + transformed_result);
                         Console.WriteLine("   (from raw output: "  + string.Join(", ", result) + ")");
 
@@ -213,7 +214,7 @@ namespace TestConsole
 
                 float rnd = 0.5f;//;(float)random.NextDouble();
                 input[0] = rnd;
-                desiredOutput[0] = (float)Math.Sin((rnd - 0.5f) * 1000.0f) * 0.5f + 0.5f;
+                desiredOutput[0] = (float)Math.Sin((rnd - 0.5f) * 4.0f) * 0.5f + 0.5f;
 
                 trainingData.Add(new TrainingSuite.TrainingData(input, desiredOutput));
             }
@@ -231,10 +232,25 @@ namespace TestConsole
             Console.WriteLine("Running training for {0} epochs!",epochs);
             Stopwatch sw = Stopwatch.StartNew();
 
+            int progress = 0;
+
             var promise = target_network.Train(suite, ComputeDeviceFactory.CreateFallbackComputeDevice());
-            promise.Await();
+
+            Console.WriteLine("____________________");
+
+            while (!promise.IsReady())
+            {
+                int progress_rounded = (int)(promise.GetTotalProgress() * 20);
+                if (progress_rounded > progress)
+                {
+                    ++progress;
+                    Console.Write("#");
+                }
+                Thread.Sleep(50);
+            }
 
             sw.Stop();
+            Console.WriteLine("#");
             Console.WriteLine("Training finished! Elapsed={0}ms",sw.Elapsed.TotalMilliseconds);
         }
 
