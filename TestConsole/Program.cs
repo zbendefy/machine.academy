@@ -18,9 +18,12 @@ namespace TestConsole
             Console.WriteLine(" ### macademy test console ");
             ComputeDevice selectedDevice = ComputeDeviceFactory.CreateFallbackComputeDevice();
 
+            Generate();
+
             while (true)
             {
                 Console.WriteLine("");
+                Console.Write("> ");
                 string rawCommand = Console.ReadLine().Trim();
                 var commands = rawCommand.Split(' ');
                 if (commands.Length == 0)
@@ -36,16 +39,23 @@ namespace TestConsole
                     }
                     else if (nextCommand == "help")
                     {
-                        Console.WriteLine("help          - Displays this help message");
-                        Console.WriteLine("devices       - Displays available devices");
-                        Console.WriteLine("select (n)    - Selectes the devices with the given id");
-                        Console.WriteLine("info          - Displays information about the selected device");
-                        Console.WriteLine("quicktest     - Performs a quick test on the selected device");
-                        Console.WriteLine("generate      - Generates a new network");
-                        Console.WriteLine("train         - Trains the network");
-                        Console.WriteLine("eval (i)      - Evals the output of the network to the given input");
-                        Console.WriteLine("benchmark (n) - Performs a benchmark on the selected device, on the given difficulty (1-10)");
-                        Console.WriteLine("exit          - Exits the app");
+                        Console.WriteLine("General");
+                        Console.WriteLine(" help          - Displays this help message");
+                        Console.WriteLine(" exit          - Exits the app");
+                        Console.WriteLine("");
+                        Console.WriteLine("Device selection");
+                        Console.WriteLine(" devices       - Displays available devices");
+                        Console.WriteLine(" select (n)    - Selectes the devices with the given id");
+                        Console.WriteLine(" info          - Displays information about the selected device");
+                        Console.WriteLine(" quicktest     - Performs a quick test on the selected device");
+                        Console.WriteLine(" benchmark [n] - Performs a benchmark on the selected device, on the given difficulty (1-10, default: 2)");
+                        Console.WriteLine("");
+                        Console.WriteLine("Model training and testing");
+                        Console.WriteLine(" generate      - Generates a new network");
+                        Console.WriteLine(" train         - Trains the network");
+                        Console.WriteLine(" eval (i)      - Evaluates the output of the network to the given input");
+                        Console.WriteLine(" export [f]    - Exports the current network to the filename provided (default: 'output.json')");
+                        Console.WriteLine(" import [f]    - Imports the network from the filename provided (default: 'output.json')");
                     }
                     else if (nextCommand == "devices")
                     {
@@ -54,7 +64,7 @@ namespace TestConsole
                         int i = 0;
                         foreach (var dev in devices)
                         {
-                            Console.WriteLine(String.Format((i++).ToString() + ": [{0}] {1}", dev.GetDeviceAccessType(), dev.GetDeviceName() ));
+                            Console.WriteLine(String.Format((i++).ToString() + ": [{0}] {1}", dev.GetDeviceAccessType(), dev.GetDeviceName()));
                         }
                     }
                     else if (nextCommand.StartsWith("select"))
@@ -72,7 +82,7 @@ namespace TestConsole
                                     continue;
                                 }
 
-                                selectedDevice = ComputeDeviceFactory.CreateComputeDevice( devices[selectedDeviceId] );
+                                selectedDevice = ComputeDeviceFactory.CreateComputeDevice(devices[selectedDeviceId]);
                                 Console.WriteLine("Selected device: " + selectedDeviceId + ": " + selectedDevice.GetName());
                             }
                             else
@@ -87,7 +97,7 @@ namespace TestConsole
                     }
                     else if (nextCommand == "quicktest")
                     {
-                        Console.WriteLine("Testing on device: " + selectedDevice.GetName() );
+                        Console.WriteLine("Testing on device: " + selectedDevice.GetName());
                         TestDevice(selectedDevice);
                     }
                     else if (nextCommand == "train")
@@ -109,30 +119,26 @@ namespace TestConsole
                             continue;
                         }
 
-                        float input = 0;
-                        if (!float.TryParse(commands[1], out input))
+                        List<float> input_values = new List<float>();
+                        for (int i = 1; i < commands.Length; ++i)
                         {
-                            Console.WriteLine("Invalid input given!");
-                            continue;
+                            float input = 0;
+                            if (!float.TryParse(commands[i], out input))
+                            {
+                                Console.WriteLine("Invalid input given at index {0}", (i-1));
+                            }
+
+                            input_values.Add(input);
                         }
 
-                        if(target_network == null)
-                        {
-                            Generate();
-                        }
+                        float[] result = Eval(input_values.ToArray(), selectedDevice);
 
-                        var result = target_network.Compute(new float[]{input}, selectedDevice);
-                        var transformed_result = result[0] * 2.0f - 1.0f;
-                        var expected_result = (float)Math.Sin((input - 0.5f) * 4.0f);
-                        Console.WriteLine("Output is: "  + transformed_result);
-                        Console.WriteLine("   (from raw output: "  + string.Join(", ", result) + ")");
-
-                        Console.WriteLine("Expected result is: " + expected_result);
-                        Console.WriteLine("   Calculated error: " + (expected_result - transformed_result));
+                        Console.WriteLine("Network output: [" + string.Join(", ", result) + "]");
                     }
                     else if (nextCommand == "generate")
                     {
                         Generate();
+                        Console.WriteLine("A new network has been generated!");
                     }
                     else if (nextCommand == "benchmark")
                     {
@@ -150,6 +156,45 @@ namespace TestConsole
                         }
 
                         BenchmarkDevice(selectedDevice, level);
+                    }
+                    else if (nextCommand == "export")
+                    {
+                        string filename = "output.json";
+
+                        if (commands.Length >= 2)
+                        {
+                            filename = commands[1];
+                        }
+
+                        try
+                        {
+                            System.IO.File.WriteAllText(filename, target_network.ExportToJSON());
+                            Console.WriteLine("Model exported to: '{0}'", filename);
+                        }
+                        catch (Exception exc)
+                        {
+                            Console.WriteLine("Error: " + exc.Message);
+                        }
+                    }
+                    else if (nextCommand == "import")
+                    {
+                        string filename = "output.json";
+
+                        if (commands.Length >= 2)
+                        {
+                            filename = commands[1];
+                        }
+
+                        try
+                        {
+                            string json_network = System.IO.File.ReadAllText(filename);
+                            target_network = Network.CreateNetworkFromJSON(json_network);
+                            Console.WriteLine("Model imported from: '{0}'", filename);
+                        }
+                        catch (Exception exc)
+                        {
+                            Console.WriteLine("Error: " + exc.Message);
+                        }
                     }
                     else if (nextCommand == "info")
                     {
@@ -173,9 +218,22 @@ namespace TestConsole
             }
         }
 
+        private static float[] Eval(float[] input, ComputeDevice device)
+        {
+            var result = target_network.Compute(input, device);
+            var transformed_result = result[0] * 2.0f - 1.0f;
+            var expected_result = (float)Math.Sin((input[0] - 0.5f) * 4.0f);
+
+            Console.WriteLine("Output is:           " + transformed_result);
+            Console.WriteLine("Expected result is:  " + expected_result);
+            Console.WriteLine("Calculated error:    " + (expected_result - transformed_result));
+
+            return result;
+        }
+
         private static void Generate()
         {
-            target_network = Network.CreateNetworkInitRandom(new int[]{1,512,512,512,32,1}, new SigmoidActivation());
+            target_network = Network.CreateNetworkInitRandom(new int[]{1,128,64,1}, new SigmoidActivation());
         }
 
         private static void TestDevice(ComputeDevice selectedDevice)
@@ -201,18 +259,13 @@ namespace TestConsole
 
         private static void Train(ComputeDevice selectedDevice, int epochs)
         {
-            if(target_network == null)
-            {
-                Generate();
-            }
-
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
             for (int i = 0; i < 10000; i++)
             {
                 float[] input = new float[1];
                 float[] desiredOutput = new float[1];
 
-                float rnd = 0.5f;//;(float)random.NextDouble();
+                float rnd = (float)random.NextDouble();
                 input[0] = rnd;
                 desiredOutput[0] = (float)Math.Sin((rnd - 0.5f) * 4.0f) * 0.5f + 0.5f;
 
