@@ -249,46 +249,6 @@ namespace Macademy.OpenCL
             computeFramework.FlushWorkingCache();
         }
 
-        private unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
-        {
-            int matrixRows = weightMx.GetLength(0);
-            float[] output = new float[matrixRows];
-            int[] configParams = new int[] { /*rows: */weightMx.GetLength(0), /*cols: */weightMx.GetLength(1), /*ApplySigmoid*/ activationFunction.GetOpenCLFunctionId() };
-
-            fixed (int* configPtr = configParams)
-            {
-                fixed (float* weightArrayPtr = weightMx, biasPtr = bias, prevActivationPtr = prevActivations)
-                {
-                    MemoryAllocation mem_param_weightMx, mem_param_bias, mem_param_prevActivation, mem_param_config, mem_param_output;
-                    mem_param_weightMx = computeFramework.GetMemoryFor(weightMx.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(weightArrayPtr));
-                    mem_param_bias = computeFramework.GetMemoryFor(bias.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(biasPtr));
-                    mem_param_prevActivation = computeFramework.GetMemoryFor(prevActivations.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(prevActivationPtr));
-                    mem_param_config = computeFramework.GetMemoryFor(configParams.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(configPtr));
-                    mem_param_output = computeFramework.GetMemoryFor(matrixRows * 4, MemoryFlag.WriteOnly, IntPtr.Zero);
-
-                    computeFramework.SetKernelArg(calcLayerKernel, 0, mem_param_weightMx);
-                    computeFramework.SetKernelArg(calcLayerKernel, 1, mem_param_bias);
-                    computeFramework.SetKernelArg(calcLayerKernel, 2, mem_param_prevActivation);
-                    computeFramework.SetKernelArg(calcLayerKernel, 3, mem_param_config);
-                    computeFramework.SetKernelArg(calcLayerKernel, 4, mem_param_output);
-
-                    int localWorkgroupSize = 32;
-                    int globalWorkSize = ExtendGlobalWorkSize(matrixRows, localWorkgroupSize);
-                    computeFramework.EnqueueKernel(calcLayerKernel, new IntPtr[] { new IntPtr(globalWorkSize) }, new IntPtr[] { new IntPtr(localWorkgroupSize) });
-
-
-                    fixed (float* outputPtr = output)
-                    {
-                        computeFramework.ReadBuffer(mem_param_output, true, UIntPtr.Zero, new UIntPtr((uint)matrixRows * 4U), new IntPtr(outputPtr));
-                    }
-                }
-            }
-
-            computeFramework.UnuseMemoryAllocations();
-
-            return output;
-        }
-
         public override void Uninitialize()
         {
             computeFramework.CleanupCLResources();
@@ -468,14 +428,21 @@ namespace Macademy.OpenCL
             bool z_values_mode = z_values != null;
 
             int largest_layer_size = input.Length;
+            int largest_weight_mx_size = 0;
+            int largest_bias_size = 0;
+
             foreach (var layer in network.layers)
             {
                 largest_layer_size = Math.Max(layer.GetNeuronCount(), largest_layer_size);
+                largest_weight_mx_size = Math.Max(layer.weightMx.Length, largest_weight_mx_size);
+                largest_bias_size = Math.Max(layer.biases.Length, largest_bias_size);
             }
 
             float[] output = new float[network.layers.Last().GetNeuronCount()];
             int[] configParams = new int[3];
             MemoryAllocation mem_param_config = computeFramework.GetMemoryFor(configParams.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, IntPtr.Zero);
+            MemoryAllocation mem_param_weightMx = computeFramework.GetMemoryFor(largest_weight_mx_size * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, IntPtr.Zero);
+            MemoryAllocation mem_param_bias = computeFramework.GetMemoryFor(largest_bias_size * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, IntPtr.Zero);
 
             fixed (float* input_ptr = input)
             {
@@ -493,9 +460,8 @@ namespace Macademy.OpenCL
 
                         fixed (float* weightArrayPtr = layer.weightMx, biasPtr = layer.biases, prevActivationPtr = layer_args)
                         {
-                            MemoryAllocation mem_param_weightMx, mem_param_bias;
-                            mem_param_weightMx = computeFramework.GetMemoryFor(layer.weightMx.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(weightArrayPtr));
-                            mem_param_bias = computeFramework.GetMemoryFor(layer.biases.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(biasPtr));
+                            computeFramework.UploadToMemory(mem_param_weightMx, 0, layer.weightMx.Length * 4, new IntPtr(weightArrayPtr), false);
+                            computeFramework.UploadToMemory(mem_param_bias, 0, layer.biases.Length * 4, new IntPtr(biasPtr), false);
 
                             configParams[0] = layer.weightMx.GetLength(0); //rows
                             configParams[1] = layer.weightMx.GetLength(1); //columns
@@ -534,20 +500,15 @@ namespace Macademy.OpenCL
                 }
             }
 
+            computeFramework.UnuseMemoryAllocations();
+
             return output;
         }
 
-        internal override float[] EvaluateNetwork(float[] input, Network network)
+        public override float[] EvaluateNetwork(float[] input, Network network)
         {
             List<float[]> null_z_values = null;
             return EvaluateNetwork(input, network, ref null_z_values);
-        }
-
-        public override List<float[]> _EvaluateNetworkZValues(float[] input, Network network)
-        {
-            List<float[]> z_values = new List<float[]>();
-            EvaluateNetwork(input, network, ref z_values);
-            return z_values;
         }
     }
 }

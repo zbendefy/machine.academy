@@ -38,7 +38,7 @@ namespace ModuleTests
         }
 
         [TestMethod]
-        public void TestOpenCLLayerCalc()
+        public void TestOpenCLNetworkEvaluation()
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(10);
@@ -60,36 +60,7 @@ namespace ModuleTests
             var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
             var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, openCLCalculator);
 
-            Utils.CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
-        }
-
-
-        [TestMethod]
-        public void TestOpenCLEvaluateZValues()
-        {
-            List<int> layerConfig = new List<int>();
-            layerConfig.Add(10);
-            layerConfig.Add(512);
-            layerConfig.Add(12);
-            layerConfig.Add(3);
-            layerConfig.Add(51);
-            layerConfig.Add(30);
-
-            Network networkReference = Network.CreateNetworkInitRandom(layerConfig.ToArray(), new SigmoidActivation());
-
-            ComputeDevice cpuCalculator = ComputeDeviceFactory.CreateFallbackComputeDevice();
-            ComputeDevice openCLCalculator = Utils.GetFirstOpenCLDevice();
-
-            float[] testInput = new float[layerConfig[0]];
-            var cpu_z_values = cpuCalculator._EvaluateNetworkZValues(testInput, networkReference);
-            var opencl_z_values = openCLCalculator._EvaluateNetworkZValues(testInput, networkReference);
-
-            Assert.AreEqual(cpu_z_values.Count, opencl_z_values.Count);
-
-            for (int i = 0; i < cpu_z_values.Count; ++i)
-            {
-                Utils.CheckNetworkError(cpu_z_values[i], opencl_z_values[i], 0.00001, "#" + i + " Z Value");
-            }
+            Utils.ValidateFloatArray(cpuTrainedOutput, openCLTrainedOutput);
         }
 
         [TestMethod]
@@ -264,7 +235,7 @@ namespace ModuleTests
             float[] outputRef = networkReference.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
             float[] outputJS = networkFromJSON.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
 
-            Utils.CheckNetworkError(outputRef, outputJS, 0.00000001);
+            Utils.ValidateFloatArray(outputRef, outputJS, 0.00000001);
         }
     }
 }

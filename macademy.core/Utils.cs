@@ -5,7 +5,17 @@ namespace Macademy
 {
     public static class Utils
     {
+        private static bool CHECKED = false;
+
         private static Random rnd = new Random();
+
+        public static void Assert(bool assertion, string message = "")
+        {
+            if (CHECKED && !assertion)
+            {
+                throw new Exception("Assert: " + message);
+            }
+        }
 
         public static IActivationFunction GetActivationFunctionFromString(string type)
         {

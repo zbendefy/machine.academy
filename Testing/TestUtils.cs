@@ -63,7 +63,7 @@ namespace ModuleTests
             float[] testInput = new float[] { 0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
             var result = network.Compute(testInput, device);
             
-            Utils.CheckNetworkError(referenceOutput, result);
+            Utils.ValidateFloatArray(referenceOutput, result);
         }
 
         public static void TestOpenCLTrainingWithConfig(IErrorFunction errorFunc, TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate, bool mix_activations = false)
@@ -133,15 +133,15 @@ namespace ModuleTests
             var cpuTrainedOutput = networkCpuTrained.Compute(testInput, cpuCalculator);
             var openCLTrainedOutput = networkOpenCLTrained.Compute(testInput, cpuCalculator);
 
-            CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
+            ValidateFloatArray(cpuTrainedOutput, openCLTrainedOutput);
         }
 
-        public static void CheckNetworkError(float[] expected, float[] actual, double errorThreshold = 0.00001, string what = "Network")
+        public static void ValidateFloatArray(float[] expected, float[] actual, double errorThreshold = 0.00001)
         {
             double error = 0;
 
             if (expected.Length != actual.Length)
-                Assert.Fail( String.Format( "{2} output sizes do not match! Expected size: {0}. Got: {1}", expected.Length, actual.Length, what ) );
+                Assert.Fail(String.Format("Array sizes do not match! Expected size: {0}. Got: {1}", expected.Length, actual.Length));
 
             for (int i = 0; i < expected.Length; i++)
             {
@@ -151,7 +151,32 @@ namespace ModuleTests
             var meanError = (error / expected.Length);
             if (meanError > errorThreshold)
             {
-                Assert.Fail(String.Format("{3}s do not match. Error was: {0}. Expected: [{1}]  Got: [{2}]", meanError, string.Join(", ", expected), string.Join(", ", actual), what));
+                Assert.Fail(String.Format("Arrays do not match. Error was: {0}. Expected: [{1}]  Got: [{2}]", meanError, string.Join(", ", expected), string.Join(", ", actual)));
+            }
+        }
+
+        public static void ValidateGradient(List<List<NeuronData>> expected, List<List<NeuronData>> actual, double error)
+        {
+            if (expected.Count != actual.Count)
+                Assert.Fail(String.Format("Layer count do not match! Expected size: {0}. Got: {1}", expected.Count, actual.Count));
+
+            for (int i = 0; i < expected.Count; i++)
+            {
+                if (expected[i].Count != actual[i].Count)
+                    Assert.Fail(String.Format("Layer #{0} sizes do not match! Expected size: {1}. Got: {2}", i, expected[i].Count, actual[i].Count));
+
+                for (int j = 0; j < expected[i].Count; j++)
+                {
+                    var expected_neuron_data = expected[i][j];
+                    var actual_neuron_data = actual[i][j];
+
+                    if (expected_neuron_data.bias != actual_neuron_data.bias)
+                    {
+                        Assert.Fail(String.Format("Layer #{0}, neuron #{1} bias does not match! Expected: {2}. Got: {3}", i, j, expected[i][j].bias, actual[i][j].bias));
+                    }
+
+                    ValidateFloatArray(expected_neuron_data.weights, actual_neuron_data.weights);
+                }
             }
         }
     }

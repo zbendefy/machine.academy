@@ -60,12 +60,7 @@ namespace Macademy
             return ret;
         }
 
-        internal override float[] EvaluateNetwork(float[] input, Network network)
-        {
-            throw new NotImplementedException();
-        }
-
-        public override List<float[]> _EvaluateNetworkZValues(float[] input, Network network)
+        public override float[] EvaluateNetwork(float[] input, Network network)
         {
             throw new NotImplementedException();
         }

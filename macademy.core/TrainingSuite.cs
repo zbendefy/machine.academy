@@ -102,7 +102,7 @@ namespace Macademy
         /// </summary>
         public TrainingConfig config = new TrainingConfig();
 
-        internal List<TrainingData> trainingData;
+        public List<TrainingData> trainingData;
 
         public TrainingSuite(List<TrainingData> trainingDatas)
         {

@@ -377,21 +377,6 @@ namespace Macademy
             }
         }
 
-        internal void EvaluateWithZValues(ComputeDevice compute_device, float[] input, ref List<float[]> activations, ref List<float[]> zValues, bool flush_compute_device_cache)
-        {
-            zValues = compute_device._EvaluateNetworkZValues(input, this);
-            for (int i = 0; i < zValues.Count; ++i)
-            {
-                float[] activation = new float[zValues[i].Length];
-                for (int j = 0; j < zValues[i].Length; j++)
-                    activation[i] = layers[i].activationFunction.Calculate(zValues[i][j]);
-                activations.Add(activation);
-            }
-
-            if (flush_compute_device_cache)
-                compute_device.FlushWorkingCache();
-        }
-
         /// <summary>
         /// Calculates an output of the network to a given input
         /// </summary>
