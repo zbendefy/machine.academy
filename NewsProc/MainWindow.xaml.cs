@@ -115,14 +115,14 @@ namespace NewsProc
             switch (cmbRegularization.SelectedIndex)
             {
                 case 0:
-                    trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
+                    trainingSuite.config.regularization = TrainingConfig.Regularization.None;
                     break;
                 case 1:
-                    trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L1;
+                    trainingSuite.config.regularization = TrainingConfig.Regularization.L1;
                     break;
                 case 2:
                 default:
-                    trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
+                    trainingSuite.config.regularization = TrainingConfig.Regularization.L2;
                     break;
             }
 

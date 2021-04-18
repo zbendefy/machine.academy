@@ -56,11 +56,5 @@ namespace Macademy
                 activationFunction = new SigmoidActivation(); //compatibility with old formats
             }
         }
-
-        public float[] Compute(ComputeDevice calculator, float[] input, IActivationFunction override_activation_function = null)
-        {
-            return calculator.CalculateLayer(weightMx, biases, input, override_activation_function == null ? activationFunction : override_activation_function);
-        }
-
     }
 }

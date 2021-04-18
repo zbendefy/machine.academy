@@ -45,11 +45,6 @@ namespace Macademy
             throw new NotImplementedException();
         }
 
-        public override float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction)
-        {
-            throw new NotImplementedException();
-        }
-
         public override void FlushWorkingCache()
         {
         }
@@ -63,6 +58,16 @@ namespace Macademy
             throw new NotImplementedException();
             List<ComputeDeviceDesc> ret = new List<ComputeDeviceDesc>();
             return ret;
+        }
+
+        internal override float[] EvaluateNetwork(float[] input, Network network)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override List<float[]> _EvaluateNetworkZValues(float[] input, Network network)
+        {
+            throw new NotImplementedException();
         }
     }
 }

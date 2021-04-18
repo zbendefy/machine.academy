@@ -377,28 +377,19 @@ namespace Macademy
             }
         }
 
-        internal float[] Compute(ComputeDevice mathLib, float[] input, ref List<float[]> activations, ref List<float[]> zValues, bool flushMathlibWorkingCache)
+        internal void EvaluateWithZValues(ComputeDevice compute_device, float[] input, ref List<float[]> activations, ref List<float[]> zValues, bool flush_compute_device_cache)
         {
-            var current = input;
-            bool applyActivationFunction = zValues == null;
-
-            foreach(var layer in layers)
+            zValues = compute_device._EvaluateNetworkZValues(input, this);
+            for (int i = 0; i < zValues.Count; ++i)
             {
-                current = layer.Compute(mathLib, current, applyActivationFunction ? null : new PasstroughActivation());
-                if (zValues != null)
-                {
-                    zValues.Add((float[])current.Clone());
-                    for (int i = 0; i < current.Length; i++)
-                        current[i] = layer.activationFunction.Calculate(current[i]);
-                }
-                if (activations != null)
-                    activations.Add(current);
+                float[] activation = new float[zValues[i].Length];
+                for (int j = 0; j < zValues[i].Length; j++)
+                    activation[i] = layers[i].activationFunction.Calculate(zValues[i][j]);
+                activations.Add(activation);
             }
 
-            if (flushMathlibWorkingCache)
-                mathLib.FlushWorkingCache();
-
-            return current;
+            if (flush_compute_device_cache)
+                compute_device.FlushWorkingCache();
         }
 
         /// <summary>
@@ -413,9 +404,7 @@ namespace Macademy
                 throw new Exception("Cannot perform operation while training is in progress!");
             if ( input == null || input.Length != layers.First().GetWeightsPerNeuron() )
                 throw new Exception("Invalid input argument!");
-            List<float[]> doesntNeedActivations = null;
-            List<float[]> doesntNeedZ = null;
-            return Compute(calculator, input, ref doesntNeedActivations, ref doesntNeedZ, true);
+            return calculator.EvaluateNetwork(input, this);
         }
 
         /// <summary>

@@ -47,8 +47,8 @@ float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, f
 
 __kernel void calcSingleLayer(__global const float* weightMx, 
                               __global const float* biases, 
-                              __global const float* prevActivation, 
                               __constant const int* config, 
+                              __global const float* input,
                               __global float* output) 
 {
     const int rowCount = config[0]; //number of neurons
@@ -62,7 +62,7 @@ __kernel void calcSingleLayer(__global const float* weightMx,
 
     float acc = 0;
     for(int i = 0; i < colCount; ++i)
-        acc += weightMx[(rowId * colCount) + i] * prevActivation[i];
+        acc += weightMx[(rowId * colCount) + i] * input[i];
     acc += biases[rowId];
 
     acc = ActivationFunction(activationFunctionId, acc);

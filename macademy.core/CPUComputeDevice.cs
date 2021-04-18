@@ -51,7 +51,7 @@ namespace Macademy
             return ret;
         }
 
-        public override float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
+        private float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
         {
             float[] ret = new float[weightMx.GetLength(0)];
             for (int m = 0; m < weightMx.GetLength(0); m++)
@@ -76,7 +76,7 @@ namespace Macademy
         {
             List<float[]> activations = new List<float[]>();
             List<float[]> zValues = new List<float[]>();
-            network.Compute(this, trainingInput, ref activations, ref zValues, false); //dont flush working cache
+            network.EvaluateWithZValues(this, trainingInput, ref activations, ref zValues, false); //dont flush working cache
 
             var lastLayerGradient = intermediateResults.Last();
             List<float> delta_k_holder = new List<float>();
@@ -148,6 +148,31 @@ namespace Macademy
             List<ComputeDeviceDesc> ret = new List<ComputeDeviceDesc>();
             CPUComputeDeviceDesc cpuDevice = new CPUComputeDeviceDesc();
             ret.Add(cpuDevice);
+            return ret;
+        }
+
+        internal override float[] EvaluateNetwork(float[] input, Network network)
+        {
+            float[] layer_args = input;
+            foreach (var layer in network.layers)
+            {
+                layer_args = CalculateLayer(layer.weightMx, layer.biases, layer_args, layer.activationFunction);
+            }
+            return layer_args;
+        }
+
+        public override List<float[]> _EvaluateNetworkZValues(float[] input, Network network)
+        {
+            List<float[]> ret = new List<float[]>();
+            var passtrough_activation = new PasstroughActivation();
+
+            float[] layer_args = input;
+            foreach (var layer in network.layers)
+            {
+                float[] layer_input = ret.Count == 0 ? input : ret.Last();
+                layer_args = CalculateLayer(layer.weightMx, layer.biases, layer_input, passtrough_activation);
+                ret.Add(layer_args);
+            }
             return ret;
         }
     }

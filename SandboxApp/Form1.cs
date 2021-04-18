@@ -83,7 +83,7 @@ namespace SandboxApp
             trainingSuite.config.epochs = (int)numericUpDown6.Value;
             trainingSuite.config.shuffleTrainingData = false;
 
-            trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
+            trainingSuite.config.regularization = TrainingConfig.Regularization.None;
             trainingSuite.config.costFunction = new CrossEntropyErrorFunction();
 
             trainingPromise = solver.Train(trainingSuite, calculator);

@@ -249,8 +249,7 @@ namespace Macademy.OpenCL
             computeFramework.FlushWorkingCache();
         }
 
-
-        public override unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
+        private unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction activationFunction)
         {
             int matrixRows = weightMx.GetLength(0);
             float[] output = new float[matrixRows];
@@ -462,6 +461,93 @@ namespace Macademy.OpenCL
             }
 
             return ret;
+        }
+
+        private unsafe float[] EvaluateNetwork(float[] input, Network network, ref List<float[]> z_values)
+        {
+            bool z_values_mode = z_values != null;
+
+            int largest_layer_size = input.Length;
+            foreach (var layer in network.layers)
+            {
+                largest_layer_size = Math.Max(layer.GetNeuronCount(), largest_layer_size);
+            }
+
+            float[] output = new float[network.layers.Last().GetNeuronCount()];
+            int[] configParams = new int[3];
+            MemoryAllocation mem_param_config = computeFramework.GetMemoryFor(configParams.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, IntPtr.Zero);
+
+            fixed (float* input_ptr = input)
+            {
+                fixed (int* configPtr = configParams)
+                {
+                    MemoryAllocation mem_param_input = computeFramework.GetMemoryFor(largest_layer_size * 4, MemoryFlag.ReadWrite | MemoryFlag.CopyHostPointer, new IntPtr(input_ptr), input.Length * 4);
+                    MemoryAllocation mem_param_output = computeFramework.GetMemoryFor(largest_layer_size * 4, MemoryFlag.ReadWrite, IntPtr.Zero);
+
+                    float[] layer_args = input;
+                    for (int i = 0; i < network.layers.Count; ++i)
+                    {
+                        var layer = network.layers[i];
+                        int matrixRows = layer.weightMx.GetLength(0);
+                        IActivationFunction activation = z_values_mode ? new PasstroughActivation() : layer.activationFunction;
+
+                        fixed (float* weightArrayPtr = layer.weightMx, biasPtr = layer.biases, prevActivationPtr = layer_args)
+                        {
+                            MemoryAllocation mem_param_weightMx, mem_param_bias;
+                            mem_param_weightMx = computeFramework.GetMemoryFor(layer.weightMx.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(weightArrayPtr));
+                            mem_param_bias = computeFramework.GetMemoryFor(layer.biases.Length * 4, MemoryFlag.ReadOnly | MemoryFlag.CopyHostPointer, new IntPtr(biasPtr));
+
+                            configParams[0] = layer.weightMx.GetLength(0); //rows
+                            configParams[1] = layer.weightMx.GetLength(1); //columns
+                            configParams[2] = activation.GetOpenCLFunctionId();
+                            computeFramework.UploadToMemory(mem_param_config, 0, configParams.Length * 3, new IntPtr(configPtr), false);
+
+                            computeFramework.SetKernelArg(calcLayerKernel, 0, mem_param_weightMx);
+                            computeFramework.SetKernelArg(calcLayerKernel, 1, mem_param_bias);
+                            computeFramework.SetKernelArg(calcLayerKernel, 2, mem_param_config);
+                            computeFramework.SetKernelArg(calcLayerKernel, 3, mem_param_input);
+                            computeFramework.SetKernelArg(calcLayerKernel, 4, mem_param_output);
+
+                            int localWorkgroupSize = 32;
+                            int globalWorkSize = ExtendGlobalWorkSize(matrixRows, localWorkgroupSize);
+                            computeFramework.EnqueueKernel(calcLayerKernel, new IntPtr[] { new IntPtr(globalWorkSize) }, new IntPtr[] { new IntPtr(localWorkgroupSize) });
+
+                            if (z_values_mode || i == network.layers.Count - 1)
+                            {
+                                float[] target_array = z_values_mode ? new float[matrixRows] : output;
+                                fixed (float* target_ptr = target_array)
+                                {
+                                    computeFramework.ReadBuffer(mem_param_output, true, UIntPtr.Zero, new UIntPtr((uint)matrixRows * 4U), new IntPtr(target_ptr));
+                                    if (z_values_mode)
+                                    {
+                                        z_values.Add(target_array);
+                                    }
+                                }
+                            }
+
+                            MemoryAllocation tmp = mem_param_input;
+                            mem_param_input = mem_param_output;
+                            mem_param_output = tmp;
+                            computeFramework.FlushCommandBuffer();
+                        }
+                    }
+                }
+            }
+
+            return output;
+        }
+
+        internal override float[] EvaluateNetwork(float[] input, Network network)
+        {
+            List<float[]> null_z_values = null;
+            return EvaluateNetwork(input, network, ref null_z_values);
+        }
+
+        public override List<float[]> _EvaluateNetworkZValues(float[] input, Network network)
+        {
+            List<float[]> z_values = new List<float[]>();
+            EvaluateNetwork(input, network, ref z_values);
+            return z_values;
         }
     }
 }

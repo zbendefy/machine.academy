@@ -30,7 +30,9 @@ namespace Macademy
 
         public  string GetName() { return descriptor.GetDeviceName(); }
 
-        public abstract unsafe float[] CalculateLayer(float[,] weightMx, float[] bias, float[] prevActivations, IActivationFunction sigmoidFunction);
+        internal abstract unsafe float[] EvaluateNetwork(float[] input, Network network);
+
+        public abstract unsafe List<float[]> _EvaluateNetworkZValues(float[] input, Network network);
 
         public abstract unsafe List<List<NeuronData>> CalculateAccumulatedGradientForMinibatch(Network network, TrainingSuite suite, int trainingDataBegin, int trainingDataEnd);
 

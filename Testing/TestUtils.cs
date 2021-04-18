@@ -23,7 +23,7 @@ namespace ModuleTests
             return null;
         }
 
-        public static void TestTraining( Network network, float[] referenceOutput, IErrorFunction errorFunc, TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
+        public static void TestTraining( Network network, ComputeDevice device, float[] referenceOutput, IErrorFunction errorFunc, TrainingConfig.Regularization regularization, float regularizationLambda, float learningRate)
         {
             List<int> layerConfig = new List<int>();
             layerConfig.Add(5);
@@ -55,13 +55,13 @@ namespace ModuleTests
             suite.config.regularizationLambda = regularizationLambda;
             suite.config.learningRate = learningRate;
 
-            var promise = network.Train(suite, ComputeDeviceFactory.CreateFallbackComputeDevice());
+            var promise = network.Train(suite, device);
 
             promise.Await();
             #endregion
 
             float[] testInput = new float[] { 0.3f, 0.4f, 0.6f, 0.1f, 0.5f };
-            var result = network.Compute(testInput, ComputeDeviceFactory.CreateFallbackComputeDevice());
+            var result = network.Compute(testInput, device);
             
             Utils.CheckNetworkError(referenceOutput, result);
         }
@@ -136,12 +136,12 @@ namespace ModuleTests
             CheckNetworkError(cpuTrainedOutput, openCLTrainedOutput);
         }
 
-        public static void CheckNetworkError(float[] expected, float[] actual, double errorThreshold = 0.00001)
+        public static void CheckNetworkError(float[] expected, float[] actual, double errorThreshold = 0.00001, string what = "Network")
         {
             double error = 0;
 
             if (expected.Length != actual.Length)
-                Assert.Fail( String.Format( "Network output sizes do not match! Expected size: {0}. Got: {1}", expected.Length, actual.Length ) );
+                Assert.Fail( String.Format( "{2} output sizes do not match! Expected size: {0}. Got: {1}", expected.Length, actual.Length, what ) );
 
             for (int i = 0; i < expected.Length; i++)
             {
@@ -151,7 +151,7 @@ namespace ModuleTests
             var meanError = (error / expected.Length);
             if (meanError > errorThreshold)
             {
-                Assert.Fail(String.Format("Networks do not match. Error was: {0}. Expected: [{1}]  Got: [{2}]", meanError, string.Join(", ", expected), string.Join(", ", actual)));
+                Assert.Fail(String.Format("{3}s do not match. Error was: {0}. Expected: [{1}]  Got: [{2}]", meanError, string.Join(", ", expected), string.Join(", ", actual), what));
             }
         }
     }

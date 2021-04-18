@@ -231,11 +231,11 @@ namespace NumberRecognize
             trainingSuite.config.shuffleTrainingData= checkShuffle.Checked;
 
             if (comboRegularization.SelectedIndex == 0)
-                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
+                trainingSuite.config.regularization = TrainingConfig.Regularization.None;
             else if (comboRegularization.SelectedIndex == 0)
-                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L1;
+                trainingSuite.config.regularization = TrainingConfig.Regularization.L1;
             else if (comboRegularization.SelectedIndex == 0)
-                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
+                trainingSuite.config.regularization = TrainingConfig.Regularization.L2;
 
             if (comboCostFunction.SelectedIndex == 0)
                 trainingSuite.config.costFunction = new MeanSquaredErrorFunction();
@@ -804,11 +804,11 @@ namespace NumberRecognize
             trainingSuite.config.shuffleTrainingData = true;
 
             if (comboRegularization.SelectedIndex == 0)
-                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.None;
+                trainingSuite.config.regularization = TrainingConfig.Regularization.None;
             else if (comboRegularization.SelectedIndex == 0)
-                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L1;
+                trainingSuite.config.regularization = TrainingConfig.Regularization.L1;
             else if (comboRegularization.SelectedIndex == 0)
-                trainingSuite.config.regularization = TrainingSuite.TrainingConfig.Regularization.L2;
+                trainingSuite.config.regularization = TrainingConfig.Regularization.L2;
 
             if (comboCostFunction.SelectedIndex == 0)
                 trainingSuite.config.costFunction = new MeanSquaredErrorFunction();

@@ -173,7 +173,7 @@ namespace Macademy.OpenCL
             ThrowOnError(errCodeEv, String.Format("Failed to release event (EnqueueWriteBuffer, UploadToMemory_3)"));
         }
 
-        public MemoryAllocation GetMemoryFor(int requiredSizeInBytes, MemoryFlag flags, IntPtr data )
+        public MemoryAllocation GetMemoryFor(int requiredSizeInBytes, MemoryFlag flags, IntPtr data, int data_size_in_bytes = -1)
         {
             if (!IsInitialized())
                 return null;
@@ -210,8 +210,10 @@ namespace Macademy.OpenCL
 
             if (flags.HasFlag(MemoryFlag.CopyHostPointer) && data != IntPtr.Zero)
             {
+                int upload_size_in_bytes = data_size_in_bytes >= 0 ? data_size_in_bytes : requiredSizeInBytes;
+
                 IntPtr ev = IntPtr.Zero;
-                var errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, candidate.buffer, 0U, UIntPtr.Zero, new UIntPtr((uint)requiredSizeInBytes), data, 0, null, out ev);
+                var errCodeWrite = EnqueuedCommandsNativeApi.EnqueueWriteBuffer(commandQueue, candidate.buffer, 0U, UIntPtr.Zero, new UIntPtr((uint)upload_size_in_bytes), data, 0, null, out ev);
                 ThrowOnError(errCodeWrite, String.Format("Failed to enqueue write buffer. Write-size:{0}, Target buffer size: {1}", requiredSizeInBytes, candidate.bufferSizeInBytes));
 
                 var errCodeEv = EventsNativeApi.ReleaseEvent(ev);
