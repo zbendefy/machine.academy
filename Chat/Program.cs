@@ -3,6 +3,7 @@ using Macademy.OpenCL;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 
 namespace TestConsole
@@ -278,7 +279,7 @@ namespace TestConsole
                     }
                     else if (nextCommand == "export")
                     {
-                        string filename = "output.json";
+                        string filename = "output.bson";
 
                         if (commands.Length >= 2)
                         {
@@ -287,7 +288,10 @@ namespace TestConsole
 
                         try
                         {
-                            System.IO.File.WriteAllText(filename, target_network.ExportToJSON());
+                            using (FileStream file = new FileStream(filename, FileMode.Create, FileAccess.Write))
+                            {
+                                target_network.SerializeToBson(file);
+                            }
                             Console.WriteLine("Model exported to: '{0}'", filename);
                         }
                         catch (Exception exc)
@@ -297,7 +301,7 @@ namespace TestConsole
                     }
                     else if (nextCommand == "import")
                     {
-                        string filename = "output.json";
+                        string filename = "output.bson";
 
                         if (commands.Length >= 2)
                         {
@@ -306,8 +310,10 @@ namespace TestConsole
 
                         try
                         {
-                            string json_network = System.IO.File.ReadAllText(filename);
-                            target_network = Network.CreateNetworkFromJSON(json_network);
+                            using (FileStream file = new FileStream(filename, FileMode.Open, FileAccess.Read))
+                            {
+                                target_network = Network.CreateNetworkFromBSON(file);
+                            }
                             Console.WriteLine("Model imported from: '{0}'", filename);
                         }
                         catch (Exception exc)
@@ -352,14 +358,9 @@ namespace TestConsole
 
         private static void Generate()
         {
-            int input_neurons = 256;
+            int input_neurons = max_network_input_length;
             var layer_config = new List<Tuple<IActivationFunction, int>>
             {
-                new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
-                new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
-                new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
-                new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
-                new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),

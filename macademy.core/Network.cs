@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.Threading;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Bson;
 
 namespace Macademy
 {
@@ -445,6 +447,21 @@ namespace Macademy
         }
 
         /// <summary>
+        /// Get a BSON representation of the network
+        /// </summary>
+        /// <returns>a stream containing the networks parameters in BSON</returns>
+        public void SerializeToBson(Stream stream)
+        {
+            if (trainingPromise != null)
+                throw new Exception("Cannot perform operation while training is in progress!");
+            using (BsonWriter writer = new BsonWriter(stream))
+            {
+                JsonSerializer serializer = new JsonSerializer();
+                serializer.Serialize(writer, this);
+            }
+        }
+
+        /// <summary>
         /// Create a network from a previously exported JSON
         /// </summary>
         /// <param name="jsonData">The JSON data to create the network from</param>
@@ -452,6 +469,18 @@ namespace Macademy
         public static Network CreateNetworkFromJSON(string jsonData)
         {
             return JsonConvert.DeserializeObject<Network>(jsonData);
+        }
+
+        /// <summary>
+        /// Create a network from a previously exported JSON
+        /// </summary>
+        /// <param name="jsonData">The BSON data to create the network from</param>
+        /// <returns></returns>
+        public static Network CreateNetworkFromBSON(Stream bsonData)
+        {
+            BsonReader reader = new BsonReader(bsonData);
+            JsonSerializer serializer = new JsonSerializer();
+            return serializer.Deserialize<Network>(reader);
         }
 
         /// <summary>
