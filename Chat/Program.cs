@@ -365,6 +365,7 @@ namespace TestConsole
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
+                new Tuple<IActivationFunction, int>(new SigmoidActivation(), 4096),
                 new Tuple<IActivationFunction, int>(new SigmoidActivation(), 48)
             };
 
@@ -445,7 +446,7 @@ namespace TestConsole
 
 
             List<TrainingSuite.TrainingData> trainingData = new List<TrainingSuite.TrainingData>();
-            for (int i = 0; i < 10000; i++)
+            for (int i = 0; i < 10; i++)
             {
                 trainingData.Add(GenerateTrainingData(content));
             }
@@ -453,7 +454,7 @@ namespace TestConsole
             TrainingSuite suite = new TrainingSuite(trainingData);
             suite.config.epochs = epochs;
             suite.config.shuffleTrainingData = true;
-            suite.config.miniBatchSize = 100;
+            suite.config.miniBatchSize = 1;
 
             suite.config.costFunction = new CrossEntropyErrorFunction();
             suite.config.regularization = TrainingConfig.Regularization.L2;
@@ -465,13 +466,13 @@ namespace TestConsole
 
             int progress = 0;
 
-            var promise = target_network.Train(suite, ComputeDeviceFactory.CreateFallbackComputeDevice());
+            var promise = target_network.Train(suite, selectedDevice);
 
-            Console.WriteLine("____________________");
+            Console.WriteLine("______________________________");
 
             while (!promise.IsReady())
             {
-                int progress_rounded = (int)(promise.GetTotalProgress() * 20);
+                int progress_rounded = (int)(promise.GetTotalProgress() * 30);
                 if (progress_rounded > progress)
                 {
                     ++progress;

@@ -1,0 +1,19 @@
+version 1.0;
+extension KHR_enable_fragment_definitions;
+
+fragment foo( input: tensor<scalar>, flag: logical ) -> ( output: tensor<scalar> )
+{
+    output = ...
+}
+
+fragment bar( input: tensor<scalar>, param: scalar ) -> ( output: tensor<scalar> )
+{
+    output = ...
+}
+
+graph foobar( input ) -> ( output )
+{
+    input = external(shape = [4,10]);
+    hidden = foo(input, flag = true);
+    output = bar(hidden, param = 3.14);
+}

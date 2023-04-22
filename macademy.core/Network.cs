@@ -182,8 +182,7 @@ namespace Macademy
         private void TrainWithBackpropagation(TrainingSuite trainingSuite, int trainingDataBegin, int trainingDataEnd, ComputeDevice calculator)
         {
             //Calculate the accumulated gradient. Accumulated means, that the gradient has to be divided by the number of samples in the minibatch.
-            List<List<NeuronData>> accumulatedGradient = null;
-            accumulatedGradient = calculator.CalculateAccumulatedGradientForMinibatch(this, trainingSuite, trainingDataBegin, trainingDataEnd);
+            List<List<NeuronData>> accumulatedGradient = calculator.CalculateAccumulatedGradientForMinibatch(this, trainingSuite, trainingDataBegin, trainingDataEnd);
             float sizeDivisor = (float)(trainingDataEnd - trainingDataBegin) / (float)trainingSuite.trainingData.Count;
 
             //Calculate regularization terms based on the training configuration
