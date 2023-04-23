@@ -16,7 +16,7 @@ namespace macademy
         thread_local std::default_random_engine generator;
 
         std::normal_distribution<float_t> distribution(mean, sigma);
-        return distribution();
+        return distribution(generator);
     }
 
 }

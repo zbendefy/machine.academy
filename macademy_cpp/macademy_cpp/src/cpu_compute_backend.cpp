@@ -1,5 +1,6 @@
 #include "cpu_compute_backend.h"
 #include "network.h"
+#include "common.h"
 
 namespace macademy
 {
@@ -14,6 +15,7 @@ namespace macademy
         auto layer_config = network.GetLayerConfig();
         std::vector<float> layer_args = input;
         std::vector<float> layer_result{};
+        float* neuron_weight_data = network.GetRawWeightData().data();
         for(size_t i = 0; i < layer_config.size(); ++i)
         {
             layer_result.clear();
@@ -26,10 +28,16 @@ namespace macademy
                 float acc = 0.0f;
                 for (uint32_t k = 0; k < input_num; k++)
                 {
-                    acc += m_data[] * layer_args[k];
+                    acc += *neuron_weight_data * layer_args[k];
+                    ++neuron_weight_data;
                 }
-                acc += m_data[j];
+                acc += *neuron_weight_data;
+                ++neuron_weight_data;
             }
+            std::swap(layer_args, layer_result);
         }
+
+        ASSERTM(neuron_weight_data - network.GetRawWeightData().data() == network.GetRawWeightData().size(), "");
+        return layer_args;
     }
 }
