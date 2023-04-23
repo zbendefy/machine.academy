@@ -30,6 +30,10 @@ namespace macademy
         std::string m_name;
         std::string m_description;
 
+        //Contains the weights and biases for the network in a compact form
+        //The layout is like this:
+        //<layer1_neuron1_weight1>, <layer1_neuron1_weight2> ... <layer1_neuron1_weightN>, <layer1_neuron1_bias>, <layer1_neuron2_weight1> ...<layer1_neuron2_weightN>, <layer1_neuron2_bias>, ... <layer2_neuron1_weight1>
+        //where there are N neurons in the previous (or input) layers
         std::vector<float> m_data;
 
         const std::vector<LayerConfig> m_layers;
@@ -60,6 +64,8 @@ namespace macademy
         }
 
         void GenerateRandomWeights(const IWeightInitializer& weight_initializer);
+
+        const uint32_t& GetInputCount() const { return m_input_arg_count; }
 
         const std::string& GetName() const { return m_name; }
         

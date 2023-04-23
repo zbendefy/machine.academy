@@ -10,7 +10,7 @@ int main()
     layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
     layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
     layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 4});
-    auto network = macademy::NetworkFactory::Build("test", 10, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
+    auto network = macademy::NetworkFactory::Build("test", 4, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
     network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
@@ -18,7 +18,7 @@ int main()
 
     auto uploaded_network = cpu_device.RegisterNetwork(*network);
     std::vector<float> input{1,2,3,4};
-    auto result = cpu_device.Evaluate(uploaded_network, input);
+    auto result = cpu_device.Evaluate(*uploaded_network, input);
 
     std::cout << "Result:" << std::endl;
     for(auto r : result)

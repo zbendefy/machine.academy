@@ -1,3 +1,12 @@
 [submodule "machine_academy_cpp/3rdparty/json"]
 	path = machine_academy_cpp/3rdparty/json
 	url = https://github.com/nlohmann/json.git
+[submodule "macademy_cpp/3rdparty/OpenCL-CLHPP"]
+	path = macademy_cpp/3rdparty/OpenCL-CLHPP
+	url = https://github.com/KhronosGroup/OpenCL-CLHPP.git
+[submodule "macademy_cpp/3rdparty/--force"]
+	path = macademy_cpp/3rdparty/--force
+	url = https://github.com/KhronosGroup/OpenCL-Headers.git
+[submodule "macademy_cpp/3rdparty/OpenCL-Headers"]
+	path = macademy_cpp/3rdparty/OpenCL-Headers
+	url = https://github.com/KhronosGroup/OpenCL-Headers.git
