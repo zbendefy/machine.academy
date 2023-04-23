@@ -9,6 +9,8 @@ set(MACADEMY_BACKEND_OPENCL 1)
 #-----------------------------
 
 if (MACADEMY_BACKEND_OPENCL)
+    find_package(OpenCL)
+
     set(OPENCL_SOURCE_FILES 
         include/opencl_backend/opencl_compute_device.h
 

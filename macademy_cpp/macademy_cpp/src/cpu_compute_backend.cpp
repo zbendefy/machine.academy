@@ -38,7 +38,7 @@ namespace macademy
 
     std::unique_ptr<NetworkResourceHandle> CPUComputeDevice::RegisterNetwork(Network& network)
     {
-        return std::make_unique<NetworkResourceHandle>(&network);
+        return std::make_unique<NetworkResourceHandle>(network);
     }
 
     std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const
