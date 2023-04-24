@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 
-project("macademy_cpp" VERSION 0.1.0)
+project("macademy_cpp_sln" VERSION 0.1.0)
 
 message("CMake version: " ${CMAKE_SYSTEM_NAME})
 message("Compiler: " ${CMAKE_CXX_COMPILER_ID})

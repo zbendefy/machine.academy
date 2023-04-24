@@ -9,7 +9,6 @@ set(MACADEMY_BACKEND_OPENCL 1)
 #-----------------------------
 
 if (MACADEMY_BACKEND_OPENCL)
-    find_package(OpenCL)
 
     set(OPENCL_SOURCE_FILES 
         include/opencl_backend/opencl_compute_device.h
@@ -19,8 +18,12 @@ if (MACADEMY_BACKEND_OPENCL)
     set(OPENCL_INCLUDE_DIRS 
         ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/OpenCL-CLHPP/include
         ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/OpenCL-Headers)
+    set(OPENCL_LINK_DIRECTORY $ENV{OPENCL_LIB})
+    set(OPENCL_LINK_LIBS opencl)
 else()
     set(OPENCL_SOURCE_FILES )
+    set(OPENCL_LINK_DIRECTORY )
+    set(OPENCL_LINK_LIBS )
     set(OPENCL_INCLUDE_DIRS )
 endif()
 
@@ -43,6 +46,12 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     ${OPENCL_INCLUDE_DIRS}
     )
 
-# target_link_libraries(${PROJECT_NAME} PUBLIC )
+target_link_directories(${PROJECT_NAME} PUBLIC 
+    ${OPENCL_LINK_DIRECTORY}
+)
+
+target_link_libraries(${PROJECT_NAME} PUBLIC 
+    ${OPENCL_LINK_LIBS}
+)
 
 add_library(::${PROJECT_NAME} ALIAS ${PROJECT_NAME}) 

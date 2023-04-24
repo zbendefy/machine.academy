@@ -2,8 +2,13 @@
 #include "network.h"
 #include "common.h"
 
+#include <fstream>
+#include <sstream>
+
+
 namespace macademy
-{
+{   
+    #include "opencl_kernels.cl"
     constexpr const char* calcLayerKernel = "calcSingleLayer";
     constexpr const char* forwardPass = "trainingForwardPass";
     constexpr const char* backwardPassKernel = "trainingBackwardPass";
@@ -18,7 +23,7 @@ namespace macademy
         , m_command_queue()
     {
         std::vector<std::string> programStrings{
-            "alma"
+            opencl_kernel_source
         };
         m_program = cl::Program(programStrings);
         m_program.build("");
