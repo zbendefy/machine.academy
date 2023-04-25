@@ -15,10 +15,8 @@ if (MACADEMY_BACKEND_OPENCL)
 
         src/opencl_backend/opencl_compute_device.cpp
     )
-    set(OPENCL_INCLUDE_DIRS 
-        ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/OpenCL-CLHPP/include
-        ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/OpenCL-Headers)
-    set(OPENCL_LINK_DIRECTORY $ENV{OPENCL_LIB})
+    set(OPENCL_INCLUDE_DIRS $ENV{OPENCL_SDK}/include)
+    set(OPENCL_LINK_DIRECTORY $ENV{OPENCL_SDK}/lib)
     set(OPENCL_LINK_LIBS opencl)
 else()
     set(OPENCL_SOURCE_FILES )
