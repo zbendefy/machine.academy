@@ -12,6 +12,7 @@ namespace macademy
         mutable cl::CommandQueue m_command_queue;
         cl::Program m_program;
         mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>> m_kernel_calc_single_layer;
+        std::string m_name;
 
         public: 
             OpenCLComputeDevice(cl::Device device);
@@ -23,5 +24,8 @@ namespace macademy
         static std::vector<cl::Device> GetDeviceList();
 
         static cl::Device AutoSelectDevice();
+
+        const std::string& GetDeviceName() const override;
+
     };
 }

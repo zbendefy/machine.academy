@@ -20,6 +20,8 @@ int main()
     macademy::CPUComputeDevice compute_device_cpu{};
     macademy::OpenCLComputeDevice compute_device_opencl{macademy::OpenCLComputeDevice::AutoSelectDevice()};
 
+    std::cout << "OpenCL device: " << compute_device_opencl.GetDeviceName() << std::endl;
+
     auto uploaded_network_cpu = compute_device_cpu.RegisterNetwork(*network);
     auto uploaded_network_opencl = compute_device_opencl.RegisterNetwork(*network);
 

@@ -51,6 +51,8 @@ namespace macademy
         , m_context(device)
         , m_command_queue(m_context, m_device)
     {
+        m_name = device.getInfo<CL_DEVICE_NAME>();
+
         std::vector<std::string> programStrings{
             opencl_kernel_source
         };
@@ -152,5 +154,11 @@ namespace macademy
     {
         auto all_devices = GetDeviceList();
         return all_devices[0];
+    }
+
+
+    const std::string& OpenCLComputeDevice::GetDeviceName() const
+    {
+        return m_name;
     }
 }
