@@ -17,6 +17,8 @@ namespace macademy
             case ActivationFunction::ReLU:
                 return x < 0.0f ? 0.0f : x;
             }
+            
+            throw std::runtime_error("Invalid activation function!");
         }
 
         float CalculateActivationFunctionPrime(ActivationFunction func, float x)
@@ -33,6 +35,8 @@ namespace macademy
             case ActivationFunction::ReLU:
                 return x < 0.0f ? 0.0f : 1.0f;
             }
+
+            throw std::runtime_error("Invalid activation function!");
         }
     }
 

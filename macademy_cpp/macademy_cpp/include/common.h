@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <stdint.h>
 #include <random>
+#include <stdexcept>
 
 namespace macademy
 {
@@ -25,3 +26,5 @@ namespace macademy
     if (!(x)) {                                                                                                                                                                                        \
         throw std::runtime_error("Assertion failed! " msg);                                                                                                                                            \
     }
+
+#define ASSERT(x) ASSERTM(x, "")

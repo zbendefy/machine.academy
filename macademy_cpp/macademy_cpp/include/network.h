@@ -63,9 +63,16 @@ namespace macademy
             return uint32_t(m_layers.size());
         }
 
+        uint32_t GetWeightByteSize() const
+        {
+            return sizeof(float);
+        }
+
         void GenerateRandomWeights(const IWeightInitializer& weight_initializer);
 
-        const uint32_t& GetInputCount() const { return m_input_arg_count; }
+        uint32_t GetInputCount() const { return m_input_arg_count; }
+
+        uint32_t GetOutputCount() const { return m_layers[m_layers.size() - 1].m_num_neurons; }
 
         const std::string& GetName() const { return m_name; }
         

@@ -9,6 +9,8 @@ namespace macademy
 
     struct NetworkResourceHandle
     {
+        virtual ~NetworkResourceHandle(){}
+        
         NetworkResourceHandle(Network& network) : m_network(&network) {}
 
         Network* m_network = nullptr;

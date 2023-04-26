@@ -47,29 +47,31 @@ float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, f
 	}
 }
 
-kernel void calcSingleLayer(__global const float* weights_biases,
-                              __constant const int* config, 
+__kernel void calcSingleLayer(__global const float* weights_biases,
+                              __constant const uint* config, 
                               __global const float* input,
                               __global float* output) 
 {
-    const int layer_neuron_count = config[0]; //number of neurons
-    const int prev_layer_neuron_count = config[1]; //weights-per-neurons
-    const int activationFunctionId = config[2]; 
-    const int weights_layer_offset = config[3]; //The offset where the weights and biases start
+    const uint layer_neuron_count = config[0]; //number of neurons
+    const uint weights_per_neuron = config[1]; //neurons in the prev layer
+    const uint activationFunctionId = config[2]; 
+    const uint weights_layer_offset = config[3]; //The offset where the weights and biases start
 
-    const int layer_neuron_id = get_global_id(0);
+    const uint layer_neuron_id = get_global_id(0);
  
     if (layer_neuron_id >= layer_neuron_count)
         return;
 
-    __global const float* layer_weights_biases = weights_biases + weights_layer_offset;
+    const uint neuron_data_size = weights_per_neuron + 1; //weights in prev layer + 1 bias
+
+    __global const float* neuron_weights_biases = weights_biases + weights_layer_offset + layer_neuron_id * neuron_data_size;
 
     float acc = 0;
-    for(int i = 0; i < prev_layer_neuron_count; ++i)
+    for(int i = 0; i < weights_per_neuron; ++i)
     {
-        acc += layer_weights_biases[(layer_neuron_id * prev_layer_neuron_count) + i] * input[i];
+        acc += neuron_weights_biases[i] * input[i];
     }
-    acc += layer_weights_biases[prev_layer_neuron_count * layer_neuron_count]; //bias
+    acc += neuron_weights_biases[weights_per_neuron]; //bias
 
     output[layer_neuron_id] = ActivationFunction(activationFunctionId, acc);
 }

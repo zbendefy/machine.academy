@@ -10,8 +10,12 @@ set(MACADEMY_BACKEND_OPENCL 1)
 
 if (MACADEMY_BACKEND_OPENCL)
 
+    message("OPENCL_SDK env var is set to: '$ENV{OPENCL_SDK}'")
+
     set(OPENCL_SOURCE_FILES 
         include/opencl_backend/opencl_compute_device.h
+        include/opencl_backend/opencl_common.h
+        include/opencl_backend/opencl_buffer.h
 
         src/opencl_backend/opencl_compute_device.cpp
     )
