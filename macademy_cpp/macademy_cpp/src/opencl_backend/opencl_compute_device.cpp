@@ -76,7 +76,7 @@ namespace macademy
             uint32_t weights_per_neuron = 0;
             uint32_t activation_function = 0;
             uint32_t weights_layer_offset = 0;
-        } args;
+        };
 
         const auto opencl_network = dynamic_cast<const OpenCLNetworkResourceHandle*>(&network_handle);
 
@@ -92,15 +92,18 @@ namespace macademy
             throw std::runtime_error("Invalid input length!");
         }
 
-        constexpr uint32_t local_workgroup_size = 32;
+        constexpr uint32_t local_workgroup_size = 128;
 
         auto layer_config = network.GetLayerConfig();
 
         auto layer_results_input = opencl_network->m_layer_result_buffer_a.get();
         auto layer_results_output = opencl_network->m_layer_result_buffer_b.get();
 
-        m_command_queue.enqueueWriteBuffer(opencl_network->m_arguments_buffer->GetBuffer(), true, 0, sizeof(Arguments), &args);
         m_command_queue.enqueueWriteBuffer(opencl_network->m_layer_result_buffer_a->GetBuffer(), true, 0, input.size_bytes(), input.data());
+
+        std::vector<Arguments> arguments;
+        arguments.resize(layer_config.size());
+        uint32_t layer_weights_offset = 0;
 
         float* neuron_weight_data = network.GetRawWeightData().data();
         for (size_t i = 0; i < layer_config.size(); ++i)
@@ -108,21 +111,20 @@ namespace macademy
             const uint32_t input_num = i == 0 ? input.size() : layer_config[i-1].m_num_neurons;
             const uint32_t output_num = layer_config[i].m_num_neurons;
 
-            args.activation_function = int(layer_config[i].m_activation);
-            args.weights_per_neuron = input_num;
-            args.layer_neurons = output_num;
+            arguments[i].activation_function = int(layer_config[i].m_activation);
+            arguments[i].weights_per_neuron = input_num;
+            arguments[i].layer_neurons = output_num;
+            arguments[i].weights_layer_offset = layer_weights_offset;
 
-            m_command_queue.enqueueWriteBuffer(opencl_network->m_arguments_buffer->GetBuffer(), false, 0, sizeof(Arguments), &args);
+            m_command_queue.enqueueWriteBuffer(opencl_network->m_arguments_buffer->GetBuffer(), false, 0, sizeof(Arguments), &arguments[i]); //Write arguments
 
             (*m_kernel_calc_single_layer)( cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, local_workgroup_size)), cl::NDRange(local_workgroup_size)), opencl_network->m_weights->GetBuffer(), opencl_network->m_arguments_buffer->GetBuffer(), layer_results_input->GetBuffer(), layer_results_output->GetBuffer());
 
-            m_command_queue.finish();
-
             const uint32_t layer_weight_size_bytes = input_num * output_num + output_num;
-            ASSERT(args.weights_layer_offset + layer_weight_size_bytes > args.weights_layer_offset);
-            args.weights_layer_offset += layer_weight_size_bytes;
+            ASSERTM(layer_weights_offset + layer_weight_size_bytes > layer_weights_offset, "Layer weights offset overflow!");
+            layer_weights_offset += layer_weight_size_bytes; //advance the offset in the weights buffer for the next layer
 
-            std::swap(layer_results_input, layer_results_output);
+            std::swap(layer_results_input, layer_results_output); //output of this layer is input of the next
         }
 
         std::vector<float> result;

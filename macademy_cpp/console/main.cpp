@@ -12,43 +12,37 @@ int main()
     layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 4 });
     layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::ReLU, .m_num_neurons = 15 });
     layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
-    layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384});
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2048 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2048 });
     layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 8});
     auto network = macademy::NetworkFactory::Build("test", 4, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
     network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
-    using DeviceNetwork = std::pair<std::unique_ptr<macademy::IComputeDevice>, std::unique_ptr<macademy::NetworkResourceHandle>>;
-    std::vector<DeviceNetwork> devices;
+    std::vector<std::unique_ptr<macademy::IComputeDevice>> devices;
+    std::vector<std::unique_ptr<macademy::NetworkResourceHandle>> uploaded_networks;
     
     {
         auto cpu_device = std::make_unique<macademy::CPUComputeDevice>();
-        auto cpu_network = cpu_device->RegisterNetwork(*network);
-        devices.emplace_back(DeviceNetwork(std::move(cpu_device), std::move(cpu_network)));
+        uploaded_networks.emplace_back(cpu_device->RegisterNetwork(*network));
+        devices.emplace_back(std::move(cpu_device));
     }
     
     for (const auto& opencl_device : macademy::OpenCLComputeDevice::GetDeviceList())
     {
         auto device = std::make_unique<macademy::OpenCLComputeDevice>(opencl_device);
-        auto ocl_network = device->RegisterNetwork(*network);
-        devices.emplace_back(DeviceNetwork(std::move(device), std::move(network)));
+        uploaded_networks.emplace_back(device->RegisterNetwork(*network));
+        devices.emplace_back(std::move(device));
     }
 
     std::vector<float> input{ 1,2,3,4 };
 
-    for (auto& device : devices)
+    for (size_t i = 0; i < devices.size(); ++i)
     {
-        std::cout << device.first->GetDeviceName() << std::endl;
+        std::cout << devices[i]->GetDeviceName() << std::endl;
 
         auto start = std::chrono::steady_clock::now();
-        auto result = device.first->Evaluate(*device.second, input);
+        auto result = devices[i]->Evaluate(*uploaded_networks[i], input);
         auto end = std::chrono::steady_clock::now();
 
         std::cout << "Result finished in: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
