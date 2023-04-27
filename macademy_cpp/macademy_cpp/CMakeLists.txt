@@ -46,6 +46,7 @@ add_library(${PROJECT_NAME}
 target_include_directories(${PROJECT_NAME} PUBLIC 
     ${CMAKE_CURRENT_LIST_DIR}/include 
     ${OPENCL_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/hwinfo/include
     )
 
 target_link_directories(${PROJECT_NAME} PUBLIC 
@@ -54,6 +55,7 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PUBLIC 
     ${OPENCL_LINK_LIBS}
+    hwinfo::HWinfo
 )
 
 add_library(::${PROJECT_NAME} ALIAS ${PROJECT_NAME}) 

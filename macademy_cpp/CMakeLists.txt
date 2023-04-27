@@ -13,6 +13,8 @@ set(COMPILE_TESTS false)
 
 include(compiler_flags.cmake)
 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/3rdparty/hwinfo)
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/macademy_cpp)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/console)

@@ -51,8 +51,6 @@ namespace macademy
         , m_context(device)
         , m_command_queue(m_context, m_device)
     {
-        m_name = device.getInfo<CL_DEVICE_NAME>();
-
         std::vector<std::string> programStrings{
             opencl_kernel_source
         };
@@ -158,9 +156,18 @@ namespace macademy
         return all_devices[0];
     }
 
-
-    const std::string& OpenCLComputeDevice::GetDeviceName() const
+    std::string OpenCLComputeDevice::GetDeviceName() const
     {
-        return m_name;
+        return "OpenCL Device: " + m_device.getInfo<CL_DEVICE_NAME>();
+    }
+
+    size_t OpenCLComputeDevice::GetTotalMemory() const
+    {
+        return size_t(m_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>());
+    }
+
+    uint32_t OpenCLComputeDevice::GetComputeUnits() const
+    {
+        return size_t(m_device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>());
     }
 }

@@ -1,3 +1,6 @@
 [submodule "machine_academy_cpp/3rdparty/json"]
 	path = machine_academy_cpp/3rdparty/json
 	url = https://github.com/nlohmann/json.git
+[submodule "macademy_cpp/3rdparty/hwinfo"]
+	path = macademy_cpp/3rdparty/hwinfo
+	url = https://github.com/lfreist/hwinfo.git

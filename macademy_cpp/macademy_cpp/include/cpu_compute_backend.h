@@ -9,10 +9,14 @@ namespace macademy
         const std::string m_name = "CPU device";
 
         public: 
-        virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
+        std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
 
-        virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
+        std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
 
-        const std::string& GetDeviceName() const override { return m_name; }
+        std::string GetDeviceName() const override;
+
+        size_t GetTotalMemory() const override;
+        
+        uint32_t GetComputeUnits() const override;
     };
 }

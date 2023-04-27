@@ -40,6 +40,8 @@ int main()
     for (size_t i = 0; i < devices.size(); ++i)
     {
         std::cout << devices[i]->GetDeviceName() << std::endl;
+        std::cout << "  Compute units: " << devices[i]->GetComputeUnits() << std::endl;
+        std::cout << "  Total memory: " << (devices[i]->GetTotalMemory() / (1024*1024)) << "MB" << std::endl;
 
         auto start = std::chrono::steady_clock::now();
         auto result = devices[i]->Evaluate(*uploaded_networks[i], input);

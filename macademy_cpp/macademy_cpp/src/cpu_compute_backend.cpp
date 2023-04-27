@@ -1,6 +1,7 @@
 #include "cpu_compute_backend.h"
 #include "network.h"
 #include "common.h"
+#include "hwinfo/hwinfo.h"
 
 namespace macademy
 {
@@ -43,6 +44,24 @@ namespace macademy
     std::unique_ptr<NetworkResourceHandle> CPUComputeDevice::RegisterNetwork(Network& network)
     {
         return std::make_unique<NetworkResourceHandle>(network);
+    }
+
+    std::string CPUComputeDevice::GetDeviceName() const 
+    {
+        hwinfo::CPU cpu;
+        return "CPU device: " + cpu.getModelName();
+    }
+
+    size_t CPUComputeDevice::GetTotalMemory() const
+    {
+        hwinfo::RAM ram;
+        return size_t(ram.getTotalSize_Bytes());
+    }
+
+    uint32_t CPUComputeDevice::GetComputeUnits() const
+    {
+        hwinfo::CPU cpu;
+        return cpu.getNumLogicalCores();
     }
 
     std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const
