@@ -1,4 +1,5 @@
 #include <iostream>
+#include <chrono>
 
 #include "network.h"
 #include "default_weight_initializer.h"
@@ -11,36 +12,52 @@ int main()
     layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 4 });
     layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::ReLU, .m_num_neurons = 15 });
     layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2 });
-    layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 128});
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{ .m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384 });
+    layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16384});
     layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 8});
     auto network = macademy::NetworkFactory::Build("test", 4, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
     network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
-    macademy::CPUComputeDevice compute_device_cpu{};
-    macademy::OpenCLComputeDevice compute_device_opencl{macademy::OpenCLComputeDevice::AutoSelectDevice()};
-
-    std::cout << "OpenCL device: " << compute_device_opencl.GetDeviceName() << std::endl;
-
-    auto uploaded_network_cpu = compute_device_cpu.RegisterNetwork(*network);
-    auto uploaded_network_opencl = compute_device_opencl.RegisterNetwork(*network);
-
-    std::vector<float> input{1,2,3,4};
-    auto result_cpu = compute_device_cpu.Evaluate(*uploaded_network_cpu, input);
-    auto result_opencl = compute_device_opencl.Evaluate(*uploaded_network_opencl, input);
-
-    std::cout << "Result CPU:" << std::endl;
-    for(auto r : result_cpu)
+    using DeviceNetwork = std::pair<std::unique_ptr<macademy::IComputeDevice>, std::unique_ptr<macademy::NetworkResourceHandle>>;
+    std::vector<DeviceNetwork> devices;
+    
     {
-        std::cout << r << std::endl;
+        auto cpu_device = std::make_unique<macademy::CPUComputeDevice>();
+        auto cpu_network = cpu_device->RegisterNetwork(*network);
+        devices.emplace_back(DeviceNetwork(std::move(cpu_device), std::move(cpu_network)));
+    }
+    
+    for (const auto& opencl_device : macademy::OpenCLComputeDevice::GetDeviceList())
+    {
+        auto device = std::make_unique<macademy::OpenCLComputeDevice>(opencl_device);
+        auto ocl_network = device->RegisterNetwork(*network);
+        devices.emplace_back(DeviceNetwork(std::move(device), std::move(network)));
     }
 
-    std::cout << std::endl;
+    std::vector<float> input{ 1,2,3,4 };
 
-    std::cout << "Result OpenCL:" << std::endl;
-    for (auto r : result_opencl)
+    for (auto& device : devices)
     {
-        std::cout << r << std::endl;
+        std::cout << device.first->GetDeviceName() << std::endl;
+
+        auto start = std::chrono::steady_clock::now();
+        auto result = device.first->Evaluate(*device.second, input);
+        auto end = std::chrono::steady_clock::now();
+
+        std::cout << "Result finished in: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+        for (auto r : result)
+        {
+            std::cout << r << std::endl;
+        }
+
+        std::cout <<  std::endl;
     }
 
     return 0;
