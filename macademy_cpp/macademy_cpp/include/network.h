@@ -7,13 +7,6 @@
 
 namespace macademy
 {
-    enum class ActivationFunction
-    {
-        Passtrough,
-        Sigmoid,
-        ReLU
-    };
-
     struct LayerConfig
     {
         ActivationFunction m_activation;

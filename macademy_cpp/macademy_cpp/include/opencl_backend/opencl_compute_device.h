@@ -11,7 +11,9 @@ namespace macademy
         cl::Context m_context;
         mutable cl::CommandQueue m_command_queue;
         cl::Program m_program;
+
         mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>> m_kernel_calc_single_layer;
+        cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 32;
 
         public: 
             OpenCLComputeDevice(cl::Device device);

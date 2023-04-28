@@ -59,6 +59,9 @@ namespace macademy
 
         m_kernel_calc_single_layer = std::make_unique<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>>(
             cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>(m_program, "calcSingleLayer"));
+
+            
+        m_kernel_calc_single_layer_ideal_workgroup_size = m_kernel_calc_single_layer->getKernel().getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(m_device, nullptr);
     }
 
     std::unique_ptr<NetworkResourceHandle> OpenCLComputeDevice::RegisterNetwork(Network& network)
@@ -90,8 +93,6 @@ namespace macademy
             throw std::runtime_error("Invalid input length!");
         }
 
-        constexpr uint32_t local_workgroup_size = 128;
-
         auto layer_config = network.GetLayerConfig();
 
         auto layer_results_input = opencl_network->m_layer_result_buffer_a.get();
@@ -116,7 +117,7 @@ namespace macademy
 
             m_command_queue.enqueueWriteBuffer(opencl_network->m_arguments_buffer->GetBuffer(), false, 0, sizeof(Arguments), &arguments[i]); //Write arguments
 
-            (*m_kernel_calc_single_layer)( cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, local_workgroup_size)), cl::NDRange(local_workgroup_size)), opencl_network->m_weights->GetBuffer(), opencl_network->m_arguments_buffer->GetBuffer(), layer_results_input->GetBuffer(), layer_results_output->GetBuffer());
+            (*m_kernel_calc_single_layer)( cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size)), cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size)), opencl_network->m_weights->GetBuffer(), opencl_network->m_arguments_buffer->GetBuffer(), layer_results_input->GetBuffer(), layer_results_output->GetBuffer());
 
             const uint32_t layer_weight_size_bytes = input_num * output_num + output_num;
             ASSERTM(layer_weights_offset + layer_weight_size_bytes > layer_weights_offset, "Layer weights offset overflow!");

@@ -19,6 +19,25 @@ namespace macademy
         std::normal_distribution<float_t> distribution(mean, sigma);
         return distribution(generator);
     }
+    
+    enum class ActivationFunction
+    {
+        Passtrough,
+        Sigmoid,
+        ReLU
+    };
+    
+    enum class CostFunction
+    {
+        MeanSquared,
+        CrossEntropy
+    };
+
+    enum class Regularization { 
+        None,
+        L1,
+        L2
+    };
 
 }
 

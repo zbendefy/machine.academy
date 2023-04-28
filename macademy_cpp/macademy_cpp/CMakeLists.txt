@@ -31,6 +31,8 @@ endif()
 
 add_library(${PROJECT_NAME}
     include/common.h
+    include/training.h
+    include/training_suite.h
     include/i_compute_backend.h
     include/cpu_compute_backend.h
     include/network.h
@@ -39,6 +41,7 @@ add_library(${PROJECT_NAME}
     
     src/cpu_compute_backend.cpp
     src/network.cpp
+    src/training.cpp
 
     ${OPENCL_SOURCE_FILES}
 )
