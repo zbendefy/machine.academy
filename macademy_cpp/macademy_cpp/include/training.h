@@ -3,14 +3,9 @@
 #include "network.h"
 #include "training_suite.h"
 
-
-namespace macademy
+namespace macademy {
+class Training
 {
-    class Training
-    {
-        TrainingResultTracker Train(Network& network, IComputeDevice& compute_device, const TrainingSuite& suite)
-        {
-            return {};
-        }
-    };
-}
+    TrainingResultTracker Train(Network& network, IComputeDevice& compute_device, const TrainingSuite& suite) { return {}; }
+};
+} // namespace macademy

@@ -1,6 +1,5 @@
 #include "training.h"
 
-namespace macademy
-{
-    
+namespace macademy {
+
 }

@@ -1,13 +1,12 @@
 #pragma once
 
-namespace macademy
+namespace macademy {
+class IWeightInitializer
 {
-    class IWeightInitializer
-    {
-        public:
-        virtual ~IWeightInitializer(){}
+  public:
+    virtual ~IWeightInitializer() {}
 
-        virtual float GetRandomWeight(uint32_t input_weight_count) const = 0;
-        virtual float GetRandomBias() const = 0;
-    };
-}
+    virtual float GetRandomWeight(uint32_t input_weight_count) const = 0;
+    virtual float GetRandomBias() const = 0;
+};
+} // namespace macademy

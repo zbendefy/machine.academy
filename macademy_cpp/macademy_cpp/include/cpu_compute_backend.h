@@ -2,23 +2,22 @@
 
 #include "i_compute_backend.h"
 
-namespace macademy
+namespace macademy {
+class CPUComputeDevice : public IComputeDevice
 {
-    class CPUComputeDevice : public IComputeDevice
-    {
-        const std::string m_name = "CPU device";
+    const std::string m_name = "CPU device";
 
-        public: 
-        std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
+  public:
+    std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
 
-        void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const override;
+    void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const override;
 
-        std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
+    std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
 
-        std::string GetDeviceName() const override;
+    std::string GetDeviceName() const override;
 
-        size_t GetTotalMemory() const override;
-        
-        uint32_t GetComputeUnits() const override;
-    };
-}
+    size_t GetTotalMemory() const override;
+
+    uint32_t GetComputeUnits() const override;
+};
+} // namespace macademy

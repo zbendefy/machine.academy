@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "run_clang_format",
+            "command": "python",
+            "type": "shell",
+            "args": [
+                "tools/clangformat/format.py",
+                "--clang_format_path=tools/clangformat",
+                "--clang_format_config=.clang-format",
+                "--add_folder=macademy_cpp",
+                "--add_folder=console"
+            ],
+            "problemMatcher": [
+                "$tsc"
+            ],
+            "presentation": {
+                "reveal": "silent"
+            },
+            "group": "build"
+        }
+    ]
+}
