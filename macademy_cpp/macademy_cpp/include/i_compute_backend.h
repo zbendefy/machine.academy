@@ -7,6 +7,7 @@
 namespace macademy
 {
     class Network;
+    class TrainingSuite;
 
     struct NetworkResourceHandle
     {
@@ -25,6 +26,8 @@ namespace macademy
         virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) = 0;
 
         virtual std::vector<float> Evaluate(const NetworkResourceHandle& network, const std::span<float>& input) const = 0;
+
+        virtual void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const = 0;
 
         virtual std::string GetDeviceName() const = 0;
 

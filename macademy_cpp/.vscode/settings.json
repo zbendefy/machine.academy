@@ -84,6 +84,8 @@
         "xloctime": "cpp",
         "xtree": "cpp",
         "codecvt": "cpp",
-        "future": "cpp"
+        "future": "cpp",
+        "cinttypes": "cpp",
+        "condition_variable": "cpp"
     }
 }

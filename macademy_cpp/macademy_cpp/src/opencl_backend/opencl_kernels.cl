@@ -48,14 +48,15 @@ float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, f
 }
 
 __kernel void calcSingleLayer(__global const float* weights_biases,
-                              __constant const uint* config, 
+                              __constant const uint* layer_config, 
                               __global const float* input,
-                              __global float* output) 
+                              __global float* output,
+                              const uint layer_id,
+                              const ulong weights_layer_offset) 
 {
-    const uint layer_neuron_count = config[0]; //number of neurons
-    const uint weights_per_neuron = config[1]; //neurons in the prev layer
-    const uint activationFunctionId = config[2]; 
-    const uint weights_layer_offset = config[3]; //The offset where the weights and biases start
+    const uint layer_neuron_count = layer_config[2 + layer_id * 2]; //number of neurons
+    const uint weights_per_neuron = layer_config[layer_id*2]; //neurons in the prev layer
+    const uint activationFunctionId = layer_config[3 + layer_id * 2]; 
 
     const uint layer_neuron_id = get_global_id(0);
  

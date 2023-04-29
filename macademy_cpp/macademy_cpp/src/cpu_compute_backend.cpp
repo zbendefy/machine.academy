@@ -1,6 +1,7 @@
 #include "cpu_compute_backend.h"
 #include "network.h"
 #include "common.h"
+#include "training_suite.h"
 #include "hwinfo/hwinfo.h"
 
 namespace macademy
@@ -39,6 +40,31 @@ namespace macademy
 
             throw std::runtime_error("Invalid activation function!");
         }
+    }
+
+    void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite) const
+    {
+        Network& network = *network_handle.m_network;
+         
+        TrainingResultTracker future;
+
+        if (training_suite.m_epochs < 1)
+        {
+            return;
+        }
+
+        std::async(std::launch::async, [&training_suite]() {
+
+            for (int currentEpoch = 0; currentEpoch < training_suite.m_epochs; currentEpoch++)
+            {
+                //if (stopatnextepoch) return;
+
+                if (training_suite.m_shuffle_training_data)
+                {
+                    //TODO
+                }
+            }
+        });
     }
 
     std::unique_ptr<NetworkResourceHandle> CPUComputeDevice::RegisterNetwork(Network& network)

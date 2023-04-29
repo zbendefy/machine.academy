@@ -12,7 +12,7 @@ namespace macademy
         mutable cl::CommandQueue m_command_queue;
         cl::Program m_program;
 
-        mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer>> m_kernel_calc_single_layer;
+        mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>> m_kernel_calc_single_layer;
         cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 32;
 
         public: 
@@ -21,6 +21,8 @@ namespace macademy
         virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
 
         virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
+
+        virtual void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const override;
 
         static std::vector<cl::Device> GetDeviceList();
 

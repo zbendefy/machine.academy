@@ -8,6 +8,8 @@
 #include <stdint.h>
 #include <random>
 #include <stdexcept>
+#include <future>
+#include <atomic>
 
 namespace macademy
 {
@@ -39,6 +41,13 @@ namespace macademy
         L2
     };
 
+    struct TrainingResultTracker
+    {
+        std::atomic<float> m_epoch_progress = 0;
+        std::atomic<uint64_t> m_epochs_finished = 0;
+        std::atomic<bool> m_stop_at_next_epoch = false;
+        std::future<int64_t> m_future;
+    };
 }
 
 #define ASSERTM(x, msg)                                                                                                                                                                                \
