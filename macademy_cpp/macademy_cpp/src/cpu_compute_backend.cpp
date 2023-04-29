@@ -3,6 +3,8 @@
 #include "common.h"
 #include "training_suite.h"
 #include "hwinfo/hwinfo.h"
+#include <execution>
+#include <algorithm>
 
 namespace macademy {
 namespace {
@@ -89,27 +91,33 @@ std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& netwo
     auto layer_config = network.GetLayerConfig();
     std::vector<float> layer_args = std::vector<float>(input.begin(), input.end());
     std::vector<float> layer_result{};
-    float* neuron_weight_data = network.GetRawWeightData().data();
+    const float* layer_weight_data = network.GetRawWeightData().data();
     for (size_t i = 0; i < layer_config.size(); ++i) {
         layer_result.clear();
         const uint32_t input_num = uint32_t(layer_args.size());
         const uint32_t output_num = layer_config[i].m_num_neurons;
+        const ActivationFunction activation = layer_config[i].m_activation;
 
         layer_result.resize(output_num);
-        for (uint32_t j = 0; j < output_num; ++j) {
+        
+        std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), output_num, [&network, input_num, &layer_weight_data, &layer_args, &layer_result, activation](const float& f) {
+            const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
             float acc = 0.0f;
-            for (uint32_t k = 0; k < input_num; k++) {
-                acc += *(neuron_weight_data++) * layer_args[k];
+            const float* neuron_weight_data = layer_weight_data + (input_num + 1) * neuron_id; //pointer to the weights of this neuron
+            for (uint32_t weight_id = 0; weight_id < input_num; weight_id++) {
+                acc += neuron_weight_data[weight_id] * layer_args[weight_id];
             }
-            acc += *(neuron_weight_data++);
+            acc += neuron_weight_data[input_num]; //bias
             // TODO: acc may become too large here in case of large networks, handle NaN!
-            layer_result[j] = CalculateActivationFunction(layer_config[i].m_activation, acc);
-        }
+            layer_result[neuron_id] = CalculateActivationFunction(activation, acc);
+            
+        });
 
+        layer_weight_data += input_num * output_num + output_num; //Advance the pointer to the weights of the layer
         std::swap(layer_args, layer_result);
     }
 
-    ASSERTM(neuron_weight_data - network.GetRawWeightData().data() == network.GetRawWeightData().size(), "");
+    ASSERTM(layer_weight_data - network.GetRawWeightData().data() == network.GetRawWeightData().size(), "");
     return layer_args;
 }
 } // namespace macademy
