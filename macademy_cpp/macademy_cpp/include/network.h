@@ -50,6 +50,8 @@ class Network
 
     uint32_t GetOutputCount() const { return m_layers[m_layers.size() - 1].m_num_neurons; }
 
+    uint32_t GetNeuronCount() const;
+
     const std::string& GetName() const { return m_name; }
 
     const std::string& GetDescription() const { return m_description; }

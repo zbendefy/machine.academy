@@ -8,7 +8,7 @@ message("System: " ${CMAKE_SYSTEM})
 message("System processor: " ${CMAKE_SYSTEM_PROCESSOR})
 message("Host system processor: " ${CMAKE_HOST_SYSTEM_PROCESSOR})
 
-set(COMPILE_TESTS false CACHE BOOL "Compile tests")
+set(COMPILE_TESTS true CACHE BOOL "Compile tests")
 set(COMPILE_TESTS true)
 
 include(compiler_flags.cmake)

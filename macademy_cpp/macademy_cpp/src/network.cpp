@@ -1,5 +1,6 @@
 #include <network.h>
 #include <i_weight_initializer.h>
+#include <algorithm>
 
 namespace macademy {
 Network::Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config) : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
@@ -38,6 +39,11 @@ void Network::GenerateRandomWeights(const IWeightInitializer& weight_initializer
             m_data[weight_bias_id++] = weight_initializer.GetRandomBias();
         }
     }
+}
+
+inline uint32_t Network::GetNeuronCount() const
+{
+    return std::accumulate(m_layers.begin(), m_layers.end(), 0, [](const LayerConfig& layer_conf) { return layer_conf.m_num_neurons; });
 }
 
 } // namespace macademy
