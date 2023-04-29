@@ -24,7 +24,7 @@ class IComputeDevice
 
     virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) = 0;
 
-    virtual std::vector<float> Evaluate(const NetworkResourceHandle& network, const std::span<float>& input) const = 0;
+    virtual std::vector<float> Evaluate(const NetworkResourceHandle& network, std::span<const float> input) const = 0;
 
     virtual void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const = 0;
 

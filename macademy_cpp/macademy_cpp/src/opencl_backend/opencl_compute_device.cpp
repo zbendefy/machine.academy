@@ -2,6 +2,7 @@
 #include "opencl_backend/opencl_buffer.h"
 #include "network.h"
 #include "common.h"
+#include "utils.h"
 
 #include <fstream>
 #include <sstream>
@@ -29,10 +30,7 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
 
     OpenCLNetworkResourceHandle(cl::Context& context, Network& network) : m_context(context), NetworkResourceHandle(network)
     {
-        const size_t largest_layer_size_bytes =
-            network.GetWeightByteSize() * std::max_element(network.GetLayerConfig().begin(), network.GetLayerConfig().end(), [](const LayerConfig& a, const LayerConfig& b) {
-                                              return a.m_num_neurons < b.m_num_neurons;
-                                          })->m_num_neurons;
+        const size_t largest_layer_size_bytes = CalculateLargestLayerNeuronCount(network.GetLayerConfig());
 
         std::vector<cl_uint> layer_config_buffer;
 
@@ -66,7 +64,7 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device) : m_device(device), 
 
 std::unique_ptr<NetworkResourceHandle> OpenCLComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<OpenCLNetworkResourceHandle>(m_context, network); }
 
-std::vector<float> OpenCLComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const
+std::vector<float> OpenCLComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const
 {
     const auto opencl_network = dynamic_cast<const OpenCLNetworkResourceHandle*>(&network_handle);
 

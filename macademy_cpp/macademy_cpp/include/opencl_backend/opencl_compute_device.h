@@ -19,7 +19,7 @@ class OpenCLComputeDevice : public IComputeDevice
 
     virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
 
-    virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
+    virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
 
     virtual void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const override;
 

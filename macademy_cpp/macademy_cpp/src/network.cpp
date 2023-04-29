@@ -1,10 +1,15 @@
 #include <network.h>
 #include <i_weight_initializer.h>
-#include <algorithm>
+#include <numeric>
 
 namespace macademy {
 Network::Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config) : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
 {
+    if(layer_config.empty())
+    {
+        throw std::runtime_error("Error! Cannot create empty network!");
+    }
+
     size_t data_size = 0;
 
     uint32_t layer_input_count = m_input_arg_count;
@@ -41,9 +46,9 @@ void Network::GenerateRandomWeights(const IWeightInitializer& weight_initializer
     }
 }
 
-inline uint32_t Network::GetNeuronCount() const
+uint32_t Network::GetNeuronCount() const
 {
-    return std::accumulate(m_layers.begin(), m_layers.end(), 0, [](const LayerConfig& layer_conf) { return layer_conf.m_num_neurons; });
+    return std::accumulate(m_layers.begin(), m_layers.end(), uint32_t(0), [](uint32_t sum, const LayerConfig& layer_conf) { return sum + layer_conf.m_num_neurons; });
 }
 
 } // namespace macademy

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "i_compute_backend.h"
+#include "common.h"
 #include <optional>
 
 namespace macademy {
@@ -15,21 +16,25 @@ class CPUComputeDevice : public IComputeDevice
         std::vector<float> m_z_values;
         std::vector<float> m_activations;
 
-        explicit InterimTrainingData(uint32_t data_size) 
+        explicit InterimTrainingData(uint32_t data_size)
         {
             m_z_values.resize(data_size);
             m_activations.resize(data_size);
         }
     };
 
-    std::vector<float> EvaluateAndCollectInterimData(const NetworkResourceHandle& network_handle, const std::span<float>& input, std::optional<InterimTrainingData>& z_values) const;
+    void CalculateOutputLayerGradient(const Network& network, CostFunction cost_function, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data, const std::vector<float>& training_input, const std::vector<float>& desired_output);
+
+    void CalculateHiddenLayerGradient(const Network& network, uint32_t layer_id, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data, const std::vector<float>& training_input);
+
+    std::vector<float> EvaluateAndCollectInterimData(const NetworkResourceHandle& network_handle, std::span<const float> input, std::optional<InterimTrainingData>& z_values) const;
 
   public:
     std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
 
     void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const override;
 
-    std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, const std::span<float>& input) const override;
+    std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
 
     std::string GetDeviceName() const override;
 

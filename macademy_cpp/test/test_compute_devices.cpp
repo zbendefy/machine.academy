@@ -4,6 +4,7 @@
 #include "default_weight_initializer.h"
 #include "cpu_compute_backend.h"
 #include "opencl_backend/opencl_compute_device.h"
+#include "utils.h"
 
 using namespace macademy;
 
@@ -26,6 +27,12 @@ class ComputeDevicesTest : public ::testing::Test
         m_network->GenerateRandomWeights(DefaultWeightInitializer{});
     }
 };
+
+
+TEST_F(ComputeDevicesTest, Utils)
+{
+    EXPECT_EQ(2048, CalculateLargestLayerNeuronCount(m_network->GetLayerConfig()));
+}
 
 TEST_F(ComputeDevicesTest, CPUComputeDevice)
 {

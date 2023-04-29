@@ -38,10 +38,12 @@ add_library(${PROJECT_NAME}
     include/network.h
     include/i_weight_initializer.h
     include/default_weight_initializer.h
+    include/utils.h
     
     src/cpu_compute_backend.cpp
     src/network.cpp
     src/training.cpp
+    src/utils.cpp
 
     ${OPENCL_SOURCE_FILES}
 )
