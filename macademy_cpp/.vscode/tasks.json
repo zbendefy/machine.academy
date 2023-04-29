@@ -10,6 +10,7 @@
                 "--clang_format_path=tools/clangformat",
                 "--clang_format_config=.clang-format",
                 "--add_folder=macademy_cpp",
+                "--add_folder=test",
                 "--add_folder=console"
             ],
             "problemMatcher": [

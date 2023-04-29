@@ -9,7 +9,7 @@ set(MACADEMY_BACKEND_OPENCL 1)
 #-----------------------------
 
 if (MACADEMY_BACKEND_OPENCL)
-
+    add_compile_definitions(MACADEMY_OPENCL_BACKEND=1)
     message("OPENCL_SDK env var is set to: '$ENV{OPENCL_SDK}'")
 
     set(OPENCL_SOURCE_FILES 

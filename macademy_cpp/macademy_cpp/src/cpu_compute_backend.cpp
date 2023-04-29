@@ -99,21 +99,20 @@ std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& netwo
         const ActivationFunction activation = layer_config[i].m_activation;
 
         layer_result.resize(output_num);
-        
+
         std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), output_num, [&network, input_num, &layer_weight_data, &layer_args, &layer_result, activation](const float& f) {
             const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
             float acc = 0.0f;
-            const float* neuron_weight_data = layer_weight_data + (input_num + 1) * neuron_id; //pointer to the weights of this neuron
+            const float* neuron_weight_data = layer_weight_data + (input_num + 1) * neuron_id; // pointer to the weights of this neuron
             for (uint32_t weight_id = 0; weight_id < input_num; weight_id++) {
                 acc += neuron_weight_data[weight_id] * layer_args[weight_id];
             }
-            acc += neuron_weight_data[input_num]; //bias
+            acc += neuron_weight_data[input_num]; // bias
             // TODO: acc may become too large here in case of large networks, handle NaN!
             layer_result[neuron_id] = CalculateActivationFunction(activation, acc);
-            
         });
 
-        layer_weight_data += input_num * output_num + output_num; //Advance the pointer to the weights of the layer
+        layer_weight_data += input_num * output_num + output_num; // Advance the pointer to the weights of the layer
         std::swap(layer_args, layer_result);
     }
 
