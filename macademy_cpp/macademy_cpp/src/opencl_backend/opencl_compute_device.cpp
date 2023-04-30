@@ -30,7 +30,7 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
 
     OpenCLNetworkResourceHandle(cl::Context& context, Network& network) : m_context(context), NetworkResourceHandle(network)
     {
-        const size_t largest_layer_size_bytes = CalculateLargestLayerNeuronCount(network.GetLayerConfig());
+        const size_t largest_layer_size_bytes = CalculateLargestLayerNeuronCount(network.GetLayerConfig()) * network.GetWeightByteSize();
 
         std::vector<cl_uint> layer_config_buffer;
 

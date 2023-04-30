@@ -9,7 +9,7 @@ class CPUComputeDevice : public IComputeDevice
 {
     const std::string m_name = "CPU device";
 
-    void TrainOnMinibatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite);
+    void TrainOnMinibatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t batch_begin, uint32_t batch_end);
 
     struct InterimTrainingData
     {

@@ -86,21 +86,35 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
     }
 
     std::async(std::launch::async, [&training_suite]() {
+        
+        std::random_device rd;
+        std::mt19937 g(rd());
+
+        std::vector<const TrainingData> training_data_shuffle_buffer; //TODO: threadlocal + clear
+        std::span<const TrainingData> training_data_view;
+
+        if (training_suite.m_shuffle_training_data) {
+            training_data_shuffle_buffer.resize(training_suite.m_training_data.size());
+            std::copy(training_suite.m_training_data.begin(), training_suite.m_training_data.end(), std::back_inserter(training_data_shuffle_buffer));
+            training_data_view = training_data_shuffle_buffer;
+        } else {
+            training_data_view = training_suite.m_training_data;
+        }
+
         for (int currentEpoch = 0; currentEpoch < training_suite.m_epochs; currentEpoch++) {
             // if (stopatnextepoch) return;
 
             if (training_suite.m_shuffle_training_data) {
-                // TODO
+                std::shuffle(training_data_view.begin(), training_data_view.end(), g);
             }
+
+
         }
     });
 }
 
-void CPUComputeDevice::TrainOnMinibatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite)
+void CPUComputeDevice::TrainOnMinibatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t batch_begin, uint32_t batch_end)
 {
-    uint32_t batch_begin = 0;
-    uint32_t batch_end = 10;
-
     const Network& network = *network_handle.m_network;
 
     const uint32_t total_neurons = network.GetNeuronCount();
@@ -126,7 +140,11 @@ void CPUComputeDevice::TrainOnMinibatch(const NetworkResourceHandle& network_han
         }
     }
 
-    //TODO apply gradient
+    std::for_each(std::execution::par_unseq, gradient.begin(), gradient.end(), [&gradient, network_handle](const float& g) { 
+        size_t idx = &g - &*gradient.begin();
+        network_handle.m_network->GetRawWeightData()[idx] += g;
+        });
+
 }
 
 void CPUComputeDevice::CalculateOutputLayerGradient(const Network& network, CostFunction cost_function, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data, const std::vector<float>& training_input, const std::vector<float>& desired_output)
