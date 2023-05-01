@@ -5,8 +5,7 @@
 namespace macademy {
 Network::Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config) : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
 {
-    if(layer_config.empty())
-    {
+    if (layer_config.empty()) {
         throw std::runtime_error("Error! Cannot create empty network!");
     }
 

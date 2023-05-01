@@ -1,6 +1,4 @@
 #include "utils.h"
 
-
-namespace macademy
-{
+namespace macademy {
 }

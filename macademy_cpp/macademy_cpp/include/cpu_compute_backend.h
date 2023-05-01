@@ -9,7 +9,7 @@ class CPUComputeDevice : public IComputeDevice
 {
     const std::string m_name = "CPU device";
 
-    std::vector<float> CalculateAccumulatedGradientForBatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t batch_begin, uint32_t batch_end);
+    std::vector<float> CalculateAccumulatedGradientForBatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t batch_begin, uint32_t batch_end) const;
 
     struct InterimTrainingData
     {
@@ -23,9 +23,11 @@ class CPUComputeDevice : public IComputeDevice
         }
     };
 
-    void CalculateOutputLayerGradient(const Network& network, CostFunction cost_function, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data, const std::vector<float>& training_input, const std::vector<float>& desired_output);
+    void CalculateOutputLayerGradient(const Network& network, CostFunction cost_function, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data,
+                                      const std::vector<float>& training_input, const std::vector<float>& desired_output) const;
 
-    void CalculateHiddenLayerGradient(const Network& network, uint32_t layer_id, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data, const std::vector<float>& training_input);
+    void CalculateHiddenLayerGradient(const Network& network, uint32_t layer_id, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data,
+                                      const std::vector<float>& training_input) const;
 
     std::vector<float> EvaluateAndCollectInterimData(const NetworkResourceHandle& network_handle, std::span<const float> input, std::optional<InterimTrainingData>& z_values) const;
 
