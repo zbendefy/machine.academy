@@ -85,7 +85,7 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
         return;
     }
 
-    std::async(std::launch::async, [&training_suite]() {
+    std::async(std::launch::async, [this, &training_suite, &network_handle]() {
         
         std::random_device rd;
         std::mt19937 g(rd());
@@ -108,19 +108,62 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
                 std::shuffle(training_data_view.begin(), training_data_view.end(), g);
             }
 
+            uint64_t trainingDataBegin = 0;
+            uint64_t trainingDataEnd = training_suite.m_mini_batch_size ? std::min(*training_suite.m_mini_batch_size, training_suite.m_training_data.size()) : training_suite.m_training_data.size();
+
+            while (true) 
+            {
+                ASSERT(trainingDataBegin < trainingDataEnd);
+
+                double sizeDivisor = 1.0 / (trainingDataEnd - trainingDataBegin);
+                const auto accumulated_gradient = CalculateAccumulatedGradientForBatch(network_handle, training_suite, trainingDataBegin, trainingDataEnd);
+
+                // Calculate regularization terms based on the training configuration
+                float regularizationTerm1 = 1.0f;
+                float regularizationTerm2Base = 0.0f;
+                if (training_suite.m_regularization == Regularization::L2) {
+                    regularizationTerm1 = 1.0f - training_suite.m_learning_rate * (training_suite.m_regularization_lambda / (float)training_suite.m_training_data.size());
+                } else if (training_suite.m_regularization == Regularization::L1) {
+                    regularizationTerm2Base = -((training_suite.m_learning_rate * (training_suite.m_regularization_lambda / (float)training_suite.m_training_data.size())));
+                }
+                const bool applyRegularizationTerm2 = regularizationTerm2Base != 0.0f;
+
+                const float normalized_learning_rate = training_suite.m_learning_rate / float(trainingDataEnd - trainingDataBegin);
+
+                //apply_gradient
+                std::for_each(std::execution::par_unseq, accumulated_gradient.begin(), accumulated_gradient.end(), [&accumulated_gradient, network_handle](const float& g) {
+                            size_t idx = &g - &*accumulated_gradient.begin();
+                            network_handle.m_network->GetRawWeightData()[idx] += g;
+                        });
+
+                if (training_suite.m_mini_batch_size) {
+                    if (trainingDataEnd >= training_suite.m_training_data.size()) {
+                        break;
+                    }
+
+                    /*trainingPromise.SetProgress(((float)trainingDataEnd + ((float)currentEpoch * (float)trainingSuite.trainingData.Count)) /
+                                                    ((float)trainingSuite.trainingData.Count * (float)trainingSuite.config.epochs),
+                                                currentEpoch + 1);*/
+
+                    trainingDataBegin = trainingDataEnd;
+                    trainingDataEnd = std::min(trainingDataEnd + *training_suite.m_mini_batch_size, training_suite.m_training_data.size());
+                } else {
+                    break;
+                }
+            }
 
         }
     });
 }
 
-void CPUComputeDevice::TrainOnMinibatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t batch_begin, uint32_t batch_end)
+std::vector<float> CPUComputeDevice::CalculateAccumulatedGradientForBatch(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t batch_begin, uint32_t batch_end)
 {
     const Network& network = *network_handle.m_network;
 
     const uint32_t total_neurons = network.GetNeuronCount();
 
-    std::vector<float> gradient;
-    gradient.resize(network.GetRawWeightData().size());
+    std::vector<float> accumulated_gradient;
+    accumulated_gradient.resize(network.GetRawWeightData().size(), 0.0f);
 
     for (int i = batch_begin; i < batch_end; ++i) {
         const auto& training_input = training_suite.m_training_data[i].m_input;
@@ -132,19 +175,15 @@ void CPUComputeDevice::TrainOnMinibatch(const NetworkResourceHandle& network_han
         std::vector<float> delta_k_buffer;
         delta_k_buffer.resize(CalculateLargestLayerNeuronCount(network.GetLayerConfig()));
 
-        CalculateOutputLayerGradient(network, training_suite.m_cost_function, gradient, delta_k_buffer, *interim_data, training_input, desired_output);
+        CalculateOutputLayerGradient(network, training_suite.m_cost_function, accumulated_gradient, delta_k_buffer, *interim_data, training_input, desired_output);
 
         for (int i = network.GetLayerConfig().size() - 2; i >= 0; --i)
         {
-            CalculateHiddenLayerGradient(network, i, gradient, delta_k_buffer, *interim_data, training_input);
+            CalculateHiddenLayerGradient(network, i, accumulated_gradient, delta_k_buffer, *interim_data, training_input);
         }
     }
 
-    std::for_each(std::execution::par_unseq, gradient.begin(), gradient.end(), [&gradient, network_handle](const float& g) { 
-        size_t idx = &g - &*gradient.begin();
-        network_handle.m_network->GetRawWeightData()[idx] += g;
-        });
-
+    return accumulated_gradient;
 }
 
 void CPUComputeDevice::CalculateOutputLayerGradient(const Network& network, CostFunction cost_function, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data, const std::vector<float>& training_input, const std::vector<float>& desired_output)
