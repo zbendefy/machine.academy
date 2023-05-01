@@ -50,7 +50,7 @@ struct TrainingSuite
     /// <summary>
     /// The cost function to use on the network's output
     /// </summary>
-    CostFunction m_cost_function = CostFunction::CrossEntropy;
+    CostFunction m_cost_function = CostFunction::CrossEntropy_Sigmoid;
 
     /// <summary>
     /// Regularization techniques help the network learn numerically smaller weights and biases

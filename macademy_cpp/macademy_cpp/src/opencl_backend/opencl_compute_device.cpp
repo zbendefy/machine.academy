@@ -113,7 +113,7 @@ std::vector<float> OpenCLComputeDevice::Evaluate(const NetworkResourceHandle& ne
     return result;
 }
 
-void OpenCLComputeDevice::Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite) const {}
+void OpenCLComputeDevice::Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const {}
 
 std::vector<cl::Device> OpenCLComputeDevice::GetDeviceList()
 {

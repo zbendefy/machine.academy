@@ -28,11 +28,7 @@ class ComputeDevicesTest : public ::testing::Test
     }
 };
 
-
-TEST_F(ComputeDevicesTest, Utils)
-{
-    EXPECT_EQ(2048, CalculateLargestLayerNeuronCount(m_network->GetLayerConfig()));
-}
+TEST_F(ComputeDevicesTest, Utils) { EXPECT_EQ(2048, CalculateLargestLayerNeuronCount(m_network->GetLayerConfig())); }
 
 TEST_F(ComputeDevicesTest, CPUComputeDevice)
 {

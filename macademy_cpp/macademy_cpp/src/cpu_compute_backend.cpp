@@ -47,7 +47,7 @@ inline float CalculateCostFunctionError(CostFunction cost_fnc, float result, flo
         float v = result - desired_output;
         return 0.5f * v * v;
     }
-    case CostFunction::CrossEntropy: {
+    case CostFunction::CrossEntropy_Sigmoid: {
         return -desired_output * logf(result) - (1.0f - desired_output) * logf(1.0f - result);
     }
     }
@@ -60,7 +60,7 @@ inline float CalculateCostFunctionDelta(CostFunction cost_fnc, float z, float a,
     case CostFunction::MeanSquared: {
         return (a - desired_output) * CalculateActivationFunctionPrime(activation_function, z);
     }
-    case CostFunction::CrossEntropy: {
+    case CostFunction::CrossEntropy_Sigmoid: {
         return a - desired_output;
     }
     }
@@ -69,99 +69,46 @@ inline float CalculateCostFunctionDelta(CostFunction cost_fnc, float z, float a,
 
 } // namespace
 
-void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite) const
+void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
 {
-    Network& network = *network_handle.m_network;
+    ASSERT(trainingDataBegin < trainingDataEnd);
 
-    TrainingResultTracker future;
+    auto& network = *network_handle.m_network;
+    const auto network_layout = network.GetLayerConfig();
 
-    if (training_suite.m_epochs < 1) {
-        return;
+    float size_divisor_and_learning_rate = training_suite.m_learning_rate / (trainingDataEnd - trainingDataBegin);
+    const auto accumulated_gradient = CalculateAccumulatedGradientForBatch(network_handle, training_suite, trainingDataBegin, trainingDataEnd);
+
+    // Calculate regularization terms based on the training configuration
+    float regularizationTerm1 = 1.0f;
+    float regularizationTerm2Base = 0.0f;
+    if (training_suite.m_regularization == Regularization::L2) {
+        regularizationTerm1 = 1.0f - training_suite.m_learning_rate * (training_suite.m_regularization_lambda / (float)training_suite.m_training_data.size());
+    } else if (training_suite.m_regularization == Regularization::L1) {
+        regularizationTerm2Base = -((training_suite.m_learning_rate * (training_suite.m_regularization_lambda / (float)training_suite.m_training_data.size())));
     }
+    const bool applyRegularizationTerm2 = regularizationTerm2Base != 0.0f;
 
-    std::async(std::launch::async, [this, &training_suite, &network_handle]() {
-        std::random_device rd;
-        std::mt19937 g(rd());
+    const float normalized_learning_rate = training_suite.m_learning_rate / float(trainingDataEnd - trainingDataBegin);
 
-        std::vector<TrainingData> training_data_shuffle_buffer; // TODO: threadlocal + clear
-        std::span<const TrainingData> training_data_view;
+    // apply_gradient
+    std::for_each(std::execution::par_unseq, network_layout.begin(), network_layout.end(), [&](const LayerConfig& layer_config) {
+        const uint32_t layer_id = &layer_config - &network_layout[0];
+        const auto layer_weight_data = network.GetRawWeightData().data() + GetOffsetToLayerWeights(network, layer_id);
+        auto layer_gradient_data = accumulated_gradient.data() + GetOffsetToLayerWeights(network, layer_id);
+        const auto weights_per_neuron = GetLayerWeightsPerNeuronCount(network, layer_id);
+        const auto neuron_data_size = weights_per_neuron + 1;
 
-        if (training_suite.m_shuffle_training_data) {
-            training_data_shuffle_buffer.resize(training_suite.m_training_data.size());
-            std::copy(training_suite.m_training_data.begin(), training_suite.m_training_data.end(), std::back_inserter(training_data_shuffle_buffer));
-            training_data_view = training_data_shuffle_buffer;
-        } else {
-            training_data_view = training_suite.m_training_data;
-        }
-
-        for (int currentEpoch = 0; currentEpoch < training_suite.m_epochs; currentEpoch++) {
-            // if (stopatnextepoch) return;
-
-            if (training_suite.m_shuffle_training_data) {
-                std::shuffle(training_data_shuffle_buffer.begin(), training_data_shuffle_buffer.end(), g);
-                training_data_view = training_suite.m_training_data; // update span after shuffling the source vector (todo: this might not be necessary)
-            }
-
-            Network& network = *network_handle.m_network;
-            const auto network_layout = network.GetLayerConfig();
-
-            uint64_t trainingDataBegin = 0;
-            uint64_t trainingDataEnd = training_suite.m_mini_batch_size ? std::min(*training_suite.m_mini_batch_size, training_suite.m_training_data.size()) : training_suite.m_training_data.size();
-
-            while (true) {
-                ASSERT(trainingDataBegin < trainingDataEnd);
-
-                float size_divisor_and_learning_rate = training_suite.m_learning_rate / (trainingDataEnd - trainingDataBegin);
-                const auto accumulated_gradient = CalculateAccumulatedGradientForBatch(network_handle, training_suite, trainingDataBegin, trainingDataEnd);
-
-                // Calculate regularization terms based on the training configuration
-                float regularizationTerm1 = 1.0f;
-                float regularizationTerm2Base = 0.0f;
-                if (training_suite.m_regularization == Regularization::L2) {
-                    regularizationTerm1 = 1.0f - training_suite.m_learning_rate * (training_suite.m_regularization_lambda / (float)training_suite.m_training_data.size());
-                } else if (training_suite.m_regularization == Regularization::L1) {
-                    regularizationTerm2Base = -((training_suite.m_learning_rate * (training_suite.m_regularization_lambda / (float)training_suite.m_training_data.size())));
-                }
-                const bool applyRegularizationTerm2 = regularizationTerm2Base != 0.0f;
-
-                const float normalized_learning_rate = training_suite.m_learning_rate / float(trainingDataEnd - trainingDataBegin);
-
-                // apply_gradient
-                std::for_each(std::execution::par_unseq, network_layout.begin(), network_layout.end(), [&](const LayerConfig& layer_config) {
-                    const uint32_t layer_id = &layer_config - &network_layout[0];
-                    const auto layer_weight_data = network.GetRawWeightData().data() + GetOffsetToLayerWeights(network, layer_id);
-                    auto layer_gradient_data = accumulated_gradient.data() + GetOffsetToLayerWeights(network, layer_id);
-                    const auto weights_per_neuron = GetLayerWeightsPerNeuronCount(network, layer_id);
-                    const auto neuron_data_size = weights_per_neuron + 1;
-
-                    for (size_t i = 0; i < layer_config.m_num_neurons; ++i) {
-                        auto neuron_weight_bias_data = layer_weight_data + i * neuron_data_size;
-                        for (size_t j = 0; j < weights_per_neuron; ++j) {
-                            const auto g = *(layer_gradient_data++);
-                            *neuron_weight_bias_data = regularizationTerm1 * (*neuron_weight_bias_data) - g * size_divisor_and_learning_rate;
-                            if (applyRegularizationTerm2) {
-                                *neuron_weight_bias_data -= regularizationTerm2Base * sign(*neuron_weight_bias_data);
-                            }
-                        }
-                        *neuron_weight_bias_data -= *(layer_gradient_data++) * size_divisor_and_learning_rate; // bias
-                    }
-                });
-
-                if (training_suite.m_mini_batch_size) {
-                    if (trainingDataEnd >= training_suite.m_training_data.size()) {
-                        break;
-                    }
-
-                    /*trainingPromise.SetProgress(((float)trainingDataEnd + ((float)currentEpoch * (float)trainingSuite.trainingData.Count)) /
-                                                    ((float)trainingSuite.trainingData.Count * (float)trainingSuite.config.epochs),
-                                                currentEpoch + 1);*/
-
-                    trainingDataBegin = trainingDataEnd;
-                    trainingDataEnd = std::min(trainingDataEnd + *training_suite.m_mini_batch_size, training_suite.m_training_data.size());
-                } else {
-                    break;
+        for (size_t i = 0; i < layer_config.m_num_neurons; ++i) {
+            auto neuron_weight_bias_data = layer_weight_data + i * neuron_data_size;
+            for (size_t j = 0; j < weights_per_neuron; ++j) {
+                const auto g = *(layer_gradient_data++);
+                *neuron_weight_bias_data = regularizationTerm1 * (*neuron_weight_bias_data) - g * size_divisor_and_learning_rate;
+                if (applyRegularizationTerm2) {
+                    *neuron_weight_bias_data -= regularizationTerm2Base * sign(*neuron_weight_bias_data);
                 }
             }
+            *neuron_weight_bias_data -= *(layer_gradient_data++) * size_divisor_and_learning_rate; // bias
         }
     });
 }
