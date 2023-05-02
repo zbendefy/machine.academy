@@ -20,7 +20,6 @@ template <typename float_t, typename Generator> float_t GenerateGaussianRandom(G
 
 enum class ActivationFunction
 {
-    Passtrough,
     Sigmoid,
     ReLU
 };

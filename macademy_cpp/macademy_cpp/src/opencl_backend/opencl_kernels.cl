@@ -8,11 +8,10 @@ float ActivationFunction(int functionId, float x)
 {
 	switch(functionId)
 	{
-        case 2: //ReLU
+        case 1: //ReLU
             return x < 0.0f ? 0.0f : x;
-		case 1: //Sigmoid
+		case 0: //Sigmoid
 			return 1.0f/(1.0f + exp(-x));
-		case 0: //Passtrough
 		default:
 			return x;
 	}
@@ -22,14 +21,13 @@ float ActivationFunctionPrime(int functionId, float x)
 {
 	switch(functionId)
 	{
-        case 2: //ReLU
+        case 1: //ReLU
             return x < 0.0f ? 0.0f : 1.0f;
-		case 1: //Sigmoid
+		case 0: //Sigmoid
         {
 			const float sigm = 1.0f/(1.0f + exp(-x));
             return sigm * (1.0f - sigm);
         }
-		case 0: //Passtrough
 		default:
 			return 0;
 	}

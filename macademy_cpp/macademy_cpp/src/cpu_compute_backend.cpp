@@ -13,8 +13,6 @@ namespace {
 inline float CalculateActivationFunction(ActivationFunction func, float x)
 {
     switch (func) {
-    case ActivationFunction::Passtrough:
-        return x;
     case ActivationFunction::Sigmoid:
         return 1.0f / (1.0f + std::expf(-x));
     case ActivationFunction::ReLU:
@@ -27,8 +25,6 @@ inline float CalculateActivationFunction(ActivationFunction func, float x)
 inline float CalculateActivationFunctionPrime(ActivationFunction func, float x)
 {
     switch (func) {
-    case ActivationFunction::Passtrough:
-        return 0;
     case ActivationFunction::Sigmoid: {
         const float sigm = CalculateActivationFunction(ActivationFunction::Sigmoid, x);
         return sigm * (1.0f - sigm);
@@ -234,18 +230,18 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
     std::vector<float> layer_result{};
     const float* layer_weight_data = network.GetRawWeightData().data();
 
-    uint32_t interim_data_written = 0;
+    uint64_t activation_offset = 0;
 
     for (size_t i = 0; i < layer_config.size(); ++i) {
         layer_result.clear();
         const uint32_t input_num = uint32_t(layer_args.size());
         const uint32_t output_num = layer_config[i].m_num_neurons;
-        ActivationFunction activation_fnc = output_interim_data ? ActivationFunction::Passtrough : layer_config[i].m_activation; // If Z values are required,
+        ActivationFunction activation_fnc = layer_config[i].m_activation; // If Z values are required,
 
         layer_result.resize(output_num);
 
         std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), output_num,
-                        [&network, input_num, &layer_weight_data, &layer_args, &layer_result, activation_fnc](const float& f) {
+                        [&](const float& f) {
                             const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
                             float acc = 0.0f;
                             const float* neuron_weight_data = layer_weight_data + (input_num + 1) * neuron_id; // pointer to the weights of this neuron
@@ -254,12 +250,10 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
                             }
                             acc += neuron_weight_data[input_num]; // bias
                             // TODO: acc may become too large here in case of large networks, handle NaN!
-                            layer_result[neuron_id] = CalculateActivationFunction(activation_fnc, acc);
+                            layer_result[neuron_id] = output_interim_data ? acc : CalculateActivationFunction(activation_fnc, acc);
                         });
 
         if (output_interim_data) {
-            const auto activation_offset = GetOffsetToLayerNeuronCount(layer_config, i);
-
             memcpy(output_interim_data->m_z_values.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
 
             ActivationFunction actual_activation_function = layer_config[i].m_activation;
@@ -269,7 +263,7 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
 
             memcpy(output_interim_data->m_activations.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
 
-            interim_data_written += layer_result.size();
+            activation_offset += layer_result.size();
         }
 
         layer_weight_data += input_num * output_num + output_num; // Advance the pointer to the weights of the layer
