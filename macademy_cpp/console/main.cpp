@@ -181,7 +181,14 @@ class SineTrainerApp : public ConsoleApp
 
             auto training_suite = std::make_shared<TrainingSuite>();
             
-            for (int i = 0; i < 1000; ++i) {
+            training_suite->m_mini_batch_size = 50;
+            training_suite->m_cost_function = CostFunction::MeanSquared;
+            training_suite->m_regularization = Regularization::None;
+            training_suite->m_learning_rate = 0.01f;
+            training_suite->m_shuffle_training_data = false;
+            training_suite->m_epochs = epochs;
+
+            for (int i = 0; i < 10000; ++i) {
                 TrainingData training_data;
                 const float sin_input = ((rand() % 1000) * 0.002f - 1.0f) * PI;  //random number between [-pi, pi]
                 const float sin_output = std::sinf(sin_input); //range: [-1, 1]

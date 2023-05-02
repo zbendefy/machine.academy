@@ -93,22 +93,26 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
     // apply_gradient
     std::for_each(std::execution::par_unseq, network_layout.begin(), network_layout.end(), [&](const LayerConfig& layer_config) {
         const uint32_t layer_id = &layer_config - &network_layout[0];
-        const auto layer_weight_data = network.GetRawWeightData().data() + GetOffsetToLayerWeights(network, layer_id);
-        auto layer_gradient_data = accumulated_gradient.data() + GetOffsetToLayerWeights(network, layer_id);
+        const auto layer_weight_data_offset = GetOffsetToLayerWeights(network, layer_id);
+        const auto layer_weight_data = network.GetRawWeightData().data() + layer_weight_data_offset;
+        auto layer_gradient_data = accumulated_gradient.data() + layer_weight_data_offset;
         const auto weights_per_neuron = GetLayerWeightsPerNeuronCount(network, layer_id);
         const auto neuron_data_size = weights_per_neuron + 1;
 
         for (size_t i = 0; i < layer_config.m_num_neurons; ++i) {
             auto neuron_weight_bias_data = layer_weight_data + i * neuron_data_size;
             for (size_t j = 0; j < weights_per_neuron; ++j) {
+                auto weight_data = neuron_weight_bias_data + j;
                 const auto g = *(layer_gradient_data++);
-                *neuron_weight_bias_data = regularizationTerm1 * (*neuron_weight_bias_data) - g * normalized_learning_rate;
+                *weight_data = regularizationTerm1 * (*weight_data) - g * normalized_learning_rate;
                 if (applyRegularizationTerm2) {
-                    *neuron_weight_bias_data -= regularizationTerm2Base * sign(*neuron_weight_bias_data);
+                    *weight_data -= regularizationTerm2Base * sign(*weight_data);
                 }
             }
-            *neuron_weight_bias_data -= *(layer_gradient_data++) * normalized_learning_rate; // bias
+            *(neuron_weight_bias_data + weights_per_neuron) -= *(layer_gradient_data++) * normalized_learning_rate; // bias
         }
+
+        ASSERT(layer_gradient_data - (accumulated_gradient.data() + layer_weight_data_offset) == (GetOffsetToLayerWeights(network, layer_id + 1) - GetOffsetToLayerWeights(network, layer_id)));
     });
 }
 
@@ -254,14 +258,16 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
                         });
 
         if (output_interim_data) {
-            memcpy(output_interim_data->m_z_values.data(), layer_result.data(), layer_result.size() * sizeof(float));
+            const auto activation_offset = GetOffsetToLayerNeuronCount(layer_config, i);
+
+            memcpy(output_interim_data->m_z_values.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
 
             ActivationFunction actual_activation_function = layer_config[i].m_activation;
             // If z value output was required, we had to skip the activation function to be able to provide it (by using passtrough). Here we apply the real activation function
             std::for_each(std::execution::par_unseq, layer_result.begin(), layer_result.end(),
                           [actual_activation_function](float& f) { f = CalculateActivationFunction(actual_activation_function, f); });
 
-            memcpy(output_interim_data->m_activations.data(), layer_result.data(), layer_result.size() * sizeof(float));
+            memcpy(output_interim_data->m_activations.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
 
             interim_data_written += layer_result.size();
         }
