@@ -76,7 +76,6 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
     auto& network = *network_handle.m_network;
     const auto network_layout = network.GetLayerConfig();
 
-    float size_divisor_and_learning_rate = training_suite.m_learning_rate / (trainingDataEnd - trainingDataBegin);
     const auto accumulated_gradient = CalculateAccumulatedGradientForBatch(network_handle, training_suite, trainingDataBegin, trainingDataEnd);
 
     // Calculate regularization terms based on the training configuration
@@ -103,12 +102,12 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
             auto neuron_weight_bias_data = layer_weight_data + i * neuron_data_size;
             for (size_t j = 0; j < weights_per_neuron; ++j) {
                 const auto g = *(layer_gradient_data++);
-                *neuron_weight_bias_data = regularizationTerm1 * (*neuron_weight_bias_data) - g * size_divisor_and_learning_rate;
+                *neuron_weight_bias_data = regularizationTerm1 * (*neuron_weight_bias_data) - g * normalized_learning_rate;
                 if (applyRegularizationTerm2) {
                     *neuron_weight_bias_data -= regularizationTerm2Base * sign(*neuron_weight_bias_data);
                 }
             }
-            *neuron_weight_bias_data -= *(layer_gradient_data++) * size_divisor_and_learning_rate; // bias
+            *neuron_weight_bias_data -= *(layer_gradient_data++) * normalized_learning_rate; // bias
         }
     });
 }

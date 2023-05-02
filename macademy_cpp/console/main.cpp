@@ -159,6 +159,8 @@ class SineTrainerApp : public ConsoleApp
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 1});
         m_network = macademy::NetworkFactory::Build("test", 1, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
+        
+        m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
         m_commands["train"].m_description = "Train the network";
         m_commands["train"].m_handler = [this](const std::vector<std::string>& args) {
@@ -190,7 +192,11 @@ class SineTrainerApp : public ConsoleApp
                 training_suite->m_training_data.push_back(training_data);
             }
 
-            m_trainer.Train(*network_on_device->second, *m_selected_device, training_suite);
+            auto tracker = m_trainer.Train(*network_on_device->second, *m_selected_device, training_suite);
+
+            tracker->m_future.wait();
+
+            std::cout << "Training finished!";
 
             return false;
         };
