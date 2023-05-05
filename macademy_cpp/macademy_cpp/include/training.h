@@ -7,12 +7,12 @@ namespace macademy {
 
 class Training
 {
-  public: 
-    std::shared_ptr<const TrainingResultTracker> Train(NetworkResourceHandle& network, IComputeDevice& compute_device, std::shared_ptr<TrainingSuite> training_suite) 
+  public:
+    std::shared_ptr<const TrainingResultTracker> Train(NetworkResourceHandle& network, IComputeDevice& compute_device, std::shared_ptr<TrainingSuite> training_suite)
     {
         auto training_result_tracker = std::make_shared<TrainingResultTracker>();
 
-        if (training_suite->m_epochs < 1) {
+        if (training_suite->m_epochs < 1 || training_suite->m_training_data.empty()) {
             return training_result_tracker;
         }
 

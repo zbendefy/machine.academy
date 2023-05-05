@@ -84,7 +84,7 @@ void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const 
     }
     const bool applyRegularizationTerm2 = regularizationTerm2Base != 0.0f;
 
-    const float normalized_learning_rate = training_suite.m_learning_rate / float(trainingDataEnd - trainingDataBegin);
+    const float normalized_learning_rate = training_suite.m_learning_rate * (float(trainingDataEnd - trainingDataBegin) / (float)training_suite.m_training_data.size());
 
     // apply_gradient
     std::for_each(std::execution::par_unseq, network_layout.begin(), network_layout.end(), [&](const LayerConfig& layer_config) {
@@ -240,18 +240,17 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
 
         layer_result.resize(output_num);
 
-        std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), output_num,
-                        [&](const float& f) {
-                            const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
-                            float acc = 0.0f;
-                            const float* neuron_weight_data = layer_weight_data + (input_num + 1) * neuron_id; // pointer to the weights of this neuron
-                            for (uint32_t weight_id = 0; weight_id < input_num; weight_id++) {
-                                acc += neuron_weight_data[weight_id] * layer_args[weight_id];
-                            }
-                            acc += neuron_weight_data[input_num]; // bias
-                            // TODO: acc may become too large here in case of large networks, handle NaN!
-                            layer_result[neuron_id] = output_interim_data ? acc : CalculateActivationFunction(activation_fnc, acc);
-                        });
+        std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), output_num, [&](const float& f) {
+            const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
+            float acc = 0.0f;
+            const float* neuron_weight_data = layer_weight_data + (input_num + 1) * neuron_id; // pointer to the weights of this neuron
+            for (uint32_t weight_id = 0; weight_id < input_num; weight_id++) {
+                acc += neuron_weight_data[weight_id] * layer_args[weight_id];
+            }
+            acc += neuron_weight_data[input_num]; // bias
+            // TODO: acc may become too large here in case of large networks, handle NaN!
+            layer_result[neuron_id] = output_interim_data ? acc : CalculateActivationFunction(activation_fnc, acc);
+        });
 
         if (output_interim_data) {
             memcpy(output_interim_data->m_z_values.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
