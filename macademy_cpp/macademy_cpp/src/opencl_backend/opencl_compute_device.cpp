@@ -56,7 +56,7 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig a
     std::vector<std::string> programStrings{opencl_kernel_source};
     m_program = cl::Program(m_context, programStrings);
 
-    std::string args = "-cl-std=CL1.1";
+    std::string args = "";//"-cl-std=CL1.1";
 
 #if CHECKED
     args += " -Werror";

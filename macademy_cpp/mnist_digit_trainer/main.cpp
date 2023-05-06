@@ -62,17 +62,17 @@ class MnistTrainerApp : public ConsoleApp
     MnistTrainerApp(const std::string& data_folder)
     {
         std::vector<macademy::LayerConfig> layers;
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 64});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 48});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
         m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
         m_training_suite = std::make_shared<TrainingSuite>();
-        m_training_suite->m_mini_batch_size = 100;
+        m_training_suite->m_mini_batch_size = 50;
         m_training_suite->m_cost_function = CostFunction::CrossEntropy_Sigmoid;
         m_training_suite->m_regularization = Regularization::L2;
-        m_training_suite->m_learning_rate = 0.01f;
+        m_training_suite->m_learning_rate = 0.012f;
         m_training_suite->m_shuffle_training_data = true;
 
         LoadMNISTData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
@@ -202,7 +202,7 @@ class MnistTrainerApp : public ConsoleApp
 
 int main()
 {
-    MnistTrainerApp app{"D:/Dev/macademy_datasets/mnist_digits"};
+    MnistTrainerApp app{"C:/tmp/MNIST"};
 
     app.Run();
     return 0;

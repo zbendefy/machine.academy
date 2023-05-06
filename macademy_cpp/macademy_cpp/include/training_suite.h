@@ -60,9 +60,9 @@ struct TrainingSuite
     Regularization m_regularization = Regularization::L2;
 
     /// <summary>
-    /// The lamdba to use if L1 or L2 regularization is enabled
+    /// The rate of regularization (lambda) to use if L1 or L2 regularization is enabled
     /// Larger values force the network more to prefer smaller weights and biases.
     /// </summary>
-    float m_regularization_lambda = 0.01f;
+    float m_regularization_rate = 0.01f;
 };
 } // namespace macademy
