@@ -55,6 +55,8 @@ class Network
     const std::string& GetName() const { return m_name; }
 
     const std::string& GetDescription() const { return m_description; }
+
+    static const uint32_t BINARY_VERSION = 0x00010000;
 };
 
 class NetworkFactory

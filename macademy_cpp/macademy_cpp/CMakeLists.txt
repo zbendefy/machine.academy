@@ -61,6 +61,7 @@ target_link_directories(${PROJECT_NAME} PUBLIC
 target_link_libraries(${PROJECT_NAME} PUBLIC 
     ${OPENCL_LINK_LIBS}
     hwinfo::HWinfo
+    nlohmann_json
 )
 
 add_library(::${PROJECT_NAME} ALIAS ${PROJECT_NAME}) 

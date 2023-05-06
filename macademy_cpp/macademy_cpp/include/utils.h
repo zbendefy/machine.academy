@@ -6,6 +6,7 @@
 #include <numeric>
 #include <cstdint>
 #include <span>
+#include <fstream>
 
 namespace macademy {
 class LayerConfig;
@@ -37,4 +38,10 @@ inline uint64_t GetOffsetToLayerNeuronCount(std::span<const LayerConfig> layer_c
 inline uint64_t GetLayerWeightsPerNeuronCount(const Network& network, uint32_t layer_id) { return layer_id == 0 ? network.GetInputCount() : network.GetLayerConfig()[layer_id - 1].m_num_neurons; }
 
 template <typename T> int sign(T val) { return (T(0) < val) - (val < T(0)); }
+
+void ExportNetworkAsJson(const Network& network, std::ostream& stream);
+
+void ExportNetworkAsBinary(const Network& network, std::ostream& stream);
+
+
 } // namespace macademy
