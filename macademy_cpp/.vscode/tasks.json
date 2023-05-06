@@ -11,6 +11,8 @@
                 "--clang_format_config=.clang-format",
                 "--add_folder=macademy_cpp",
                 "--add_folder=test",
+                "--add_folder=macademy_utils",
+                "--add_folder=mnist_digit_trainer",
                 "--add_folder=console"
             ],
             "problemMatcher": [

@@ -50,7 +50,8 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
     }
 };
 
-OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config) : m_device(device), m_device_config(advanced_config), m_context(device), m_command_queue(m_context, m_device)
+OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config)
+    : m_device(device), m_device_config(advanced_config), m_context(device), m_command_queue(m_context, m_device)
 {
     std::vector<std::string> programStrings{opencl_kernel_source};
     m_program = cl::Program(m_context, programStrings);

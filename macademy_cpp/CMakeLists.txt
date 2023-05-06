@@ -21,6 +21,8 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/macademy_utils)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/console)
 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/mnist_digit_trainer)
+
 if(COMPILE_TESTS)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test)
 endif()
