@@ -50,11 +50,34 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
     }
 };
 
-OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device) : m_device(device), m_context(device), m_command_queue(m_context, m_device)
+OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config) : m_device(device), m_device_config(advanced_config), m_context(device), m_command_queue(m_context, m_device)
 {
     std::vector<std::string> programStrings{opencl_kernel_source};
     m_program = cl::Program(m_context, programStrings);
-    m_program.build("");
+
+    std::string args = "-cl-std=CL1.1";
+
+#if CHECKED
+    args += " -Werror";
+#endif
+
+    if (m_device_config.m_fast_relaxed_math) {
+        args += " -cl-fast-relaxed-math";
+    }
+
+    if (m_device_config.m_mad_enable) {
+        args += " -cl-mad-enable";
+    }
+
+    if (m_device_config.m_no_signed_zeros) {
+        args += " -cl-no-signed-zeros";
+    }
+
+    if (m_device_config.m_unsafe_math_optimizations) {
+        args += " -cl-unsafe-math-optimizations";
+    }
+
+    m_program.build(args.c_str());
 
     m_kernel_calc_single_layer = std::make_unique<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>>(
         cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>(m_program, "calcSingleLayer"));

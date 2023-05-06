@@ -3,10 +3,23 @@
 #include "i_compute_backend.h"
 #include "opencl_common.h"
 
+#include <optional>
+
 namespace macademy {
+
+struct OpenCLDeviceConfig
+{
+    bool m_mad_enable = true;
+    bool m_fast_relaxed_math = true;
+    bool m_no_signed_zeros = true;
+    bool m_unsafe_math_optimizations = false;
+    std::optional<uint32_t> m_optimal_threadgroup_size;
+};
+
 class OpenCLComputeDevice : public IComputeDevice
 {
     cl::Device m_device;
+    OpenCLDeviceConfig m_device_config;
     cl::Context m_context;
     mutable cl::CommandQueue m_command_queue;
     cl::Program m_program;
@@ -15,7 +28,7 @@ class OpenCLComputeDevice : public IComputeDevice
     cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 32;
 
   public:
-    OpenCLComputeDevice(cl::Device device);
+    OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config = {});
 
     virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
 

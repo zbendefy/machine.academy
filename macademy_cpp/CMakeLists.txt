@@ -17,6 +17,8 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/3rdparty)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/macademy_cpp)
 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/macademy_utils)
+
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/console)
 
 if(COMPILE_TESTS)

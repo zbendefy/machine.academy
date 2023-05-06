@@ -1,4 +1,4 @@
-#include "console_app.h"
+#include "macademy_utils/console_app.h"
 
 constexpr float PI = 3.141592f;
 
