@@ -7,6 +7,8 @@ using namespace macademy;
 
 class MnistTrainerApp : public ConsoleApp
 {
+    static const int img_dimension = 28;
+
     std::unique_ptr<Network> m_network;
     Training m_trainer;
     std::shared_ptr<TrainingSuite> m_training_suite;
@@ -14,7 +16,7 @@ class MnistTrainerApp : public ConsoleApp
 
     static std::vector<uint8_t> ReadFile(const std::string& filename)
     {
-        std::ifstream infile(filename);
+        std::ifstream infile(filename, std::ios::binary);
         infile.seekg(0, std::ios::end);
         size_t length = infile.tellg();
         infile.seekg(0, std::ios::beg);
@@ -27,7 +29,7 @@ class MnistTrainerApp : public ConsoleApp
         return ret;
     }
 
-    static void LoadTrainingData(std::vector<TrainingData>& training_data_vector, const std::string& img_filename, const std::string& label_filename)
+    static void LoadMNISTData(std::vector<TrainingData>& training_data_vector, const std::string& img_filename, const std::string& label_filename)
     {
         // Details: http://yann.lecun.com/exdb/mnist/
 
@@ -39,7 +41,7 @@ class MnistTrainerApp : public ConsoleApp
         const uint8_t* labels = label_data.data() + 8; // first 8 bytes contain metadata
         const uint8_t* pixels = img_data.data() + 16;  // first 8 bytes contain metadata
 
-        const size_t image_data_size = 28 * 28 * sizeof(uint8_t);
+        const size_t image_data_size = img_dimension * img_dimension * sizeof(uint8_t);
 
         training_data_vector.reserve(training_data_vector.size() + data_count);
 
@@ -49,8 +51,8 @@ class MnistTrainerApp : public ConsoleApp
             training_data.m_desired_output = std::vector<float>(10, 0.0f);
             training_data.m_desired_output[labels[i]] = 1.0f;
 
-            training_data.m_input.resize(28 * 28, 0.0f);
-            for (uint32_t px = 0; px < 28 * 28; ++px) {
+            training_data.m_input.resize(img_dimension * img_dimension, 0.0f);
+            for (uint32_t px = 0; px < img_dimension * img_dimension; ++px) {
                 training_data.m_input[px] = float(pixels[i * image_data_size + px]) / 255.0f; // 0 means background (white), 255 means foreground (black).
             }
         }
@@ -62,7 +64,7 @@ class MnistTrainerApp : public ConsoleApp
         std::vector<macademy::LayerConfig> layers;
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 64});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
-        m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", 28 * 28, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
+        m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
         m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
@@ -73,9 +75,9 @@ class MnistTrainerApp : public ConsoleApp
         m_training_suite->m_learning_rate = 0.01f;
         m_training_suite->m_shuffle_training_data = true;
 
-        LoadTrainingData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
+        LoadMNISTData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
 
-        LoadTrainingData(m_test_data, data_folder + "/t10k-images.idx3-ubyte", data_folder + "/t10k-labels.idx1-ubyte");
+        LoadMNISTData(m_test_data, data_folder + "/t10k-images.idx3-ubyte", data_folder + "/t10k-labels.idx1-ubyte");
 
         m_commands["train"].m_description = "Train the network";
         m_commands["train"].m_handler = [this](const std::vector<std::string>& args) {
@@ -108,7 +110,12 @@ class MnistTrainerApp : public ConsoleApp
         m_commands["eval"].m_description = "Eval the test input [n] on the network";
         m_commands["eval"].m_handler = [this](const std::vector<std::string>& args) {
             int input = 0;
+            bool eval_from_training_dataset = false;
             for (int i = 1; i < args.size(); ++i) {
+                if (args[i] == "training") {
+                    eval_from_training_dataset = true;
+                }
+
                 switch (i) {
                 case 1:
                     input = atof(args[i].c_str());
@@ -122,11 +129,21 @@ class MnistTrainerApp : public ConsoleApp
                 network_on_device = m_uploaded_networks.find(m_selected_device);
             }
 
-            if (input < m_test_data.size() && input > 0) {
-                auto& test_data = m_test_data[input];
-                for (int y = 0; y < 28; ++y) {
-                    for (int x = 0; x < 28; ++x) {
-                        float pixel_value = test_data.m_input[y * 28 + x];
+            std::vector<TrainingData>* dataset = nullptr;
+
+            if (eval_from_training_dataset) {
+                dataset = &m_training_suite->m_training_data;
+                std::cout << "Eval from training dataset, #" << input << " of " << m_training_suite->m_training_data.size() << std::endl;
+            } else {
+                dataset = &m_test_data;
+                std::cout << "Eval from test dataset, #" << input << " of " << m_test_data.size() << std::endl;
+            }
+
+            if (input < dataset->size() && input >= 0) {
+                auto& test_data = (*dataset)[input];
+                for (int y = 0; y < img_dimension; ++y) {
+                    for (int x = 0; x < img_dimension; ++x) {
+                        float pixel_value = test_data.m_input[y * img_dimension + x];
                         if (pixel_value > 0.8f) {
                             std::cout << "##";
                         } else if (pixel_value > 0.5f) {
@@ -149,7 +166,7 @@ class MnistTrainerApp : public ConsoleApp
                 std::cout << "Network output: " << guessed_number;
 
             } else {
-                std::cout << "Input out of range (" << m_test_data.size() << ")";
+                std::cout << "Input out of range (" << dataset->size() << ")";
             }
 
             return false;
