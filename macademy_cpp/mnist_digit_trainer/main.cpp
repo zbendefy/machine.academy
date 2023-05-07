@@ -64,17 +64,19 @@ class MnistTrainerApp : public ConsoleApp
     MnistTrainerApp(const std::string& data_folder)
     {
         std::vector<macademy::LayerConfig> layers;
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 48});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 24});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
         m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
         m_training_suite = std::make_shared<TrainingSuite>();
-        m_training_suite->m_mini_batch_size = 50;
+        m_training_suite->m_mini_batch_size = 500;
         m_training_suite->m_cost_function = CostFunction::CrossEntropy_Sigmoid;
         m_training_suite->m_regularization = Regularization::L2;
-        m_training_suite->m_learning_rate = 0.012f;
+        m_training_suite->m_learning_rate = 0.01f;
         m_training_suite->m_shuffle_training_data = true;
 
         LoadMNISTData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
@@ -176,7 +178,6 @@ class MnistTrainerApp : public ConsoleApp
 
         m_commands["test"].m_description = "Test on the 10k test dataset";
         m_commands["test"].m_handler = [this](const std::vector<std::string>& args) {
-            size_t good_answers = 0;
 
             auto network_on_device = m_uploaded_networks.find(m_selected_device);
             if (network_on_device == m_uploaded_networks.end()) {
@@ -184,14 +185,7 @@ class MnistTrainerApp : public ConsoleApp
                 network_on_device = m_uploaded_networks.find(m_selected_device);
             }
 
-            for (size_t i = 0; i < m_test_data.size(); ++i) {
-                auto result = m_selected_device->Evaluate(*network_on_device->second, m_test_data[i].m_input);
-                auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
-                auto reference_solution = std::max_element(m_test_data[i].m_desired_output.begin(), m_test_data[i].m_desired_output.end()) - m_test_data[i].m_desired_output.begin();
-                if (guessed_number == reference_solution) {
-                    ++good_answers;
-                }
-            }
+            size_t good_answers = TestNetwork(*network_on_device->second);
 
             std::cout << "Test dataset count: " << m_test_data.size() << std::endl;
             std::cout << "Good answers: " << good_answers << std::endl;
@@ -209,6 +203,21 @@ class MnistTrainerApp : public ConsoleApp
             f.close();
             return false;
         };
+    }
+
+    size_t TestNetwork(const NetworkResourceHandle& network)
+    {
+        size_t good_answers = 0;
+        for (size_t i = 0; i < m_test_data.size(); ++i) {
+            auto result = m_selected_device->Evaluate(network, m_test_data[i].m_input);
+            auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
+            auto reference_solution = std::max_element(m_test_data[i].m_desired_output.begin(), m_test_data[i].m_desired_output.end()) - m_test_data[i].m_desired_output.begin();
+            if (guessed_number == reference_solution) {
+                ++good_answers;
+            }
+        }
+
+        return good_answers;
     }
 };
 

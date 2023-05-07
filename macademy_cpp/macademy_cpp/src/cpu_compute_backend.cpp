@@ -133,8 +133,8 @@ std::vector<float> CPUComputeDevice::CalculateAccumulatedGradientForBatch(const 
 
         CalculateOutputLayerGradient(network, training_suite.m_cost_function, accumulated_gradient, delta_k_buffer, *interim_data, training_input, desired_output);
 
-        for (int i = network.GetLayerConfig().size() - 2; i >= 0; --i) {
-            CalculateHiddenLayerGradient(network, i, accumulated_gradient, delta_k_buffer, *interim_data, training_input);
+        for (int lyr_id = network.GetLayerConfig().size() - 2; lyr_id >= 0; --lyr_id) {
+            CalculateHiddenLayerGradient(network, lyr_id, accumulated_gradient, delta_k_buffer, *interim_data, training_input);
         }
     }
 
