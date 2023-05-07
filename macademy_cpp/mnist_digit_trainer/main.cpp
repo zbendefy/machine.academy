@@ -1,6 +1,8 @@
 #include "macademy_utils/console_app.h"
+#include "utils.h"
 
 #include <fstream>
+#include <iostream>
 
 using namespace std::chrono_literals;
 using namespace macademy;
@@ -197,12 +199,22 @@ class MnistTrainerApp : public ConsoleApp
 
             return false;
         };
+        
+
+        m_commands["export"].m_description = "Test on the 10k test dataset";
+        m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
+            
+            std::ofstream f{"output.bin", std::ios::out | std::ios::binary};
+            ExportNetworkAsBinary(*m_network, f);
+            f.close();
+            return false;
+        };
     }
 };
 
 int main()
 {
-    MnistTrainerApp app{"C:/tmp/MNIST"};
+    MnistTrainerApp app{"/media/zoltan/Storage/Dev/macademy_datasets/mnist_digits"};
 
     app.Run();
     return 0;

@@ -14,7 +14,7 @@ inline float CalculateActivationFunction(ActivationFunction func, float x)
 {
     switch (func) {
     case ActivationFunction::Sigmoid:
-        return 1.0f / (1.0f + std::expf(-x));
+        return 1.0f / (1.0f + expf(-x));
     case ActivationFunction::ReLU:
         return x < 0.0f ? 0.0f : x;
     }

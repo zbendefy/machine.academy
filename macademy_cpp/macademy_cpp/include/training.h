@@ -3,6 +3,8 @@
 #include "network.h"
 #include "training_suite.h"
 
+#include <algorithm>
+
 namespace macademy {
 
 class Training

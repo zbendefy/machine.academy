@@ -88,7 +88,14 @@
         "cinttypes": "cpp",
         "condition_variable": "cpp",
         "execution": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "*.tcc": "cpp",
+        "bitset": "cpp",
+        "cwctype": "cpp",
+        "memory_resource": "cpp",
+        "string_view": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp"
     },
     "VsCodeTaskButtons.tasks": [
         {
