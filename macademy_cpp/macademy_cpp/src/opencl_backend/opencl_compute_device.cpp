@@ -28,7 +28,7 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
     std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_a;
     std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_b;
 
-    OpenCLNetworkResourceHandle(cl::Context& context, Network& network) : m_context(context), NetworkResourceHandle(network)
+    OpenCLNetworkResourceHandle(cl::Context& context, cl::CommandQueue& command_queue, Network& network) : m_context(context), NetworkResourceHandle(network)
     {
         const size_t largest_layer_size_bytes = CalculateLargestLayerNeuronCount(network.GetLayerConfig()) * network.GetWeightByteSize();
 
@@ -43,10 +43,18 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
             }
         }
 
-        m_weights = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, network.GetRawWeightData().size_bytes(), network.GetRawWeightData().data());
-        m_layer_config_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
+        m_weights = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, network.GetRawWeightData().size_bytes(), nullptr);
+        m_layer_config_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, layer_config_buffer.size() * sizeof(cl_uint), nullptr);
         m_layer_result_buffer_a = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_size_bytes, nullptr);
         m_layer_result_buffer_b = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_size_bytes, nullptr);
+
+        command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, network.GetRawWeightData().size_bytes(), network.GetRawWeightData().data());
+        command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
+        command_queue.finish();
+
+        //Note: using COPY_HOST_PTR at buffer creation is not optimal, as it will copy it first to host memory, and then upload it at kernel runtime
+        //Enqueueing a writebuffer separately makes sure there are no 2 copies, and that the buffer is uploaded when this function returns.
+        //See: https://stackoverflow.com/questions/3832963/what-is-the-difference-between-creating-a-buffer-object-with-clcreatebuffer-cl
     }
 };
 
@@ -86,7 +94,7 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig a
     m_kernel_calc_single_layer_ideal_workgroup_size = m_kernel_calc_single_layer->getKernel().getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(m_device, nullptr);
 }
 
-std::unique_ptr<NetworkResourceHandle> OpenCLComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<OpenCLNetworkResourceHandle>(m_context, network); }
+std::unique_ptr<NetworkResourceHandle> OpenCLComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<OpenCLNetworkResourceHandle>(m_context, m_command_queue, network); }
 
 std::vector<float> OpenCLComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const
 {
@@ -108,7 +116,7 @@ std::vector<float> OpenCLComputeDevice::Evaluate(const NetworkResourceHandle& ne
     auto layer_results_output = opencl_network->m_layer_result_buffer_b.get();
 
     // Write input into buffer
-    m_command_queue.enqueueWriteBuffer(opencl_network->m_layer_result_buffer_a->GetBuffer(), true, 0, input.size_bytes(), input.data());
+    m_command_queue.enqueueWriteBuffer(opencl_network->m_layer_result_buffer_a->GetBuffer(), false, 0, input.size_bytes(), input.data());
 
     cl_ulong weights_layer_offset = 0;
 

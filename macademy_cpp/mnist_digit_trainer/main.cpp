@@ -65,8 +65,7 @@ class MnistTrainerApp : public ConsoleApp
     {
         std::vector<macademy::LayerConfig> layers;
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 24});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 16});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
@@ -223,7 +222,7 @@ class MnistTrainerApp : public ConsoleApp
 
 int main()
 {
-    MnistTrainerApp app{"/media/zoltan/Storage/Dev/macademy_datasets/mnist_digits"};
+    MnistTrainerApp app{"D:/Dev/macademy_datasets/mnist_digits"};
 
     app.Run();
     return 0;

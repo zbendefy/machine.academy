@@ -186,7 +186,7 @@ void CPUComputeDevice::CalculateHiddenLayerGradient(const Network& network, uint
 {
     //Read only data
     const ActivationFunction activation_fnc = network.GetLayerConfig()[layer_id].m_activation;
-    const uint32_t layer_weight_count = layer_id == 0 ? training_input.size() : network.GetLayerConfig()[layer_id - 1].m_num_neurons;
+    const uint32_t layer_weight_count = GetLayerWeightsPerNeuronCount(network, layer_id);
     const uint32_t layer_neuron_count = network.GetLayerConfig()[layer_id].m_num_neurons;
     const uint32_t next_layer_neuron_count = network.GetLayerConfig()[layer_id + 1].m_num_neurons;
     std::span<const float> next_layer_weights = std::span<const float>(network.GetRawWeightData().begin() + GetOffsetToLayerWeights(network, layer_id + 1),
@@ -266,10 +266,8 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
         if (output_interim_data) {
             memcpy(output_interim_data->m_z_values.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
 
-            ActivationFunction actual_activation_function = layer_config[i].m_activation;
             // If z value output was required, we had to skip the activation function to be able to provide it (by using passtrough). Here we apply the real activation function
-            std::for_each(std::execution::par_unseq, layer_result.begin(), layer_result.end(),
-                          [actual_activation_function](float& f) { f = CalculateActivationFunction(actual_activation_function, f); });
+            std::for_each(std::execution::par_unseq, layer_result.begin(), layer_result.end(), [activation_fnc](float& f) { f = CalculateActivationFunction(activation_fnc, f); });
 
             memcpy(output_interim_data->m_activations.data() + activation_offset, layer_result.data(), layer_result.size() * sizeof(float));
 
