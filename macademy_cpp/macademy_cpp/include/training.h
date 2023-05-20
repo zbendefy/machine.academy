@@ -18,7 +18,7 @@ class Training
             return training_result_tracker;
         }
 
-        training_result_tracker->m_future = std::async(std::launch::async, [this, &compute_device, training_suite, network, training_result_tracker]() {
+        training_result_tracker->m_future = std::async(std::launch::async, [this, &compute_device, training_suite, &network, training_result_tracker]() {
             std::random_device rd;
             std::mt19937 g(rd());
 

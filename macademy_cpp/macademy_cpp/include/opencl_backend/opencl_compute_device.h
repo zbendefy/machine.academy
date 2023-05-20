@@ -20,12 +20,14 @@ class OpenCLComputeDevice : public IComputeDevice
 {
     cl::Device m_device;
     OpenCLDeviceConfig m_device_config;
-    cl::Context m_context;
+    mutable cl::Context m_context;
     mutable cl::CommandQueue m_command_queue;
     cl::Program m_program;
 
     mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>> m_kernel_calc_single_layer;
+    mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>> m_kernel_train_forward_pass;
     cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 32;
+    cl::size_type m_kernel_training_ideal_workgroup_size = 16;
 
   public:
     OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config = {});
@@ -34,7 +36,7 @@ class OpenCLComputeDevice : public IComputeDevice
 
     virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
 
-    virtual void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const override;
+    virtual void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const override;
 
     static std::vector<cl::Device> GetDeviceList();
 

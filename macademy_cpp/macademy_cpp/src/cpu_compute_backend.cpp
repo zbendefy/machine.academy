@@ -65,7 +65,7 @@ inline float CalculateCostFunctionDelta(CostFunction cost_fnc, float z, float a,
 
 } // namespace
 
-void CPUComputeDevice::Train(const NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
+void CPUComputeDevice::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
 {
     ASSERT(trainingDataBegin < trainingDataEnd);
 

@@ -26,7 +26,7 @@ class IComputeDevice
 
     virtual std::vector<float> Evaluate(const NetworkResourceHandle& network, std::span<const float> input) const = 0;
 
-    virtual void Train(const NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const = 0;
+    virtual void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const = 0;
 
     virtual std::string GetDeviceName() const = 0;
 
