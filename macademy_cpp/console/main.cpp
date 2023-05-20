@@ -64,7 +64,7 @@ class SineTrainerApp : public ConsoleApp
 
                 const float rnd = (rand() % 1000) / (1000.0f - 1.0f);
                 const float sin_input = ConvertNetworkInputToInput(rnd); // random number between [-pi, pi]
-                const float sin_output = std::sinf(sin_input);           // range: [-1, 1]
+                const float sin_output = sinf(sin_input);           // range: [-1, 1]
 
                 training_data.m_input.emplace_back(ConvertInputToNetworkInput(sin_input));
                 training_data.m_desired_output.emplace_back(ConvertOutputToNetworkOutput(sin_output));

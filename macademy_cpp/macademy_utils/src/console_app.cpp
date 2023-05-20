@@ -1,4 +1,5 @@
 #include "macademy_utils/console_app.h"
+#include <sstream>
 
 namespace macademy {
 
