@@ -24,8 +24,17 @@ class OpenCLComputeDevice : public IComputeDevice
     mutable cl::CommandQueue m_command_queue;
     cl::Program m_program;
 
-    mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>> m_kernel_calc_single_layer;
-    mutable std::unique_ptr<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>> m_kernel_train_forward_pass;
+    using KernelEval = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>;
+    using KernelTrainingForwardPass = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>;
+    using KernelTrainingBackwardPass =
+        cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_ulong, cl::Buffer, cl::Buffer, cl::Buffer>;
+    using KernelTrainingApplyGradient = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_float, cl_float, cl_float>;
+
+    mutable std::unique_ptr<KernelEval> m_kernel_calc_single_layer;
+    mutable std::unique_ptr<KernelTrainingForwardPass> m_kernel_train_forward_pass;
+    mutable std::unique_ptr<KernelTrainingBackwardPass> m_kernel_train_backward_pass;
+    mutable std::unique_ptr<KernelTrainingApplyGradient> m_kernel_train_apply_gradient;
+
     cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 32;
     cl::size_type m_kernel_training_ideal_workgroup_size = 16;
 

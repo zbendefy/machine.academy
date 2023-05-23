@@ -3,12 +3,11 @@
 
 namespace macademy {
 
-void ExportNetworkAsJson(const Network& network, std::ostream& stream) 
+void ExportNetworkAsJson(const Network& network, std::ostream& stream)
 {
     nlohmann::json output = {};
     output["name"] = network.GetName();
     output["description"] = "";
-
 }
 
 void ExportNetworkAsBinary(const Network& network, std::ostream& file)
@@ -24,10 +23,9 @@ void ExportNetworkAsBinary(const Network& network, std::ostream& file)
         file << uint32_t(layer.m_num_neurons);
     }
 
-    //write weights and biases
+    // write weights and biases
     file.write(reinterpret_cast<const char*>(network.GetRawWeightData().data()), network.GetRawWeightData().size());
 }
-
 
 std::unique_ptr<Network> ImportNetworkAsBinary(std::istream& file)
 {
@@ -38,7 +36,7 @@ std::unique_ptr<Network> ImportNetworkAsBinary(std::istream& file)
     {
         return nullptr;
     }*/
-    
+
     return nullptr;
 }
 

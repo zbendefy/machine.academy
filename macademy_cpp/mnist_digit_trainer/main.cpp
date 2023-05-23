@@ -177,7 +177,6 @@ class MnistTrainerApp : public ConsoleApp
 
         m_commands["test"].m_description = "Test on the 10k test dataset";
         m_commands["test"].m_handler = [this](const std::vector<std::string>& args) {
-
             auto network_on_device = m_uploaded_networks.find(m_selected_device);
             if (network_on_device == m_uploaded_networks.end()) {
                 m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
@@ -192,11 +191,9 @@ class MnistTrainerApp : public ConsoleApp
 
             return false;
         };
-        
 
         m_commands["export"].m_description = "Test on the 10k test dataset";
         m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
-            
             std::ofstream f{"output.bin", std::ios::out | std::ios::binary};
             ExportNetworkAsBinary(*m_network, f);
             f.close();
