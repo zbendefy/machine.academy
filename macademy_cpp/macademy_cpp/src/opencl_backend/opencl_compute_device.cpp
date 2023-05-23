@@ -235,17 +235,28 @@ void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const Tra
 
     ASSERT(weights_layer_offset == 0);
 
+    // Calculate regularization terms based on the training configuration
+    float regularizationTerm1 = 1.0f;
+    float regularizationTerm2Base = 0.0f;
+    if (training_suite.m_regularization == Regularization::L2) {
+        regularizationTerm1 = 1.0f - training_suite.m_learning_rate * (training_suite.m_regularization_rate / (float)training_suite.m_training_data.size());
+    } else if (training_suite.m_regularization == Regularization::L1) {
+        regularizationTerm2Base = -((training_suite.m_learning_rate * (training_suite.m_regularization_rate / (float)training_suite.m_training_data.size())));
+    }
+    const bool applyRegularizationTerm2 = regularizationTerm2Base != 0.0f;
+
+    const float normalized_learning_rate = training_suite.m_learning_rate * (float(trainingDataEnd - trainingDataBegin) / (float)training_suite.m_training_data.size());
+
     // Gradient apply pass
     for (uint32_t i = 0; i < layer_config.size(); ++i) {
         const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
         const uint32_t output_num = layer_config[i].m_num_neurons;
 
-        (*m_kernel_train_forward_pass)(cl::EnqueueArgs(m_command_queue,
-                                                       cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
-                                                                   ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
-                                                       cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
-                                       opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), m_activations_zvalues_buffer->GetBuffer(),
-                                       m_input_buffer->GetBuffer(), i, weights_layer_offset, num_training_samples, total_neuron_count);
+        (*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue,
+                                                       cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
+                                                       cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
+                                       opencl_network->m_weights->GetBuffer(), m_gradient_buffer->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(),
+                                        i, weights_layer_offset, regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);
 
         const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
         ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");

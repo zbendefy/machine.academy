@@ -236,7 +236,7 @@ __kernel void trainingBackwardPass(__global const float* weightsAndBiases,
 }
 
 __kernel void trainingApplyGradient(__global float* weights_biases,
-                                    __global float* gradient,
+                                    __global const float* gradient,
                                     __constant const uint* layer_config,
                                     const uint layer_id,
                                     const ulong weights_layer_offset,

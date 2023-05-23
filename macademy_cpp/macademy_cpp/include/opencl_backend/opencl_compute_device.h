@@ -35,8 +35,9 @@ class OpenCLComputeDevice : public IComputeDevice
     mutable std::unique_ptr<KernelTrainingBackwardPass> m_kernel_train_backward_pass;
     mutable std::unique_ptr<KernelTrainingApplyGradient> m_kernel_train_apply_gradient;
 
-    cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 32;
+    cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 64;
     cl::size_type m_kernel_training_ideal_workgroup_size = 16;
+    cl::size_type m_kernel_training_apply_gradient_ideal_workgroup_size = 64;
 
   public:
     OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config = {});
