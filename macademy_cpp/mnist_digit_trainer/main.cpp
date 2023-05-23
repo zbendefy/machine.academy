@@ -114,9 +114,13 @@ class MnistTrainerApp : public ConsoleApp
         m_commands["eval"].m_handler = [this](const std::vector<std::string>& args) {
             int input = 0;
             bool eval_from_training_dataset = false;
+            bool verbose = false;
             for (int i = 1; i < args.size(); ++i) {
                 if (args[i] == "training") {
                     eval_from_training_dataset = true;
+                }
+                if (args[i] == "verbose") {
+                    verbose = true;
                 }
 
                 switch (i) {
@@ -166,7 +170,14 @@ class MnistTrainerApp : public ConsoleApp
                 auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
 
                 std::cout << std::endl << "Label: " << label << std::endl;
-                std::cout << "Network output: " << guessed_number;
+                std::cout << "Network output: " << guessed_number << std::endl;
+
+                if (verbose) {
+                    std::cout << "Raw network output: " << std::endl;
+                    for (auto o : result) {
+                        std::cout << o << std::endl;
+                    }
+                }
 
             } else {
                 std::cout << "Input out of range (" << dataset->size() << ")";

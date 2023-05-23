@@ -50,7 +50,7 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
         m_layer_result_buffer_b = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_size_bytes, nullptr);
 
         command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, network.GetRawWeightData().size_bytes(), network.GetRawWeightData().data());
-        command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
+        command_queue.enqueueWriteBuffer(m_layer_config_buffer->GetBuffer(), false, 0, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
         command_queue.finish();
 
         // Note: using COPY_HOST_PTR at buffer creation is not optimal, as it will copy it first to host memory, and then upload it at kernel runtime
