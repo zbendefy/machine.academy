@@ -43,6 +43,6 @@ void ExportNetworkAsJson(const Network& network, std::ostream& stream);
 
 void ExportNetworkAsBinary(const Network& network, std::ostream& stream);
 
-void ImportNetworkAsBinary(const Network& network, std::ostream& stream);
+std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file);
 
 } // namespace macademy

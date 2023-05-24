@@ -205,9 +205,31 @@ class MnistTrainerApp : public ConsoleApp
 
         m_commands["export"].m_description = "Test on the 10k test dataset";
         m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
-            std::ofstream f{"output.bin", std::ios::out | std::ios::binary};
+            std::string filename = "output.bin";
+            for (int i = 1; i < args.size(); ++i) {
+                filename = args[i];
+            }
+
+            std::ofstream f{filename, std::ios::out | std::ios::binary};
             ExportNetworkAsBinary(*m_network, f);
             f.close();
+            return false;
+        };
+
+        m_commands["import"].m_description = "Test on the 10k test dataset";
+        m_commands["import"].m_handler = [this](const std::vector<std::string>& args) {
+
+            std::string filename = "output.bin";
+            for (int i = 1; i < args.size(); ++i) {
+                filename = args[i];
+            }
+
+            std::ifstream f{filename, std::ios::in | std::ios::binary};
+            m_network = ImportNetworkFromBinary(f);
+            f.close();
+
+            m_uploaded_networks.clear();
+
             return false;
         };
     }

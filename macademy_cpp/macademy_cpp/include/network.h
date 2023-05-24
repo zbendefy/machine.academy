@@ -32,7 +32,7 @@ class Network
     const uint32_t m_input_arg_count{};
 
   public:
-    Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config);
+    Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config, std::span<float> weights = std::span<float>());
 
     std::span<const float> GetRawWeightData() const { return std::span<const float>(m_data.data(), m_data.size()); }
 
@@ -62,7 +62,15 @@ class Network
 class NetworkFactory
 {
   public:
-    static std::unique_ptr<Network> Build(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config) { return std::make_unique<Network>(name, input_count, layer_config); }
+    static std::unique_ptr<Network> Build(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config, std::span<float> weights)
+    {
+        return std::make_unique<Network>(name, input_count, layer_config, weights);
+    }
+
+    static std::unique_ptr<Network> Build(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config)
+    {
+        return std::make_unique<Network>(name, input_count, layer_config);
+    }
 };
 
 } // namespace macademy

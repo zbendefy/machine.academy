@@ -3,7 +3,8 @@
 #include <numeric>
 
 namespace macademy {
-Network::Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config) : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
+Network::Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config, std::span<float> weights)
+    : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
 {
     if (layer_config.empty()) {
         throw std::runtime_error("Error! Cannot create empty network!");
@@ -24,6 +25,16 @@ Network::Network(const std::string& name, uint32_t input_count, std::span<LayerC
     }
 
     m_data.resize(data_size, 0);
+
+
+    if (!weights.empty())
+    {
+        if (weights.size() != data_size) {
+            throw std::runtime_error("Invalid input weight data size!");
+        }
+
+        memcpy(m_data.data(), weights.data(), weights.size_bytes());
+    }
 }
 
 void Network::GenerateRandomWeights(const IWeightInitializer& weight_initializer)
