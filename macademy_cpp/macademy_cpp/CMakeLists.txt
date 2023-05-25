@@ -9,7 +9,6 @@ set(MACADEMY_BACKEND_OPENCL 1)
 #-----------------------------
 
 if (MACADEMY_BACKEND_OPENCL)
-    add_compile_definitions(MACADEMY_OPENCL_BACKEND=1)
     message("OPENCL_SDK env var is set to: '$ENV{OPENCL_SDK}'")
 
     set(OPENCL_SOURCE_FILES 
@@ -48,6 +47,10 @@ add_library(${PROJECT_NAME}
     ${OPENCL_SOURCE_FILES}
 )
 
+if (MACADEMY_BACKEND_OPENCL)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC MACADEMY_OPENCL_BACKEND=1)
+endif()
+
 target_include_directories(${PROJECT_NAME} PUBLIC 
     ${CMAKE_CURRENT_LIST_DIR}/include 
     ${OPENCL_INCLUDE_DIRS}
@@ -58,10 +61,17 @@ target_link_directories(${PROJECT_NAME} PUBLIC
     ${OPENCL_LINK_DIRECTORY}
 )
 
+if(UNIX)
+    set(ADDITIONAL_LINK_TARGETS pthread) 
+else()
+    set(ADDITIONAL_LINK_TARGETS) 
+endif()
+
 target_link_libraries(${PROJECT_NAME} PUBLIC 
     ${OPENCL_LINK_LIBS}
     hwinfo::HWinfo
     nlohmann_json
+    ${ADDITIONAL_LINK_TARGETS}
 )
 
 add_library(::${PROJECT_NAME} ALIAS ${PROJECT_NAME}) 

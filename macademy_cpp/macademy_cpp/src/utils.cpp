@@ -3,11 +3,59 @@
 
 namespace macademy {
 
-void ExportNetworkAsJson(const Network& network, std::ostream& stream)
+namespace {
+nlohmann::json GetNetworkAsJsonObj(const Network& network)
 {
     nlohmann::json output = {};
     output["name"] = network.GetName();
     output["description"] = "";
+
+    const float* weights_data = network.GetRawWeightData().data();
+
+    for (auto layer_config : network.GetLayerConfig()) {
+        nlohmann::json layer;
+        nlohmann::json weightsMx;
+        nlohmann::json biases;
+
+        uint32_t weights_per_neuron = network.GetInputCount();
+
+        for (uint32_t n = 0; n < layer_config.m_num_neurons; ++n) {
+            nlohmann::json weights;
+            for (uint32_t w = 0; w < weights_per_neuron; ++w) {
+                weights.push_back(*weights_data);
+                ++weights_data;
+            }
+
+            biases.push_back(*weights_data);
+            ++weights_data;
+
+            weightsMx.push_back(std::move(weights));
+            weights_per_neuron = layer_config.m_num_neurons;
+        }
+
+        layer["weightMx"] = weightsMx;
+        layer["biases"] = biases;
+
+        if (layer_config.m_activation == ActivationFunction::Sigmoid) {
+            layer["activationFunction"] = "SigmoidActivation";
+        } else if (layer_config.m_activation == ActivationFunction::ReLU) {
+            layer["activationFunction"] = "ReLUActivation";
+        }
+
+        output["layers"].push_back(layer);
+    }
+
+    return output;
+}
+} // namespace
+
+void ExportNetworkAsJson(const Network& network, std::ostream& stream) { stream << GetNetworkAsJsonObj(network); }
+
+void ExportNetworkAsBson(const Network& network, std::ostream& stream)
+{
+    auto obj = GetNetworkAsJsonObj(network);
+    auto bson_data = nlohmann::json::to_bson(obj);
+    stream.write(reinterpret_cast<char*>(bson_data.data()), bson_data.size());
 }
 
 void ExportNetworkAsBinary(const Network& network, std::ostream& file)
@@ -37,7 +85,7 @@ void ExportNetworkAsBinary(const Network& network, std::ostream& file)
     uint64_t total_weight_count = uint64_t(network.GetRawWeightData().size());
     file.write(reinterpret_cast<const char*>(&total_weight_count), sizeof(total_weight_count));
 
-    file.write(reinterpret_cast<const char*>(network.GetRawWeightData().data()), network.GetRawWeightData().size());
+    file.write(reinterpret_cast<const char*>(network.GetRawWeightData().data()), network.GetRawWeightData().size() * sizeof(float));
 }
 
 std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file)
@@ -45,8 +93,7 @@ std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file)
     uint32_t file_binary_version;
     file.read(reinterpret_cast<char*>(&file_binary_version), sizeof(file_binary_version));
 
-    if(file_binary_version != Network::BINARY_VERSION)
-    {
+    if (file_binary_version != Network::BINARY_VERSION) {
         return nullptr;
     }
 
@@ -77,7 +124,7 @@ std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file)
 
     uint64_t total_weight_count;
     file.read(reinterpret_cast<char*>(&total_weight_count), sizeof(total_weight_count));
-    
+
     std::vector<float> weights;
     weights.resize(total_weight_count);
     file.read(reinterpret_cast<char*>(weights.data()), total_weight_count * sizeof(float));

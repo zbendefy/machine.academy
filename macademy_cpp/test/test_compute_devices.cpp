@@ -56,6 +56,7 @@ TEST_F(ComputeDevicesTest, CPUComputeDevice)
     }
 }
 
+#ifdef MACADEMY_OPENCL_BACKEND
 TEST_F(ComputeDevicesTest, OpenCLComputeDevice)
 {
     std::vector<float> input{1, -2, 3, -10, 10};
@@ -79,3 +80,4 @@ TEST_F(ComputeDevicesTest, OpenCLComputeDevice)
         }
     }
 }
+#endif

@@ -11,7 +11,6 @@ class MnistTrainerApp : public ConsoleApp
 {
     static const int img_dimension = 28;
 
-    std::unique_ptr<Network> m_network;
     Training m_trainer;
     std::shared_ptr<TrainingSuite> m_training_suite;
     std::vector<TrainingData> m_test_data;
@@ -199,36 +198,6 @@ class MnistTrainerApp : public ConsoleApp
             std::cout << "Test dataset count: " << m_test_data.size() << std::endl;
             std::cout << "Good answers: " << good_answers << std::endl;
             std::cout << "Result: " << (float(good_answers) / m_test_data.size()) * 100.0f << "%" << std::endl;
-
-            return false;
-        };
-
-        m_commands["export"].m_description = "Test on the 10k test dataset";
-        m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
-            std::string filename = "output.bin";
-            for (int i = 1; i < args.size(); ++i) {
-                filename = args[i];
-            }
-
-            std::ofstream f{filename, std::ios::out | std::ios::binary};
-            ExportNetworkAsBinary(*m_network, f);
-            f.close();
-            return false;
-        };
-
-        m_commands["import"].m_description = "Test on the 10k test dataset";
-        m_commands["import"].m_handler = [this](const std::vector<std::string>& args) {
-
-            std::string filename = "output.bin";
-            for (int i = 1; i < args.size(); ++i) {
-                filename = args[i];
-            }
-
-            std::ifstream f{filename, std::ios::in | std::ios::binary};
-            m_network = ImportNetworkFromBinary(f);
-            f.close();
-
-            m_uploaded_networks.clear();
 
             return false;
         };

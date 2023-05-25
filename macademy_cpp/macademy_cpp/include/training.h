@@ -18,13 +18,11 @@ class Training
             return training_result_tracker;
         }
 
-        if (training_suite->m_training_data[0].m_input.size() != network.m_network->GetInputCount())
-        {
+        if (training_suite->m_training_data[0].m_input.size() != network.m_network->GetInputCount()) {
             throw std::runtime_error("Invalid training input size!");
         }
-        
-        if (training_suite->m_training_data[0].m_desired_output.size() != network.m_network->GetOutputCount())
-        {
+
+        if (training_suite->m_training_data[0].m_desired_output.size() != network.m_network->GetOutputCount()) {
             throw std::runtime_error("Invalid training desired output size!");
         }
 
@@ -79,7 +77,7 @@ class Training
                 ++training_result_tracker->m_epochs_finished;
             }
 
-            //network.SynchronizeNetworkData();
+            // network.SynchronizeNetworkData();
             network.FreeTrainingResources();
 
             return training_suite->m_epochs;

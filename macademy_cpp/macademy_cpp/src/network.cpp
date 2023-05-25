@@ -26,9 +26,7 @@ Network::Network(const std::string& name, uint32_t input_count, std::span<LayerC
 
     m_data.resize(data_size, 0);
 
-
-    if (!weights.empty())
-    {
+    if (!weights.empty()) {
         if (weights.size() != data_size) {
             throw std::runtime_error("Invalid input weight data size!");
         }

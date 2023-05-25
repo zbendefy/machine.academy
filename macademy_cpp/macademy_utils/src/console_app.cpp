@@ -1,6 +1,14 @@
 #include "macademy_utils/console_app.h"
+#include "utils.h"
 
 namespace macademy {
+
+enum class ExportMode
+{
+    Binary,
+    Json,
+    Bson
+};
 
 std::vector<std::string> ConsoleApp::Split(const std::string& src, const char delimiter)
 {
@@ -41,10 +49,12 @@ ConsoleApp::ConsoleApp()
     m_devices.emplace_back(std::make_unique<CPUComputeDevice>());
     m_selected_device = m_devices.begin()->get();
 
+#ifdef MACADEMY_OPENCL_BACKEND
     auto opencl_devices = OpenCLComputeDevice::GetDeviceList();
     for (const auto cl_device : opencl_devices) {
         m_devices.emplace_back(std::make_unique<OpenCLComputeDevice>(cl_device));
     }
+#endif
 
     m_commands["quit"].m_description = "Exits the application";
     m_commands["quit"].m_handler = [](const std::vector<std::string>&) { return true; };
@@ -137,6 +147,53 @@ ConsoleApp::ConsoleApp()
         } else {
             std::cout << "No selected device!";
         }
+        return false;
+    };
+
+    m_commands["export"].m_description = "Test on the 10k test dataset";
+    m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
+        if (!m_network) {
+            std::cout << "Error! There is no network to be exported!" << std::endl;
+            return false;
+        }
+
+        std::string filename = "output.bin";
+        ExportMode export_mode = ExportMode::Binary;
+        for (int i = 1; i < args.size(); ++i) {
+            if (args[i] == "--json") {
+                export_mode = ExportMode::Json;
+            } else if (args[i] == "--bson") {
+                export_mode = ExportMode::Bson;
+            } else {
+                filename = args[i];
+            }
+        }
+
+        std::ofstream f{filename, std::ios::out | std::ios::binary};
+        if (export_mode == ExportMode::Json) {
+            ExportNetworkAsJson(*m_network, f);
+        } else if (export_mode == ExportMode::Bson) {
+            ExportNetworkAsBson(*m_network, f);
+        } else {
+            ExportNetworkAsBinary(*m_network, f);
+        }
+        f.close();
+        return false;
+    };
+
+    m_commands["import"].m_description = "Test on the 10k test dataset";
+    m_commands["import"].m_handler = [this](const std::vector<std::string>& args) {
+        std::string filename = "output.bin";
+        for (int i = 1; i < args.size(); ++i) {
+            filename = args[i];
+        }
+
+        std::ifstream f{filename, std::ios::in | std::ios::binary};
+        m_network = ImportNetworkFromBinary(f);
+        f.close();
+
+        m_uploaded_networks.clear();
+
         return false;
     };
 }
