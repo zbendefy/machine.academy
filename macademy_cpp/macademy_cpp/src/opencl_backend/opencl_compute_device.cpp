@@ -195,8 +195,8 @@ void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const Tra
 
     m_command_queue.enqueueFillBuffer<float>(opencl_network->m_gradient_buffer->GetBuffer(), 0.0f, 0, opencl_network->m_gradient_buffer->GetSize());
 
+    std::vector<float> training_input_buffer_data;
     {
-        std::vector<float> training_input_buffer_data;
         training_input_buffer_data.resize(num_training_samples * network.GetInputCount());
         auto data_ptr = training_input_buffer_data.data();
         for (auto i = trainingDataBegin; i < trainingDataEnd; ++i) {
@@ -207,8 +207,8 @@ void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const Tra
         m_command_queue.enqueueWriteBuffer(opencl_network->m_input_buffer->GetBuffer(), false, 0, training_input_buffer_data.size() * sizeof(float), training_input_buffer_data.data());
     }
 
+    std::vector<float> training_desired_output_buffer_data;
     {
-        std::vector<float> training_desired_output_buffer_data;
         training_desired_output_buffer_data.resize(num_training_samples * network.GetOutputCount());
         auto data_ptr = training_desired_output_buffer_data.data();
         for (auto i = trainingDataBegin; i < trainingDataEnd; ++i) {

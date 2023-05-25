@@ -63,8 +63,9 @@ class MnistTrainerApp : public ConsoleApp
     MnistTrainerApp(const std::string& data_folder)
     {
         std::vector<macademy::LayerConfig> layers;
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 1024});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 1024});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 1024});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
@@ -100,11 +101,18 @@ class MnistTrainerApp : public ConsoleApp
 
             m_training_suite->m_epochs = epochs;
 
+            auto time_begin = std::chrono::high_resolution_clock::now();
+
             auto tracker = m_trainer.Train(*network_on_device->second, *m_selected_device, m_training_suite);
 
             std::cout << std::endl;
 
             TrainingDisplay(*tracker);
+
+            auto time_end = std::chrono::high_resolution_clock::now();
+            auto duration = duration_cast<std::chrono::milliseconds>(time_end - time_begin);
+
+            std::cout << "Training time: " << duration << std::endl;
 
             return false;
         };

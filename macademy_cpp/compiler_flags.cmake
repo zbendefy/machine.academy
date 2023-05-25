@@ -88,8 +88,7 @@ if (NOT DEFINED COMPILER_FLAGS_DEFAULT)
                                ${COMPILER_FLAG_ITERATOR_BASE_CLASS_DEPRECATION_WARNING}
                                ${COMPILER_FLAG_RESULT_OF_DEPRECATION_WARNING}
                                ${COMPILER_FLAG_ALLOCATOR_VOID_DEPRECATION_WARNING}
-                               ${COMPILER_FLAG_SUPPRESS_WARNINGS}
-                               ${COMPILER_FLAG_VECTOR_EXTENSIONS})
+                               ${COMPILER_FLAG_SUPPRESS_WARNINGS})
 
     set(COMPILER_FLAGS_STRICT ${COMPILER_FLAGS_DEFAULT} ${COMPILER_FLAG_PEDANTIC_WARNINGS})
 
@@ -112,6 +111,7 @@ if (NOT DEFINED COMPILER_FLAGS_DEFAULT)
     endif()
 
     # add compile options for the current directory and below
+    add_compile_options(${COMPILER_FLAG_VECTOR_EXTENSIONS})
     #add_compile_options(${COMPILER_FLAGS_STRICT})
 
 endif()
