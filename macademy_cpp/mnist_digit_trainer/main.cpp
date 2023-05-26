@@ -18,6 +18,7 @@ class MnistTrainerApp : public ConsoleApp
     static std::vector<uint8_t> ReadFile(const std::string& filename)
     {
         std::ifstream infile(filename, std::ios::binary);
+        }
         infile.seekg(0, std::ios::end);
         size_t length = infile.tellg();
         infile.seekg(0, std::ios::beg);
