@@ -31,8 +31,10 @@ void ConsoleApp::TrainingDisplay(const TrainingResultTracker& tracker)
             break;
         }
 
+        constexpr int progressbar_length = 20;
+
         std::cout << "\rCurrent epoch: " << tracker.m_epochs_finished << ", Epoch progress: |";
-        for (float i = 0.0f; i < 1.0f; i += (1.0f / 8.0f)) {
+        for (float i = 0.0f; i < 1.0f; i += (1.0f / progressbar_length)) {
             if ((tracker.m_epoch_progress >= i)) {
                 std::cout << "#";
             } else {
@@ -193,6 +195,30 @@ ConsoleApp::ConsoleApp()
         f.close();
 
         m_uploaded_networks.clear();
+
+        return false;
+    };
+
+    m_commands["print_network"].m_description = "Print details about the network";
+    m_commands["print_network"].m_handler = [this](const std::vector<std::string>& args) {
+        
+        if(m_network)
+        {
+            std::cout << m_network->GetName() << std::endl;
+            std::cout << "Layers:" << std::endl;
+
+            std::cout << " Input layer: " << m_network->GetInputCount() << std::endl;
+
+            for(int i = 0; i < m_network->GetLayerConfig().size(); ++i)
+            {
+                const auto& layer_conf = m_network->GetLayerConfig()[i];
+                std::cout << " Layer " << i << ": " << layer_conf.m_num_neurons << "  Activation: " << uint32_t(layer_conf.m_activation) << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "No loaded network!" << std::endl;
+        }
 
         return false;
     };

@@ -148,10 +148,6 @@ __kernel void trainingForwardPass(__global const float* weights_biases,
     activationsAndZValues[layer_activation_offset+layer_neuron_id] = ActivationFunction(activationFunctionId, acc);
 }
 
-
-
-
-
 __kernel void trainingBackwardPass(__global const float* weightsAndBiases,
                                    __constant const uint* layer_config,
                                    __global const float* activationsAndZValues,

@@ -87,6 +87,7 @@ void ExportNetworkAsBinary(const Network& network, std::ostream& file)
 
     file.write(reinterpret_cast<const char*>(network.GetRawWeightData().data()), network.GetRawWeightData().size() * sizeof(float));
 }
+#pragma optimize("", off)
 
 std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file)
 {

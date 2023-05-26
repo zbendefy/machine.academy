@@ -77,7 +77,7 @@ class Training
                 ++training_result_tracker->m_epochs_finished;
             }
 
-            // network.SynchronizeNetworkData();
+            network.SynchronizeNetworkData();
             network.FreeTrainingResources();
 
             return training_suite->m_epochs;
