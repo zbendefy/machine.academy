@@ -7,7 +7,6 @@ using namespace macademy;
 
 class SineTrainerApp : public ConsoleApp
 {
-    std::unique_ptr<Network> m_network;
     Training m_trainer;
 
     //[-pi, pi] --> [0, 1]

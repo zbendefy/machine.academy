@@ -34,6 +34,7 @@ class ConsoleApp
     std::map<IComputeDevice*, std::unique_ptr<NetworkResourceHandle>> m_uploaded_networks;
     std::unordered_map<std::string, Command> m_commands;
     IComputeDevice* m_selected_device = nullptr;
+    std::unique_ptr<Network> m_network;
 
     std::vector<std::string> Split(const std::string& src, const char delimiter);
 

@@ -11,7 +11,6 @@ class MnistTrainerApp : public ConsoleApp
 {
     static const int img_dimension = 28;
 
-    std::unique_ptr<Network> m_network;
     Training m_trainer;
     std::shared_ptr<TrainingSuite> m_training_suite;
     std::vector<TrainingData> m_test_data;
@@ -64,18 +63,19 @@ class MnistTrainerApp : public ConsoleApp
     MnistTrainerApp(const std::string& data_folder)
     {
         std::vector<macademy::LayerConfig> layers;
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 256});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 64});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
         m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
         m_training_suite = std::make_shared<TrainingSuite>();
-        m_training_suite->m_mini_batch_size = 500;
+        m_training_suite->m_mini_batch_size = 100;
         m_training_suite->m_cost_function = CostFunction::CrossEntropy_Sigmoid;
         m_training_suite->m_regularization = Regularization::L2;
-        m_training_suite->m_learning_rate = 0.01f;
+        m_training_suite->m_learning_rate = 0.005f;
         m_training_suite->m_shuffle_training_data = true;
 
         LoadMNISTData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
@@ -101,11 +101,18 @@ class MnistTrainerApp : public ConsoleApp
 
             m_training_suite->m_epochs = epochs;
 
+            auto time_begin = std::chrono::high_resolution_clock::now();
+
             auto tracker = m_trainer.Train(*network_on_device->second, *m_selected_device, m_training_suite);
 
             std::cout << std::endl;
 
             TrainingDisplay(*tracker);
+
+            auto time_end = std::chrono::high_resolution_clock::now();
+            auto duration = duration_cast<std::chrono::milliseconds>(time_end - time_begin);
+
+            std::cout << "Training time: " << duration << std::endl;
 
             return false;
         };
@@ -114,9 +121,13 @@ class MnistTrainerApp : public ConsoleApp
         m_commands["eval"].m_handler = [this](const std::vector<std::string>& args) {
             int input = 0;
             bool eval_from_training_dataset = false;
+            bool verbose = false;
             for (int i = 1; i < args.size(); ++i) {
                 if (args[i] == "training") {
                     eval_from_training_dataset = true;
+                }
+                if (args[i] == "verbose") {
+                    verbose = true;
                 }
 
                 switch (i) {
@@ -166,7 +177,14 @@ class MnistTrainerApp : public ConsoleApp
                 auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
 
                 std::cout << std::endl << "Label: " << label << std::endl;
-                std::cout << "Network output: " << guessed_number;
+                std::cout << "Network output: " << guessed_number << std::endl;
+
+                if (verbose) {
+                    std::cout << "Raw network output: " << std::endl;
+                    for (auto o : result) {
+                        std::cout << o << std::endl;
+                    }
+                }
 
             } else {
                 std::cout << "Input out of range (" << dataset->size() << ")";
@@ -177,7 +195,6 @@ class MnistTrainerApp : public ConsoleApp
 
         m_commands["test"].m_description = "Test on the 10k test dataset";
         m_commands["test"].m_handler = [this](const std::vector<std::string>& args) {
-
             auto network_on_device = m_uploaded_networks.find(m_selected_device);
             if (network_on_device == m_uploaded_networks.end()) {
                 m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
@@ -190,16 +207,6 @@ class MnistTrainerApp : public ConsoleApp
             std::cout << "Good answers: " << good_answers << std::endl;
             std::cout << "Result: " << (float(good_answers) / m_test_data.size()) * 100.0f << "%" << std::endl;
 
-            return false;
-        };
-        
-
-        m_commands["export"].m_description = "Test on the 10k test dataset";
-        m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
-            
-            std::ofstream f{"output.bin", std::ios::out | std::ios::binary};
-            ExportNetworkAsBinary(*m_network, f);
-            f.close();
             return false;
         };
     }

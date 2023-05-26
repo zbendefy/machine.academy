@@ -1,7 +1,15 @@
 #include "macademy_utils/console_app.h"
+#include "utils.h"
 #include <sstream>
 
 namespace macademy {
+
+enum class ExportMode
+{
+    Binary,
+    Json,
+    Bson
+};
 
 std::vector<std::string> ConsoleApp::Split(const std::string& src, const char delimiter)
 {
@@ -24,8 +32,10 @@ void ConsoleApp::TrainingDisplay(const TrainingResultTracker& tracker)
             break;
         }
 
+        constexpr int progressbar_length = 20;
+
         std::cout << "\rCurrent epoch: " << tracker.m_epochs_finished << ", Epoch progress: |";
-        for (float i = 0.0f; i < 1.0f; i += (1.0f / 8.0f)) {
+        for (float i = 0.0f; i < 1.0f; i += (1.0f / progressbar_length)) {
             if ((tracker.m_epoch_progress >= i)) {
                 std::cout << "#";
             } else {
@@ -42,10 +52,12 @@ ConsoleApp::ConsoleApp()
     m_devices.emplace_back(std::make_unique<CPUComputeDevice>());
     m_selected_device = m_devices.begin()->get();
 
+#ifdef MACADEMY_OPENCL_BACKEND
     auto opencl_devices = OpenCLComputeDevice::GetDeviceList();
     for (const auto cl_device : opencl_devices) {
         m_devices.emplace_back(std::make_unique<OpenCLComputeDevice>(cl_device));
     }
+#endif
 
     m_commands["quit"].m_description = "Exits the application";
     m_commands["quit"].m_handler = [](const std::vector<std::string>&) { return true; };
@@ -138,6 +150,77 @@ ConsoleApp::ConsoleApp()
         } else {
             std::cout << "No selected device!";
         }
+        return false;
+    };
+
+    m_commands["export"].m_description = "Test on the 10k test dataset";
+    m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
+        if (!m_network) {
+            std::cout << "Error! There is no network to be exported!" << std::endl;
+            return false;
+        }
+
+        std::string filename = "output.bin";
+        ExportMode export_mode = ExportMode::Binary;
+        for (int i = 1; i < args.size(); ++i) {
+            if (args[i] == "--json") {
+                export_mode = ExportMode::Json;
+            } else if (args[i] == "--bson") {
+                export_mode = ExportMode::Bson;
+            } else {
+                filename = args[i];
+            }
+        }
+
+        std::ofstream f{filename, std::ios::out | std::ios::binary};
+        if (export_mode == ExportMode::Json) {
+            ExportNetworkAsJson(*m_network, f);
+        } else if (export_mode == ExportMode::Bson) {
+            ExportNetworkAsBson(*m_network, f);
+        } else {
+            ExportNetworkAsBinary(*m_network, f);
+        }
+        f.close();
+        return false;
+    };
+
+    m_commands["import"].m_description = "Test on the 10k test dataset";
+    m_commands["import"].m_handler = [this](const std::vector<std::string>& args) {
+        std::string filename = "output.bin";
+        for (int i = 1; i < args.size(); ++i) {
+            filename = args[i];
+        }
+
+        std::ifstream f{filename, std::ios::in | std::ios::binary};
+        m_network = ImportNetworkFromBinary(f);
+        f.close();
+
+        m_uploaded_networks.clear();
+
+        return false;
+    };
+
+    m_commands["print_network"].m_description = "Print details about the network";
+    m_commands["print_network"].m_handler = [this](const std::vector<std::string>& args) {
+        
+        if(m_network)
+        {
+            std::cout << m_network->GetName() << std::endl;
+            std::cout << "Layers:" << std::endl;
+
+            std::cout << " Input layer: " << m_network->GetInputCount() << std::endl;
+
+            for(int i = 0; i < m_network->GetLayerConfig().size(); ++i)
+            {
+                const auto& layer_conf = m_network->GetLayerConfig()[i];
+                std::cout << " Layer " << i << ": " << layer_conf.m_num_neurons << "  Activation: " << uint32_t(layer_conf.m_activation) << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "No loaded network!" << std::endl;
+        }
+
         return false;
     };
 }

@@ -24,14 +24,21 @@ size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
 struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
 {
     cl::Context& m_context;
+    cl::CommandQueue& m_command_queue;
     std::unique_ptr<OpenCLBuffer> m_weights;
     std::unique_ptr<OpenCLBuffer> m_layer_config_buffer;
     std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_a;
     std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_b;
 
-    OpenCLNetworkResourceHandle(cl::Context& context, cl::CommandQueue& command_queue, Network& network) : m_context(context), NetworkResourceHandle(network)
+    std::unique_ptr<OpenCLBuffer> m_input_buffer;
+    std::unique_ptr<OpenCLBuffer> m_desired_output_buffer;
+    std::unique_ptr<OpenCLBuffer> m_activations_zvalues_buffer;
+    std::unique_ptr<OpenCLBuffer> m_delta_k_buffer;
+    std::unique_ptr<OpenCLBuffer> m_gradient_buffer;
+
+    OpenCLNetworkResourceHandle(cl::Context& context, cl::CommandQueue& command_queue, Network& network) : m_context(context), m_command_queue(command_queue), NetworkResourceHandle(network)
     {
-        const size_t largest_layer_size_bytes = CalculateLargestLayerNeuronCount(network.GetLayerConfig()) * network.GetWeightByteSize();
+        const size_t largest_layer_size_bytes = std::max(network.GetInputCount(), CalculateLargestLayerNeuronCount(network.GetLayerConfig())) * network.GetWeightByteSize();
 
         std::vector<cl_uint> layer_config_buffer;
 
@@ -49,13 +56,33 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
         m_layer_result_buffer_a = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_size_bytes, nullptr);
         m_layer_result_buffer_b = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_size_bytes, nullptr);
 
-        command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, network.GetRawWeightData().size_bytes(), network.GetRawWeightData().data());
-        command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
-        command_queue.finish();
+        m_command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, network.GetRawWeightData().size_bytes(), network.GetRawWeightData().data());
+        m_command_queue.enqueueWriteBuffer(m_layer_config_buffer->GetBuffer(), false, 0, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
+        m_command_queue.finish();
 
-        //Note: using COPY_HOST_PTR at buffer creation is not optimal, as it will copy it first to host memory, and then upload it at kernel runtime
-        //Enqueueing a writebuffer separately makes sure there are no 2 copies, and that the buffer is uploaded when this function returns.
-        //See: https://stackoverflow.com/questions/3832963/what-is-the-difference-between-creating-a-buffer-object-with-clcreatebuffer-cl
+        // Note: using COPY_HOST_PTR at buffer creation is not optimal, as it will copy it first to host memory, and then upload it at kernel runtime
+        // Enqueueing a writebuffer separately makes sure there are no 2 copies, and that the buffer is uploaded when this function returns.
+        // See: https://stackoverflow.com/questions/3832963/what-is-the-difference-between-creating-a-buffer-object-with-clcreatebuffer-cl
+    }
+
+    void SynchronizeNetworkData() override { m_command_queue.enqueueReadBuffer(m_weights->GetBuffer(), true, 0, m_weights->GetSize(), m_network->GetRawWeightData().data()); }
+
+    virtual void AllocateTrainingResources(uint32_t training_sample_count)
+    {
+        m_input_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, training_sample_count * m_network->GetInputCount() * sizeof(float), nullptr);
+        m_desired_output_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, training_sample_count * m_network->GetOutputCount() * sizeof(float), nullptr);
+        m_activations_zvalues_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, training_sample_count * m_network->GetNeuronCount() * 2 * sizeof(float), nullptr);
+        m_delta_k_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, training_sample_count * m_network->GetNeuronCount() * 2 * sizeof(float), nullptr);
+        m_gradient_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, m_network->GetRawWeightData().size_bytes(), nullptr);
+    }
+
+    virtual void FreeTrainingResources()
+    {
+        m_input_buffer.reset();
+        m_desired_output_buffer.reset();
+        m_activations_zvalues_buffer.reset();
+        m_delta_k_buffer.reset();
+        m_gradient_buffer.reset();
     }
 };
 
@@ -65,7 +92,7 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig a
     std::vector<std::string> programStrings{opencl_kernel_source};
     m_program = cl::Program(m_context, programStrings);
 
-    std::string args = "";//"-cl-std=CL1.1";
+    std::string args = ""; //"-cl-std=CL1.1";
 
 #if CHECKED
     args += " -Werror";
@@ -89,13 +116,13 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig a
 
     m_program.build(args.c_str());
 
-    m_kernel_calc_single_layer = std::make_unique<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>>(
-        cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>(m_program, "calcSingleLayer"));
+    m_kernel_calc_single_layer = std::make_unique<KernelEval>(KernelEval(m_program, "calcSingleLayer"));
 
     m_kernel_calc_single_layer_ideal_workgroup_size = m_kernel_calc_single_layer->getKernel().getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(m_device, nullptr);
 
-    m_kernel_train_forward_pass = std::make_unique<cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>>(
-        cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>(m_program, "trainingForwardPass"));
+    m_kernel_train_forward_pass = std::make_unique<KernelTrainingForwardPass>(KernelTrainingForwardPass(m_program, "trainingForwardPass"));
+    m_kernel_train_backward_pass = std::make_unique<KernelTrainingBackwardPass>(KernelTrainingBackwardPass(m_program, "trainingBackwardPass"));
+    m_kernel_train_apply_gradient = std::make_unique<KernelTrainingApplyGradient>(KernelTrainingApplyGradient(m_program, "trainingApplyGradient"));
 }
 
 std::unique_ptr<NetworkResourceHandle> OpenCLComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<OpenCLNetworkResourceHandle>(m_context, m_command_queue, network); }
@@ -160,26 +187,42 @@ void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const Tra
     Network& network = *network_handle.m_network;
 
     const uint32_t num_training_samples = trainingDataEnd - trainingDataBegin;
+    auto layer_config = network.GetLayerConfig();
     const uint32_t total_neuron_count = network.GetNeuronCount();
-    
-    std::unique_ptr<OpenCLBuffer> m_input_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, num_training_samples * network.GetInputCount() * sizeof(float), nullptr);
-    std::unique_ptr<OpenCLBuffer> m_activations_zvalues_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, network.GetNeuronCount() * 2 * sizeof(float), nullptr);
+    const auto largest_layer_neuron_count = CalculateLargestLayerNeuronCount(layer_config);
 
-    
+    ASSERTM(opencl_network->m_input_buffer, "No training resources were allocated!");
+
+    m_command_queue.enqueueFillBuffer<float>(opencl_network->m_gradient_buffer->GetBuffer(), 0.0f, 0, opencl_network->m_gradient_buffer->GetSize());
+
     std::vector<float> training_input_buffer_data;
-    training_input_buffer_data.resize(num_training_samples * network.GetInputCount());
-    auto input_ptr = training_input_buffer_data.data();
-    for (auto i = trainingDataBegin; i < trainingDataEnd; ++i) {
-        std::memcpy(input_ptr, training_suite.m_training_data[i].m_input.data(), training_suite.m_training_data[i].m_input.size() * sizeof(float));
-        input_ptr += training_suite.m_training_data[i].m_input.size();
+    {
+        training_input_buffer_data.resize(num_training_samples * network.GetInputCount());
+        auto data_ptr = training_input_buffer_data.data();
+        for (auto i = trainingDataBegin; i < trainingDataEnd; ++i) {
+            std::memcpy(data_ptr, training_suite.m_training_data[i].m_input.data(), training_suite.m_training_data[i].m_input.size() * sizeof(float));
+            data_ptr += training_suite.m_training_data[i].m_input.size();
+        }
+
+        m_command_queue.enqueueWriteBuffer(opencl_network->m_input_buffer->GetBuffer(), false, 0, training_input_buffer_data.size() * sizeof(float), training_input_buffer_data.data());
     }
 
-    m_command_queue.enqueueWriteBuffer(m_input_buffer->GetBuffer(), false, 0, training_input_buffer_data.size() * sizeof(float), training_input_buffer_data.data());
+    std::vector<float> training_desired_output_buffer_data;
+    {
+        training_desired_output_buffer_data.resize(num_training_samples * network.GetOutputCount());
+        auto data_ptr = training_desired_output_buffer_data.data();
+        for (auto i = trainingDataBegin; i < trainingDataEnd; ++i) {
+            std::memcpy(data_ptr, training_suite.m_training_data[i].m_desired_output.data(), training_suite.m_training_data[i].m_desired_output.size() * sizeof(float));
+            data_ptr += training_suite.m_training_data[i].m_desired_output.size();
+        }
 
-    auto layer_config = network.GetLayerConfig();
+        m_command_queue.enqueueWriteBuffer(opencl_network->m_desired_output_buffer->GetBuffer(), false, 0, training_desired_output_buffer_data.size() * sizeof(float),
+                                           training_desired_output_buffer_data.data());
+    }
 
     cl_ulong weights_layer_offset = 0;
-    
+
+    // Forward pass (calculating z values and activations for each neuron times for each training data in the network)
     for (uint32_t i = 0; i < layer_config.size(); ++i) {
         const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
         const uint32_t output_num = layer_config[i].m_num_neurons;
@@ -188,7 +231,55 @@ void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const Tra
                                                        cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
                                                                    ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
                                                        cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
-                                      opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), m_activations_zvalues_buffer->GetBuffer(), m_input_buffer->GetBuffer(), i, weights_layer_offset, num_training_samples, total_neuron_count);
+                                       opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), opencl_network->m_activations_zvalues_buffer->GetBuffer(),
+                                       opencl_network->m_input_buffer->GetBuffer(), i, weights_layer_offset, num_training_samples, total_neuron_count);
+
+        const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
+        ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
+        weights_layer_offset += layer_weight_size_bytes; // advance the offset in the weights buffer for the next layer
+    }
+
+    // Backwards pass (accumulated gradient calculation)
+    for (int i = layer_config.size() - 1; i >= 0; --i) {
+        const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
+        const uint32_t output_num = layer_config[i].m_num_neurons;
+
+        const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
+        weights_layer_offset -= layer_weight_size_bytes; // advance the offset backwards in the weights buffer
+
+        (*m_kernel_train_backward_pass)(cl::EnqueueArgs(m_command_queue,
+                                                        cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
+                                                                    ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
+                                                        cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
+                                        opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), opencl_network->m_activations_zvalues_buffer->GetBuffer(),
+                                        opencl_network->m_input_buffer->GetBuffer(), i, layer_config.size(), num_training_samples, total_neuron_count, cl_uint(training_suite.m_cost_function),
+                                        largest_layer_neuron_count, weights_layer_offset, opencl_network->m_delta_k_buffer->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(),
+                                        opencl_network->m_desired_output_buffer->GetBuffer());
+    }
+
+    ASSERT(weights_layer_offset == 0);
+
+    // Calculate regularization terms based on the training configuration
+    float regularizationTerm1 = 1.0f;
+    float regularizationTerm2Base = 0.0f;
+    if (training_suite.m_regularization == Regularization::L2) {
+        regularizationTerm1 = 1.0f - training_suite.m_learning_rate * (training_suite.m_regularization_rate / (float)training_suite.m_training_data.size());
+    } else if (training_suite.m_regularization == Regularization::L1) {
+        regularizationTerm2Base = -((training_suite.m_learning_rate * (training_suite.m_regularization_rate / (float)training_suite.m_training_data.size())));
+    }
+    const bool applyRegularizationTerm2 = regularizationTerm2Base != 0.0f;
+
+    const float normalized_learning_rate = training_suite.m_learning_rate * (float(trainingDataEnd - trainingDataBegin) / (float)training_suite.m_training_data.size());
+
+    // Gradient apply pass
+    for (uint32_t i = 0; i < layer_config.size(); ++i) {
+        const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
+        const uint32_t output_num = layer_config[i].m_num_neurons;
+
+        (*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
+                                                         cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
+                                         opencl_network->m_weights->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), i,
+                                         weights_layer_offset, regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);
 
         const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
         ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");

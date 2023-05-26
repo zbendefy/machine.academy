@@ -144,7 +144,7 @@ std::vector<float> CPUComputeDevice::CalculateAccumulatedGradientForBatch(const 
 void CPUComputeDevice::CalculateOutputLayerGradient(const Network& network, CostFunction cost_function, std::span<float> gradient_data, std::span<float> delta_k_vector,
                                                     const InterimTrainingData& interim_data, const std::vector<float>& training_input, const std::vector<float>& desired_output) const
 {
-    //Read only data
+    // Read only data
     const int last_layer_idx = network.GetLayerConfig().size() - 1;
     const auto activationFunction = network.GetLayerConfig()[last_layer_idx].m_activation;
     const uint32_t last_layer_neuron_count = network.GetLayerConfig()[last_layer_idx].m_num_neurons;
@@ -162,13 +162,13 @@ void CPUComputeDevice::CalculateOutputLayerGradient(const Network& network, Cost
         std::span<const float>(interim_data.m_activations.end() - last_layer_neuron_count, interim_data.m_activations.end());                                    // Activations in the last layer
     std::span<const float> last_layer_z_values = std::span<const float>(interim_data.m_z_values.end() - last_layer_neuron_count, interim_data.m_z_values.end()); // Z Values in the last layer
     const size_t last_layer_weight_and_bias_count = last_layer_neuron_count * (last_layer_weight_count + 1);
-    
-    //Write data
+
+    // Write data
     std::span<float> gradient_last_layer = std::span<float>(gradient_data.end() - last_layer_weight_and_bias_count, gradient_data.end());
 
-    std::for_each_n(std::execution::par_unseq, gradient_last_layer.begin(), last_layer_neuron_count, [&](const float& it){
+    std::for_each_n(std::execution::par_unseq, gradient_last_layer.begin(), last_layer_neuron_count, [&](const float& it) {
         const uint32_t i = &it - &gradient_last_layer[0];
-        
+
         const float outputValue = last_layer_activations[i];
         const float delta_k = CalculateCostFunctionDelta(cost_function, last_layer_z_values[i], outputValue, desired_output[i], activationFunction);
         float* gradient_neuron_data = gradient_last_layer.data() + i * (last_layer_weight_count + 1);
@@ -184,7 +184,7 @@ void CPUComputeDevice::CalculateOutputLayerGradient(const Network& network, Cost
 void CPUComputeDevice::CalculateHiddenLayerGradient(const Network& network, uint32_t layer_id, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data,
                                                     const std::vector<float>& training_input) const
 {
-    //Read only data
+    // Read only data
     const ActivationFunction activation_fnc = network.GetLayerConfig()[layer_id].m_activation;
     const uint32_t layer_weight_count = GetLayerWeightsPerNeuronCount(network, layer_id);
     const uint32_t layer_neuron_count = network.GetLayerConfig()[layer_id].m_num_neurons;
@@ -198,22 +198,23 @@ void CPUComputeDevice::CalculateHiddenLayerGradient(const Network& network, uint
                                                                   : std::span<const float>(interim_data.m_activations.begin() + GetOffsetToLayerNeuronCount(network.GetLayerConfig(), layer_id - 1),
                                                                                            interim_data.m_activations.begin() + GetOffsetToLayerNeuronCount(network.GetLayerConfig(), layer_id));
 
-    //Write data:
+    // Write data:
     std::span<float> current_layer_gradient_data =
         std::span<float>(gradient_data.begin() + GetOffsetToLayerWeights(network, layer_id), gradient_data.begin() + GetOffsetToLayerWeights(network, layer_id + 1));
-    
+
     std::vector<float> newGammak;
     newGammak.resize(layer_neuron_count);
 
-    std::for_each_n(std::execution::par_unseq, current_layer_gradient_data.begin(), layer_neuron_count, [&](const float& it){
+    std::for_each_n(std::execution::par_unseq, current_layer_gradient_data.begin(), layer_neuron_count, [&](const float& it) {
         const uint32_t i = &it - &current_layer_gradient_data[0];
-        
+
         float* gradient_neuron_data = current_layer_gradient_data.data() + i * (layer_weight_count + 1);
 
         float deltak = 0;
         const uint32_t next_layer_neuron_data_size = layer_neuron_count + 1; // weights + bias
-        for (int k = 0; k < next_layer_neuron_count; ++k) {
-            deltak += delta_k_vector[k] * next_layer_weights[k * next_layer_neuron_data_size + i];
+        const float* next_layer_weight_for_ith_neuron = next_layer_weights.data() + i;
+        for (uint32_t k = 0; k < next_layer_neuron_count; ++k) {
+            deltak += delta_k_vector[k] * next_layer_weight_for_ith_neuron[k * next_layer_neuron_data_size];
         }
         deltak *= CalculateActivationFunctionPrime(activation_fnc, layer_z_values[i]);
         newGammak[i] = deltak;

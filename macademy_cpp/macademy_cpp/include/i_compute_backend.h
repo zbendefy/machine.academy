@@ -14,6 +14,12 @@ struct NetworkResourceHandle
 
     NetworkResourceHandle(Network& network) : m_network(&network) {}
 
+    virtual void SynchronizeNetworkData() {}
+
+    virtual void AllocateTrainingResources(uint32_t training_sample_count) {}
+
+    virtual void FreeTrainingResources() {}
+
     Network* m_network = nullptr;
 };
 

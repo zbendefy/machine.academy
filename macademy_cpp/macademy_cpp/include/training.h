@@ -18,6 +18,14 @@ class Training
             return training_result_tracker;
         }
 
+        if (training_suite->m_training_data[0].m_input.size() != network.m_network->GetInputCount()) {
+            throw std::runtime_error("Invalid training input size!");
+        }
+
+        if (training_suite->m_training_data[0].m_desired_output.size() != network.m_network->GetOutputCount()) {
+            throw std::runtime_error("Invalid training desired output size!");
+        }
+
         training_result_tracker->m_future = std::async(std::launch::async, [this, &compute_device, training_suite, &network, training_result_tracker]() {
             std::random_device rd;
             std::mt19937 g(rd());
@@ -32,6 +40,8 @@ class Training
             } else {
                 training_data_view = training_suite->m_training_data;
             }
+
+            network.AllocateTrainingResources(training_suite->m_mini_batch_size ? *training_suite->m_mini_batch_size : training_suite->m_training_data.size());
 
             for (uint32_t currentEpoch = 0; currentEpoch < training_suite->m_epochs; currentEpoch++) {
                 if (training_result_tracker->m_stop_at_next_epoch) {
@@ -66,6 +76,9 @@ class Training
 
                 ++training_result_tracker->m_epochs_finished;
             }
+
+            network.SynchronizeNetworkData();
+            network.FreeTrainingResources();
 
             return training_suite->m_epochs;
         });
