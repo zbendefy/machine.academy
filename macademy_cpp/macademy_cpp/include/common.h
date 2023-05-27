@@ -24,9 +24,11 @@ enum class ActivationFunction
     Sigmoid, //> Also known as 'Logistic' function
     ReLU,
     Tanh,
-    LeakyReLU, // Avoids the dead neurons by using a shallow linear part for negative values.
+    LeakyReLU, // Avoids the dead neurons of ReLU by using a shallow linear part for negative values.
     Identity,
     Threshold, //> Also known as 'Step' or 'Binary step'
+    SoftPlus,
+    ArcTan,
 };
 
 enum class CostFunction

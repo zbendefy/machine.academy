@@ -12,6 +12,8 @@ enum ActivationFunction
     Activation_LeakyReLU,
     Activation_Identity,
     Activation_Threshold,
+    Activation_SoftPlus,
+    Activation_ArcTan,
 };
 
 float ActivationFunction(int functionId, float x)
@@ -29,6 +31,10 @@ float ActivationFunction(int functionId, float x)
         return x < 0 ? 0 : 1;
     case Activation_LeakyReLU:
         return x < 0.0f ? (0.01f * x) : x;
+    case Activation_SoftPlus:
+        return log(1 + exp(x));
+    case Activation_ArcTan:
+        return atan(x);
     default:
         return 0;
     }
@@ -53,6 +59,10 @@ float ActivationFunctionPrime(int functionId, float x)
         return 0.0f;
     case Activation_LeakyReLU:
         return x < 0.0f ? 0.01f : 1.0f;
+    case Activation_SoftPlus:
+        return 1.0f / (1.0f + exp(-x));
+    case Activation_ArcTan:
+        return 1.0f / (x * x + 1);
     default:
         return 0;
     }

@@ -25,6 +25,10 @@ inline float CalculateActivationFunction(ActivationFunction func, float x)
         return x < 0 ? 0 : 1;
     case ActivationFunction::LeakyReLU:
         return x < 0.0f ? (0.01f * x) : x;
+    case ActivationFunction::SoftPlus:
+        return logf(1 + exp(x));
+    case ActivationFunction::ArcTan:
+        return atanf(x);
     }
 
     throw std::runtime_error("Invalid activation function!");
@@ -49,6 +53,10 @@ inline float CalculateActivationFunctionPrime(ActivationFunction func, float x)
         return 0.0f;
     case ActivationFunction::LeakyReLU:
         return x < 0.0f ? 0.01f : 1.0f;
+    case ActivationFunction::SoftPlus:
+        return 1.0f / (1.0f + expf(-x));
+    case ActivationFunction::ArcTan:
+        return 1.0f / (x * x + 1);
     }
 
     throw std::runtime_error("Invalid activation function!");

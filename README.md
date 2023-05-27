@@ -1,6 +1,6 @@
 # machine.academy
 
-Neural network training library written in C# (.net Core 3.1) as a learning project. Also available as a [nuget package](https://www.nuget.org/packages/Macademy/).
+Neural network training library written in C++ (also available in C#) as a learning project. Also available as a [nuget package](https://www.nuget.org/packages/Macademy/).
 
 ## Demos:
 
@@ -19,13 +19,12 @@ Uses evolutional selection to evolve the neural network in the racecars, so they
     * Mean-Squared
     * Cross-entropy
  * Activation functions:
-    * Sigmoid
-    * ReLU
- * Optional L1 and L2 regularization
- * Xavier weight initialization
+    * Sigmoid, ReLU, LeakyReLU, Tanh, Identity, Threshold, SoftPlus, ArcTan
+ * L1 and L2 regularization
+ * Xavier and He weight initialization
  * Stochastic gradient descent with shuffled mini-batches
 
-## Sample code:
+## Sample code (C#):
 
 ### Initializing a random network:
 ```
