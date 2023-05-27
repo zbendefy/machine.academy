@@ -21,8 +21,12 @@ template <typename float_t, typename Generator> float_t GenerateGaussianRandom(G
 
 enum class ActivationFunction
 {
-    Sigmoid,
-    ReLU
+    Sigmoid, //> Also known as 'Logistic' function
+    ReLU,
+    Tanh,
+    LeakyReLU,
+    Identity,
+    Threshold, //> Also known as 'Step' or 'Binary step'
 };
 
 enum class CostFunction

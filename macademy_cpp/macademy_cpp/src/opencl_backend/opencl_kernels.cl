@@ -4,33 +4,58 @@ constexpr const char* opencl_kernel_source = R"OPENCLSRC(
 /// OpenCL kernels implementing network calculations, and backpropagation
 ///
 
+enum ActivationFunction
+{
+    Activation_Sigmoid,
+    Activation_ReLU,
+    Activation_Tanh,
+    Activation_LeakyReLU,
+    Activation_Identity,
+    Activation_Threshold,
+};
+
 float ActivationFunction(int functionId, float x)
 {
-	switch(functionId)
-	{
-        case 1: //ReLU
-            return x < 0.0f ? 0.0f : x;
-		case 0: //Sigmoid
-			return 1.0f/(1.0f + exp(-x));
-		default:
-			return x;
-	}
+	switch (functionId) {
+    case Activation_Sigmoid:
+        return 1.0f / (1.0f + exp(-x));
+    case Activation_ReLU:
+        return x < 0.0f ? 0.0f : x;
+    case Activation_Tanh:
+        return 2.0f / (1.0f + exp(-2.0f * x)) - 1.0f;
+    case Activation_Identity:
+        return x;
+    case Activation_Threshold:
+        return x < 0 ? 0 : 1;
+    case Activation_LeakyReLU:
+        return x < 0.0f ? (0.01f * x) : x;
+    default:
+        return 0;
+    }
 }
 
 float ActivationFunctionPrime(int functionId, float x)
 {
-	switch(functionId)
-	{
-        case 1: //ReLU
-            return x < 0.0f ? 0.0f : 1.0f;
-		case 0: //Sigmoid
-        {
-			const float sigm = 1.0f/(1.0f + exp(-x));
-            return sigm * (1.0f - sigm);
-        }
-		default:
-			return 0;
-	}
+	switch (functionId) {
+    case Activation_Sigmoid: {
+        const float sigm = ActivationFunction(Activation_Sigmoid, x);
+        return sigm * (1.0f - sigm);
+    }
+    case Activation_ReLU:
+        return x < 0.0f ? 0.0f : 1.0f;
+    case Activation_Tanh: {
+        const float sigm = ActivationFunction(Activation_Tanh, x);
+        return 1.0f - sigm * sigm;
+    }
+    case Activation_Identity:
+        return 1.0f;
+    case Activation_Threshold:
+        return 0.0f;
+    case Activation_LeakyReLU:
+        return x < 0.0f ? 0.01f : 1.0f;
+    default:
+        return 0;
+    }
 }
 
 float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, float a, float desiredOutput)
@@ -265,11 +290,6 @@ __kernel void trainingApplyGradient(__global float* weights_biases,
     neuron_weight_data[weights_per_neuron] -= neuron_gradient_data[weights_per_neuron] * normalized_learning_rate; //bias
 
 }
-
-
-
-
-
 
 
 )OPENCLSRC";
