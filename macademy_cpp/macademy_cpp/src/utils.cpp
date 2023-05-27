@@ -11,13 +11,12 @@ nlohmann::json GetNetworkAsJsonObj(const Network& network)
     output["description"] = "";
 
     const float* weights_data = network.GetRawWeightData().data();
+    uint32_t weights_per_neuron = network.GetInputCount();
 
     for (auto layer_config : network.GetLayerConfig()) {
         nlohmann::json layer;
         nlohmann::json weightsMx;
         nlohmann::json biases;
-
-        uint32_t weights_per_neuron = network.GetInputCount();
 
         for (uint32_t n = 0; n < layer_config.m_num_neurons; ++n) {
             nlohmann::json weights;
@@ -30,7 +29,6 @@ nlohmann::json GetNetworkAsJsonObj(const Network& network)
             ++weights_data;
 
             weightsMx.push_back(std::move(weights));
-            weights_per_neuron = layer_config.m_num_neurons;
         }
 
         layer["weightMx"] = weightsMx;
@@ -43,6 +41,8 @@ nlohmann::json GetNetworkAsJsonObj(const Network& network)
         }
 
         output["layers"].push_back(layer);
+
+        weights_per_neuron = layer_config.m_num_neurons;
     }
 
     return output;

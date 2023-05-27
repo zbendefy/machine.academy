@@ -18,7 +18,10 @@ class MnistTrainerApp : public ConsoleApp
     static std::vector<uint8_t> ReadFile(const std::string& filename)
     {
         std::ifstream infile(filename, std::ios::binary);
+        if (infile.fail()) {
+            throw std::runtime_error("Failed to open file: " + filename);
         }
+
         infile.seekg(0, std::ios::end);
         size_t length = infile.tellg();
         infile.seekg(0, std::ios::beg);
@@ -64,9 +67,7 @@ class MnistTrainerApp : public ConsoleApp
     MnistTrainerApp(const std::string& data_folder)
     {
         std::vector<macademy::LayerConfig> layers;
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 256});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 64});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 32});
+        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 24});
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
