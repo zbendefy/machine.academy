@@ -24,7 +24,7 @@ class ComputeDevicesTest : public ::testing::Test
         layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = 8});
         m_network = NetworkFactory::Build("test", 5, std::span<LayerConfig>(layers.data(), layers.size()));
 
-        m_network->GenerateRandomWeights(DefaultWeightInitializer{});
+        m_network->GenerateRandomWeights(XavierWeightInitializer{});
     }
 };
 

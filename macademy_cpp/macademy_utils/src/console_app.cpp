@@ -202,22 +202,17 @@ ConsoleApp::ConsoleApp()
 
     m_commands["print_network"].m_description = "Print details about the network";
     m_commands["print_network"].m_handler = [this](const std::vector<std::string>& args) {
-        
-        if(m_network)
-        {
+        if (m_network) {
             std::cout << m_network->GetName() << std::endl;
             std::cout << "Layers:" << std::endl;
 
             std::cout << " Input layer: " << m_network->GetInputCount() << std::endl;
 
-            for(int i = 0; i < m_network->GetLayerConfig().size(); ++i)
-            {
+            for (int i = 0; i < m_network->GetLayerConfig().size(); ++i) {
                 const auto& layer_conf = m_network->GetLayerConfig()[i];
                 std::cout << " Layer " << i << ": " << layer_conf.m_num_neurons << "  Activation: " << uint32_t(layer_conf.m_activation) << std::endl;
             }
-        }
-        else
-        {
+        } else {
             std::cout << "No loaded network!" << std::endl;
         }
 

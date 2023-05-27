@@ -71,7 +71,7 @@ class MnistTrainerApp : public ConsoleApp
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
         m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
-        m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
+        m_network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
 
         m_training_suite = std::make_shared<TrainingSuite>();
         m_training_suite->m_mini_batch_size = 100;

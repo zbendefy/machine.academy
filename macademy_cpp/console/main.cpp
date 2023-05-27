@@ -30,7 +30,7 @@ class SineTrainerApp : public ConsoleApp
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 1});
         m_network = macademy::NetworkFactory::Build("test", 1, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
-        m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
+        m_network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
 
         m_commands["train"].m_description = "Train the network";
         m_commands["train"].m_handler = [this](const std::vector<std::string>& args) {
@@ -63,7 +63,7 @@ class SineTrainerApp : public ConsoleApp
 
                 const float rnd = (rand() % 1000) / (1000.0f - 1.0f);
                 const float sin_input = ConvertNetworkInputToInput(rnd); // random number between [-pi, pi]
-                const float sin_output = sinf(sin_input);           // range: [-1, 1]
+                const float sin_output = sinf(sin_input);                // range: [-1, 1]
 
                 training_data.m_input.emplace_back(ConvertInputToNetworkInput(sin_input));
                 training_data.m_desired_output.emplace_back(ConvertOutputToNetworkOutput(sin_output));
@@ -121,7 +121,7 @@ class SimpleTrainerApp : public ConsoleApp
         layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 1});
         m_network = macademy::NetworkFactory::Build("test", 1, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
-        m_network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
+        m_network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
 
         m_commands["train"].m_description = "Train the network";
         m_commands["train"].m_handler = [this](const std::vector<std::string>& args) {
@@ -208,7 +208,7 @@ int main()
                                                                layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 8});
                                                                auto network = macademy::NetworkFactory::Build("test", 4, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
-                                                               network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
+                                                               network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
 
                                                                std::vector<std::unique_ptr<macademy::IComputeDevice>> devices;
                                                                std::vector<std::unique_ptr<macademy::NetworkResourceHandle>> uploaded_networks;
