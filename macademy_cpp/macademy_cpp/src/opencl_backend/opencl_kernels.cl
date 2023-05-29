@@ -4,6 +4,8 @@ constexpr const char* opencl_kernel_source = R"OPENCLSRC(
 /// OpenCL kernels implementing network calculations, and backpropagation
 ///
 
+#define LOCAL_MEMORY_CACHE 128u
+
 enum ActivationFunction
 {
     Activation_Sigmoid,
@@ -125,6 +127,21 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
     } while( current.u32 != expected.u32 );
 }
 
+//Atomic addition function from: https://streamhpc.com/blog/2016-02-09/atomic-operations-for-floats-in-opencl-improved/
+void atomicAdd_l_f(volatile __local float *addr, float val)
+{
+    union {
+        unsigned int u32;
+        float        f32;
+    } next, expected, current;
+    current.f32    = *addr;
+    do {
+        expected.f32 = current.f32;
+        next.f32     = expected.f32 + val;
+        current.u32  = atomic_cmpxchg( (volatile __local unsigned int *)addr, expected.u32, next.u32);
+    } while( current.u32 != expected.u32 );
+}
+
 int GetLayerNeuronCountOffset(int layerId, __constant const uint* layer_config)
 {
     int offset = 0;
@@ -170,6 +187,7 @@ __kernel void trainingForwardPass(__global const float* weights_biases,
     
     //Calculate ZValues for layer
     float acc = 0;
+
     for(int i = 0; i < weights_per_neuron; ++i)
     {
         acc += neuron_weights_biases[i] * prevActivations[i];
@@ -254,11 +272,52 @@ __kernel void trainingBackwardPass(__global const float* weightsAndBiases,
 
     const uint gradientBaseOffset = layer_weights_offset + layer_neuron_id * (weights_per_neuron + 1);
 
+#if defined(LOCAL_MEMORY_CACHE) && LOCAL_MEMORY_CACHE > 0
+    __local float gradient_cache[LOCAL_MEMORY_CACHE];
+    const uint cached_size = min(LOCAL_MEMORY_CACHE, weights_per_neuron);
+
+    for(int i = 0; i < cached_size; ++i)
+    {
+        atomicAdd_l_f(gradient_cache + i, delta_k * prevActivations[i]);
+    }
+
+    if(weights_per_neuron < LOCAL_MEMORY_CACHE)
+    {
+        atomicAdd_l_f(gradient_cache + weights_per_neuron, delta_k ); //bias
+    }
+    else
+    {
+        // Fall back to global memory addition if the local memory is insufficient
+        for(int i = cached_size; i < weights_per_neuron; ++i)
+        {
+            atomicAdd_g_f(gradient + gradientBaseOffset + i, delta_k * prevActivations[i]);
+        }
+        atomicAdd_g_f(gradient + gradientBaseOffset + weights_per_neuron, delta_k );
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
+    if(get_local_id(1) == 0)
+    {
+        for(int i = 0; i < cached_size; ++i)
+        {
+            atomicAdd_g_f(gradient + gradientBaseOffset + i, gradient_cache[i]);
+        }
+        
+        if(weights_per_neuron < LOCAL_MEMORY_CACHE)
+        {
+            atomicAdd_l_f(gradient_cache + weights_per_neuron, gradient_cache[weights_per_neuron]);
+        }
+    }
+
+#else
+    //Add to gradient using no local memory. Slower as each trainig sample thread is simultaneously writing to the global memory.
     for(int i = 0; i < weights_per_neuron; ++i)
     {
         atomicAdd_g_f(gradient + gradientBaseOffset + i, delta_k * prevActivations[i]);
     }
     atomicAdd_g_f(gradient + gradientBaseOffset + weights_per_neuron, delta_k );
+#endif
 
     if ( layer_id != 0 )
     {
