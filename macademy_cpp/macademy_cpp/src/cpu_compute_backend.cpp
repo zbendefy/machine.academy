@@ -151,11 +151,14 @@ std::vector<float> CPUComputeDevice::CalculateAccumulatedGradientForBatch(const 
     delta_k_buffer.resize(CalculateLargestLayerNeuronCount(network.GetLayerConfig()));
 
     std::optional<InterimTrainingData> interim_data = InterimTrainingData{total_neurons};
+    
+    std::vector<float> output_buffer; //buffer for output values
+    output_buffer.resize(network.GetOutputCount(), 0.0f);
 
     for (int i = batch_begin; i < batch_end; ++i) {
         const auto& training_input = training_suite.m_training_data[i].m_input;
         const auto& desired_output = training_suite.m_training_data[i].m_desired_output;
-        EvaluateAndCollectInterimData(network_handle, training_input, interim_data);
+        EvaluateAndCollectInterimData(output_buffer, network_handle, training_input, interim_data);
 
         CalculateOutputLayerGradient(network, training_suite.m_cost_function, accumulated_gradient, delta_k_buffer, *interim_data, training_input, desired_output);
 
@@ -254,8 +257,8 @@ void CPUComputeDevice::CalculateHiddenLayerGradient(const Network& network, uint
     memcpy(delta_k_vector.data(), newGammak.data(), newGammak.size() * sizeof(float));
 }
 
-std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const NetworkResourceHandle& network_handle, std::span<const float> input,
-                                                                   std::optional<InterimTrainingData>& output_interim_data) const
+void CPUComputeDevice::EvaluateAndCollectInterimData(std::span<float> result_buffer, const NetworkResourceHandle& network_handle, std::span<const float> input,
+                                                     std::optional<InterimTrainingData>& output_interim_data) const
 {
     Network& network = *network_handle.m_network;
 
@@ -263,20 +266,36 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
         throw std::runtime_error("Invalid input length!");
     }
 
+    if (result_buffer.size() != network.GetOutputCount()) {
+        throw std::runtime_error("Invalid result buffer length!");
+    }
+
     auto layer_config = network.GetLayerConfig();
     std::vector<float> layer_args = std::vector<float>(input.begin(), input.end());
-    std::vector<float> layer_result{};
+    std::vector<float> hidden_layer_result_buffer{};
     const float* layer_weight_data = network.GetRawWeightData().data();
 
     uint64_t activation_offset = 0;
 
     for (size_t i = 0; i < layer_config.size(); ++i) {
-        layer_result.clear();
+        const bool is_output_layer = i == layer_config.size() - 1;
+
         const uint32_t input_num = uint32_t(layer_args.size());
         const uint32_t output_num = layer_config[i].m_num_neurons;
         ActivationFunction activation_fnc = layer_config[i].m_activation; // If Z values are required,
 
-        layer_result.resize(output_num);
+        std::span<float> layer_result;
+
+        if (!is_output_layer) {
+            hidden_layer_result_buffer.clear();
+            hidden_layer_result_buffer.resize(output_num);
+            layer_result = hidden_layer_result_buffer;
+        }
+        else
+        {
+            //Write the result of the last layer directly into the buffer given from the outside
+            layer_result = result_buffer;
+        }
 
         std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), output_num, [&](const float& f) {
             const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
@@ -302,11 +321,14 @@ std::vector<float> CPUComputeDevice::EvaluateAndCollectInterimData(const Network
         }
 
         layer_weight_data += input_num * output_num + output_num; // Advance the pointer to the weights of the layer
-        std::swap(layer_args, layer_result);
+
+        if (!is_output_layer)
+        {
+            std::swap(layer_args, hidden_layer_result_buffer);
+        }
     }
 
     ASSERTM(layer_weight_data - network.GetRawWeightData().data() == network.GetRawWeightData().size(), "");
-    return layer_args;
 }
 
 std::unique_ptr<NetworkResourceHandle> CPUComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<NetworkResourceHandle>(network); }
@@ -329,9 +351,26 @@ uint32_t CPUComputeDevice::GetComputeUnits() const
     return cpu.getNumLogicalCores();
 }
 
-std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const
+std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const { return EvaluateBatch(1, network_handle, input); }
+
+std::vector<float> CPUComputeDevice::EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network_handle, std::span<const float> input) const
 {
     std::optional<InterimTrainingData> empty{};
-    return EvaluateAndCollectInterimData(network_handle, input, empty);
+    const auto output_layer_size = network_handle.m_network->GetOutputCount();
+    const auto input_layer_size = network_handle.m_network->GetInputCount();
+    std::vector<float> ret;
+    ret.resize(output_layer_size * batch_size);
+
+    for (uint32_t i = 0; i < batch_size; ++i)
+    {
+        const auto output_offset = output_layer_size * i;
+        const auto input_offset = input_layer_size * i;
+        EvaluateAndCollectInterimData(std::span<float>(ret.begin() + output_offset, ret.end() + output_offset), network_handle,
+                                      std::span<const float>(input.begin() + input_offset, input.end() + input_offset), empty);
+    }
+
+    return ret;
 }
+
+
 } // namespace macademy

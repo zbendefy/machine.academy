@@ -29,7 +29,7 @@ class CPUComputeDevice : public IComputeDevice
     void CalculateHiddenLayerGradient(const Network& network, uint32_t layer_id, std::span<float> gradient_data, std::span<float> delta_k_vector, const InterimTrainingData& interim_data,
                                       const std::vector<float>& training_input) const;
 
-    std::vector<float> EvaluateAndCollectInterimData(const NetworkResourceHandle& network_handle, std::span<const float> input, std::optional<InterimTrainingData>& z_values) const;
+    void EvaluateAndCollectInterimData(std::span<float> result_buffer, const NetworkResourceHandle& network_handle, std::span<const float> input, std::optional<InterimTrainingData>& z_values) const;
 
   public:
     std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
@@ -37,6 +37,8 @@ class CPUComputeDevice : public IComputeDevice
     void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const override;
 
     std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
+
+    std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
 
     std::string GetDeviceName() const override;
 

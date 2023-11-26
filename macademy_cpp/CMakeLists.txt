@@ -23,6 +23,10 @@ add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/console)
 
 add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/mnist_digit_trainer)
 
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/mandelbrot)
+
+add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/text_model)
+
 if(COMPILE_TESTS)
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/test)
 endif()

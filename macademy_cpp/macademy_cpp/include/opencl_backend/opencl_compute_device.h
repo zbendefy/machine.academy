@@ -46,6 +46,8 @@ class OpenCLComputeDevice : public IComputeDevice
 
     virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
 
+    virtual std::vector<float> EvaluateBatch(uint32_t batch_count, const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
+
     virtual void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const override;
 
     static std::vector<cl::Device> GetDeviceList();
