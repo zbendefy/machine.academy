@@ -167,11 +167,11 @@ std::vector<float> OpenCLComputeDevice::EvaluateBatch(uint32_t batch_count, cons
 
     float* neuron_weight_data = network.GetRawWeightData().data();
     for (uint32_t i = 0; i < layer_config.size(); ++i) {
-        const uint32_t input_num = i == 0 ? input.size() : layer_config[i - 1].m_num_neurons;
+        const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
         const uint32_t output_num = layer_config[i].m_num_neurons;
 
-        (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size)),
-                                                      cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size, batch_count)),
+        (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count),
+                                                      cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size, 1)),
                                       opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), layer_results_input->GetBuffer(), layer_results_output->GetBuffer(),
                                       i, weights_layer_offset);
 

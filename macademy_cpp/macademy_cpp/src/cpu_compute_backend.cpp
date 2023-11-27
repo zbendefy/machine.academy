@@ -365,8 +365,8 @@ std::vector<float> CPUComputeDevice::EvaluateBatch(uint32_t batch_size, const Ne
     {
         const auto output_offset = output_layer_size * i;
         const auto input_offset = input_layer_size * i;
-        EvaluateAndCollectInterimData(std::span<float>(ret.begin() + output_offset, ret.end() + output_offset), network_handle,
-                                      std::span<const float>(input.begin() + input_offset, input.end() + input_offset), empty);
+        EvaluateAndCollectInterimData(std::span<float>(ret.begin() + output_offset, ret.begin() + output_offset + output_layer_size), network_handle,
+                                      std::span<const float>(input.begin() + input_offset, input.begin() + input_offset + input_layer_size), empty);
     }
 
     return ret;
