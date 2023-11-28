@@ -39,6 +39,8 @@ class CPUComputeDevice : public IComputeDevice
     std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
 
     std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
+    
+    void ApplyRandomMutation(const NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution) override;
 
     std::string GetDeviceName() const override;
 

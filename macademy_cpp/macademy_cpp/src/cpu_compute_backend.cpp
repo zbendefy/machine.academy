@@ -372,5 +372,53 @@ std::vector<float> CPUComputeDevice::EvaluateBatch(uint32_t batch_size, const Ne
     return ret;
 }
 
+void CPUComputeDevice::ApplyRandomMutation(const NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
+{
+    Network& network = *network_handle.m_network;
+
+    auto layer_config = network.GetLayerConfig();
+
+    uint32_t weights_per_neuron = network.GetInputCount();
+    uint32_t layer_neuron_count = 0;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    auto generate_mutator = [&](const MutationDistribution& mutation_distribution) {
+        if (std::holds_alternative<UniformDistribution>(mutation_distribution))
+        {
+            UniformDistribution uniform_distribution_desc = std::get<UniformDistribution>(mutation_distribution);
+            std::uniform_real_distribution uniform_distribution(-uniform_distribution_desc.range, uniform_distribution_desc.range);
+
+            return [uniform_distribution, &gen](float x) { 
+                return x + uniform_distribution(gen);
+            };
+        }
+        throw std::runtime_error("Invalid mutation distribution!");
+    };
+
+    std::function<float(float)> weight_mutator = generate_mutator(weight_mutation_distribution);
+    std::function<float(float)> bias_mutator = generate_mutator(bias_mutation_distribution);
+
+    float* data_ptr = network.GetRawWeightData().data();
+
+    for (size_t i = 0; i < layer_config.size(); ++i) {
+        layer_neuron_count = layer_config[0].m_num_neurons;
+
+        for (uint32_t n = 0; n < layer_neuron_count; ++n)
+        {
+            for (uint32_t w = 0; w < weights_per_neuron; ++w)
+            {
+                *data_ptr = weight_mutator(*data_ptr);
+                ++data_ptr;
+            }
+            *data_ptr = bias_mutator(*data_ptr);
+            ++data_ptr;
+        }
+
+        weights_per_neuron = layer_neuron_count;
+    }
+}
+
 
 } // namespace macademy
