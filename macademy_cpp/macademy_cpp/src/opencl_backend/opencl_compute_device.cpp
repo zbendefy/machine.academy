@@ -27,6 +27,7 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
     mutable std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_a;
     mutable std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_b;
 
+    std::unique_ptr<OpenCLBuffer> m_mutation_buffer;
     std::unique_ptr<OpenCLBuffer> m_input_buffer;
     std::unique_ptr<OpenCLBuffer> m_desired_output_buffer;
     std::unique_ptr<OpenCLBuffer> m_activations_zvalues_buffer;
@@ -76,6 +77,15 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
         }
     }
 
+    void AllocateMutationBuffer()
+    {
+        const auto total_weight_and_bias_count = m_network->GetRawWeightData().size() / m_network->GetWeightByteSize();
+
+        if (!m_mutation_buffer) {
+            m_mutation_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, m_network->GetRawWeightData().size_bytes(), nullptr);
+        }
+    }
+
     virtual void AllocateTrainingResources(uint32_t training_sample_count)
     {
         m_input_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, training_sample_count * m_network->GetInputCount() * sizeof(float), nullptr);
@@ -94,6 +104,7 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
         m_gradient_buffer.reset();
         m_layer_result_buffer_a.reset();
         m_layer_result_buffer_b.reset();
+        m_mutation_buffer.reset();
     }
 };
 
@@ -330,4 +341,78 @@ std::string OpenCLComputeDevice::GetDeviceName() const { return "OpenCL Device: 
 size_t OpenCLComputeDevice::GetTotalMemory() const { return size_t(m_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>()); }
 
 uint32_t OpenCLComputeDevice::GetComputeUnits() const { return size_t(m_device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()); }
+
+
+void OpenCLComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
+{
+    auto opencl_network = dynamic_cast<OpenCLNetworkResourceHandle*>(&network_handle);
+
+    if (!opencl_network) {
+        throw std::runtime_error("Network was not created by an OpenCL compute device!");
+    }
+
+    Network& network = *network_handle.m_network;
+
+    opencl_network->AllocateMutationBuffer();
+
+    std::vector<float> mutation_buffer_data;
+    mutation_buffer_data.resize(network.GetTotalWeightAndBiasCount());
+    
+    uint32_t weights_per_neuron = network.GetInputCount();
+    uint32_t layer_neuron_count = 0;
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    auto generate_mutator = [&](const MutationDistribution& mutation_distribution) {
+        if (std::holds_alternative<UniformDistribution>(mutation_distribution)) {
+            UniformDistribution uniform_distribution_desc = std::get<UniformDistribution>(mutation_distribution);
+            std::uniform_real_distribution uniform_distribution(-uniform_distribution_desc.range, uniform_distribution_desc.range);
+
+            return [uniform_distribution, &gen](float x) mutable { return x + uniform_distribution(gen); };
+        }
+        throw std::runtime_error("Invalid mutation distribution!");
+    };
+
+    std::function<float(float)> weight_mutator = generate_mutator(weight_mutation_distribution);
+    std::function<float(float)> bias_mutator = generate_mutator(bias_mutation_distribution);
+
+    float* data_ptr = network.GetRawWeightData().data();
+
+    const auto& layer_config = network.GetLayerConfig();
+
+    for (size_t i = 0; i < layer_config.size(); ++i) {
+        layer_neuron_count = layer_config[0].m_num_neurons;
+
+        for (uint32_t n = 0; n < layer_neuron_count; ++n) {
+            for (uint32_t w = 0; w < weights_per_neuron; ++w) {
+                mutation_buffer_data.emplace_back(weight_mutator(0));
+            }
+            mutation_buffer_data.emplace_back(bias_mutator(0));
+        }
+
+        weights_per_neuron = layer_neuron_count;
+    }
+
+    m_command_queue.enqueueWriteBuffer(opencl_network->m_mutation_buffer->GetBuffer(), false, 0, mutation_buffer_data.size() * sizeof(float), mutation_buffer_data.data());
+
+    cl_ulong weights_layer_offset = 0;
+
+    for (uint32_t i = 0; i < layer_config.size(); ++i) {
+        const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
+        const uint32_t output_num = layer_config[i].m_num_neurons;
+
+        (*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
+                                                         cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
+                                         opencl_network->m_weights->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), i,
+                                         weights_layer_offset, 1.0f, 0.0f, -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
+
+        const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
+        ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
+        weights_layer_offset += layer_weight_size_bytes; // advance the offset in the weights buffer for the next layer
+    }
+
+    m_command_queue.finish();
+}
+
 } // namespace macademy

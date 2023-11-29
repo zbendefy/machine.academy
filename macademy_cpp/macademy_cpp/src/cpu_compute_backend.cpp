@@ -372,7 +372,7 @@ std::vector<float> CPUComputeDevice::EvaluateBatch(uint32_t batch_size, const Ne
     return ret;
 }
 
-void CPUComputeDevice::ApplyRandomMutation(const NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
+void CPUComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
 {
     Network& network = *network_handle.m_network;
 
@@ -390,7 +390,7 @@ void CPUComputeDevice::ApplyRandomMutation(const NetworkResourceHandle& network_
             UniformDistribution uniform_distribution_desc = std::get<UniformDistribution>(mutation_distribution);
             std::uniform_real_distribution uniform_distribution(-uniform_distribution_desc.range, uniform_distribution_desc.range);
 
-            return [uniform_distribution, &gen](float x) { 
+            return [uniform_distribution, &gen](float x) mutable { 
                 return x + uniform_distribution(gen);
             };
         }

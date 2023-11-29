@@ -116,8 +116,6 @@ TEST_F(ComputeDevicesTest, OpenCLComputeDevice)
     }
 }
 
-
-
 TEST_F(ComputeDevicesTest, OpenCLComputeDeviceBatchEval)
 {
     std::vector<float> input{ 

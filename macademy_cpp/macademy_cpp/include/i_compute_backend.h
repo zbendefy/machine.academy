@@ -42,7 +42,7 @@ class IComputeDevice
 
     virtual std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network, std::span<const float> input) const = 0;
 
-    virtual void ApplyRandomMutation(const NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution) = 0;
+    virtual void ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution) = 0;
 
     virtual void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const = 0;
 

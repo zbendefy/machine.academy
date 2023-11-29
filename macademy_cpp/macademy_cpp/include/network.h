@@ -52,6 +52,8 @@ class Network
 
     uint32_t GetNeuronCount() const;
 
+    uint64_t GetTotalWeightAndBiasCount() const { return m_data.size() / GetWeightByteSize(); }
+
     const std::string& GetName() const { return m_name; }
 
     const std::string& GetDescription() const { return m_description; }
