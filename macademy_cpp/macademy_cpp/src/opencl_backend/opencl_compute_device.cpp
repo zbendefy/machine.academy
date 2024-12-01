@@ -8,15 +8,19 @@
 #include <fstream>
 #include <sstream>
 
+namespace
+{
+    size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
+    {
+        return ((desiredGlobalSize % localSize) == 0) ? desiredGlobalSize : (desiredGlobalSize + (localSize - (desiredGlobalSize % localSize)));
+    }
+}
+
 namespace macademy {
 #include "opencl_kernels.cl"
 
 void SetKernelArgs(cl::Kernel kernel, cl_uint index, OpenCLBuffer& buffer) { kernel.setArg(index, buffer.GetSize(), buffer.GetBuffer().get()); }
 
-size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
-{
-    return ((desiredGlobalSize % localSize) == 0) ? desiredGlobalSize : (desiredGlobalSize + (localSize - (desiredGlobalSize % localSize)));
-}
 
 struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
 {
@@ -111,6 +115,10 @@ struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
 OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config)
     : m_device(device), m_device_config(advanced_config), m_context(device), m_command_queue(m_context, m_device)
 {
+    auto extensions = m_device.getInfo<CL_DEVICE_EXTENSIONS>() + " ";
+
+    m_is_float16_supported = extensions.find("cl_khr_fp16 ") != std::string::npos;
+
     std::vector<std::string> programStrings{opencl_kernel_source};
     m_program = cl::Program(m_context, programStrings);
 
@@ -413,6 +421,18 @@ void OpenCLComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_han
     }
 
     m_command_queue.finish();
+}
+
+bool OpenCLComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
+{
+    switch (format) {
+    case macademy::NetworkWeightFormat::Float16:
+        return m_is_float16_supported;
+    case macademy::NetworkWeightFormat::Float32:
+        return true;
+    }
+
+    throw std::runtime_error("OpenCLComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
 }
 
 } // namespace macademy

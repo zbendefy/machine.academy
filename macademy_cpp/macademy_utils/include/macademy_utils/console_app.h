@@ -7,7 +7,12 @@
 #include "network.h"
 #include "default_weight_initializer.h"
 #include "cpu_compute_backend.h"
+#ifdef MACADEMY_OPENCL_BACKEND
 #include "opencl_backend/opencl_compute_device.h"
+#endif
+#ifdef MACADEMY_VULKAN_BACKEND
+#include "vulkan_backend/vulkan_compute_device.h"
+#endif
 #include "training_suite.h"
 #include "training.h"
 #include <set>

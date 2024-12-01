@@ -59,6 +59,13 @@ ConsoleApp::ConsoleApp()
     }
 #endif
 
+#ifdef MACADEMY_VULKAN_BACKEND
+    auto vulkan_devices = VulkanComputeDevice::GetDeviceList();
+    for (const auto vk_device : vulkan_devices) {
+        m_devices.emplace_back(std::make_unique<VulkanComputeDevice>(vk_device));
+    }
+#endif
+
     m_commands["quit"].m_description = "Exits the application";
     m_commands["quit"].m_handler = [](const std::vector<std::string>&) { return true; };
 
@@ -109,9 +116,14 @@ ConsoleApp::ConsoleApp()
     m_commands["device_info"].m_description = "List info about the currently selected device";
     m_commands["device_info"].m_handler = [this](const std::vector<std::string>&) {
         if (m_selected_device) {
+            const bool float16_supported = m_selected_device->SupportsWeightFormat(NetworkWeightFormat::Float16);
+            const bool float32_supported = m_selected_device->SupportsWeightFormat(NetworkWeightFormat::Float32);
+
             std::cout << "Name: " << m_selected_device->GetDeviceName() << std::endl;
             std::cout << "Compute units: " << m_selected_device->GetComputeUnits() << std::endl;
             std::cout << "Memory: " << (m_selected_device->GetTotalMemory() / (1024 * 1024)) << "MB" << std::endl;
+            std::cout << "Supported formats: "
+                      << "Float16: " << (float16_supported ? "Yes" : "No") << ", Float32: " << (float32_supported ? "Yes" : "No") << std::endl;
         } else {
             std::cout << "No selected device!";
         }

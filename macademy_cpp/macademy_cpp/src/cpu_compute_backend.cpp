@@ -351,6 +351,18 @@ uint32_t CPUComputeDevice::GetComputeUnits() const
     return cpu.getNumLogicalCores();
 }
 
+bool CPUComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const 
+{
+    switch (format) {
+    case macademy::NetworkWeightFormat::Float16:
+        return true;
+    case macademy::NetworkWeightFormat::Float32:
+        return true;
+    }
+    
+    throw std::runtime_error("CPUComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
+}
+
 std::vector<float> CPUComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const { return EvaluateBatch(1, network_handle, input); }
 
 std::vector<float> CPUComputeDevice::EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network_handle, std::span<const float> input) const

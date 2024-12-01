@@ -7,3 +7,6 @@
 [submodule "macademy_cpp/3rdparty/json"]
 	path = macademy_cpp/3rdparty/json
 	url = https://github.com/nlohmann/json.git
+[submodule "macademy_cpp/3rdparty/VulkanMemoryAllocator"]
+	path = macademy_cpp/3rdparty/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git

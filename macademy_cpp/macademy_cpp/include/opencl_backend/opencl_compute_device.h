@@ -38,6 +38,7 @@ class OpenCLComputeDevice : public IComputeDevice
     cl::size_type m_kernel_calc_single_layer_ideal_workgroup_size = 64;
     cl::size_type m_kernel_training_ideal_workgroup_size = 16;
     cl::size_type m_kernel_training_apply_gradient_ideal_workgroup_size = 64;
+    bool m_is_float16_supported = false;
 
   public:
     OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config = {});
@@ -61,5 +62,7 @@ class OpenCLComputeDevice : public IComputeDevice
     size_t GetTotalMemory() const override;
 
     uint32_t GetComputeUnits() const override;
+
+    bool SupportsWeightFormat(NetworkWeightFormat format) const override;
 };
 } // namespace macademy

@@ -80,9 +80,9 @@ class MnistTrainerApp : public ConsoleApp
         m_training_suite->m_learning_rate = 0.005f;
         m_training_suite->m_shuffle_training_data = true;
 
-        LoadMNISTData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
+        MnistTrainerApp::LoadMNISTData(m_training_suite->m_training_data, data_folder + "/train-images.idx3-ubyte", data_folder + "/train-labels.idx1-ubyte");
 
-        LoadMNISTData(m_test_data, data_folder + "/t10k-images.idx3-ubyte", data_folder + "/t10k-labels.idx1-ubyte");
+        MnistTrainerApp::LoadMNISTData(m_test_data, data_folder + "/t10k-images.idx3-ubyte", data_folder + "/t10k-labels.idx1-ubyte");
 
         m_commands["train"].m_description = "Train the network";
         m_commands["train"].m_handler = [this](const std::vector<std::string>& args) {

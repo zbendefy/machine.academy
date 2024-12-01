@@ -3,7 +3,7 @@
 
 #include <fstream>
 #include <iostream>
-
+#if 0
 using namespace std::chrono_literals;
 using namespace macademy;
 
@@ -233,11 +233,11 @@ class MnistTrainerApp : public ConsoleApp
         return good_answers;
     }
 };
-
+#endif
 int main()
 {
-    MnistTrainerApp app{"D:/Dev/macademy_datasets/mnist_digits"};
+    //MnistTrainerApp app{"D:/Dev/macademy_datasets/mnist_digits"};
 
-    app.Run();
+    //app.Run();
     return 0;
 }

@@ -47,5 +47,7 @@ class CPUComputeDevice : public IComputeDevice
     size_t GetTotalMemory() const override;
 
     uint32_t GetComputeUnits() const override;
+
+    bool SupportsWeightFormat(NetworkWeightFormat format) const override;
 };
 } // namespace macademy
