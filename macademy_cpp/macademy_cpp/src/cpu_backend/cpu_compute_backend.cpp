@@ -151,8 +151,8 @@ std::vector<float> CPUComputeDevice::CalculateAccumulatedGradientForBatch(const 
     delta_k_buffer.resize(CalculateLargestLayerNeuronCount(network.GetLayerConfig()));
 
     std::optional<InterimTrainingData> interim_data = InterimTrainingData{total_neurons};
-    
-    std::vector<float> output_buffer; //buffer for output values
+
+    std::vector<float> output_buffer; // buffer for output values
     output_buffer.resize(network.GetOutputCount(), 0.0f);
 
     for (int i = batch_begin; i < batch_end; ++i) {
@@ -290,10 +290,8 @@ void CPUComputeDevice::EvaluateAndCollectInterimData(std::span<float> result_buf
             hidden_layer_result_buffer.clear();
             hidden_layer_result_buffer.resize(output_num);
             layer_result = hidden_layer_result_buffer;
-        }
-        else
-        {
-            //Write the result of the last layer directly into the buffer given from the outside
+        } else {
+            // Write the result of the last layer directly into the buffer given from the outside
             layer_result = result_buffer;
         }
 
@@ -322,8 +320,7 @@ void CPUComputeDevice::EvaluateAndCollectInterimData(std::span<float> result_buf
 
         layer_weight_data += input_num * output_num + output_num; // Advance the pointer to the weights of the layer
 
-        if (!is_output_layer)
-        {
+        if (!is_output_layer) {
             std::swap(layer_args, hidden_layer_result_buffer);
         }
     }
@@ -351,7 +348,7 @@ uint32_t CPUComputeDevice::GetComputeUnits() const
     return cpu.getNumLogicalCores();
 }
 
-bool CPUComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const 
+bool CPUComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
 {
     switch (format) {
     case macademy::NetworkWeightFormat::Float16:
@@ -359,7 +356,7 @@ bool CPUComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
     case macademy::NetworkWeightFormat::Float32:
         return true;
     }
-    
+
     throw std::runtime_error("CPUComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
 }
 
@@ -373,8 +370,7 @@ std::vector<float> CPUComputeDevice::EvaluateBatch(uint32_t batch_size, const Ne
     std::vector<float> ret;
     ret.resize(output_layer_size * batch_size);
 
-    for (uint32_t i = 0; i < batch_size; ++i)
-    {
+    for (uint32_t i = 0; i < batch_size; ++i) {
         const auto output_offset = output_layer_size * i;
         const auto input_offset = input_layer_size * i;
         EvaluateAndCollectInterimData(std::span<float>(ret.begin() + output_offset, ret.begin() + output_offset + output_layer_size), network_handle,
@@ -397,14 +393,11 @@ void CPUComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle
     std::mt19937 gen(rd());
 
     auto generate_mutator = [&](const MutationDistribution& mutation_distribution) {
-        if (std::holds_alternative<UniformDistribution>(mutation_distribution))
-        {
+        if (std::holds_alternative<UniformDistribution>(mutation_distribution)) {
             UniformDistribution uniform_distribution_desc = std::get<UniformDistribution>(mutation_distribution);
             std::uniform_real_distribution uniform_distribution(-uniform_distribution_desc.range, uniform_distribution_desc.range);
 
-            return [uniform_distribution, &gen](float x) mutable { 
-                return x + uniform_distribution(gen);
-            };
+            return [uniform_distribution, &gen](float x) mutable { return x + uniform_distribution(gen); };
         }
         throw std::runtime_error("Invalid mutation distribution!");
     };
@@ -417,10 +410,8 @@ void CPUComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle
     for (size_t i = 0; i < layer_config.size(); ++i) {
         layer_neuron_count = layer_config[0].m_num_neurons;
 
-        for (uint32_t n = 0; n < layer_neuron_count; ++n)
-        {
-            for (uint32_t w = 0; w < weights_per_neuron; ++w)
-            {
+        for (uint32_t n = 0; n < layer_neuron_count; ++n) {
+            for (uint32_t w = 0; w < weights_per_neuron; ++w) {
                 *data_ptr = weight_mutator(*data_ptr);
                 ++data_ptr;
             }
@@ -432,5 +423,68 @@ void CPUComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle
     }
 }
 
+void CPUComputeDevice::QueueWriteToBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) 
+{ 
+    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(buffer);
+
+    ASSERT(cpu_buffer->m_data.size() >= offset + data.size());
+
+    memcpy(cpu_buffer->m_data.data() + offset, data.data(), data.size());
+}
+
+void CPUComputeDevice::QueueReadFromBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) 
+{
+    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(buffer);
+
+    ASSERT(cpu_buffer->m_data.size() >= offset + data.size());
+
+    memcpy(data.data(), cpu_buffer->m_data.data() + offset, data.size());
+}
+
+void CPUComputeDevice::QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t offset_bytes, size_t size_bytes)
+{
+    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(buffer);
+
+    ASSERT(cpu_buffer->m_data.size() >= offset + size);
+
+    memset(cpu_buffer->m_data.data() + offset, data, size);
+}
+
+void CPUComputeDevice::SubmitQueue() { /*CPU doesn't queue operations*/ }
+
+void CPUComputeDevice::WaitQueueIdle()
+{
+    /*CPU doesn't queue operations*/ 
+}
+
+void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const layer_input_buffer, const IBuffer* layer_output_buffer, uint32_t layer_id,
+                                            uint64_t weights_layer_offset, uint32_t batch_count)
+{
+    const uint32_t layer_neuron_count = layer_config[2 + layer_id * 2]; // number of neurons
+    const uint32_t weights_per_neuron = layer_config[layer_id * 2];     // neurons in the prev layer
+    const uint32_t activationFunctionId = layer_config[3 + layer_id * 2];
+
+    std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), layer_neuron_count * batch_count, [&](const float& f) {
+        const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
+
+        const uint32_t layer_neuron_id = neuron_id % layer_neuron_count;
+        const uint32_t batch_id = neuron_id / layer_neuron_count;
+
+        const float* input = layer_input_buffer + batch_id * weights_per_neuron;
+        float* output = layer_output_buffer + batch_id * layer_neuron_count;
+
+        const uint32_t neuron_data_size = weights_per_neuron + 1; // weights in prev layer + 1 bias
+
+         const float* neuron_weights_biases = weights_buffer + weights_layer_offset + layer_neuron_id * neuron_data_size;
+
+        float acc = 0;
+        for (int i = 0; i < weights_per_neuron; ++i) {
+            acc += neuron_weights_biases[i] * input[i];
+        }
+        acc += neuron_weights_biases[weights_per_neuron]; // bias
+
+        output[layer_neuron_id] = CalculateActivationFunction( ActivationFunction(activationFunctionId), acc);
+    });
+}
 
 } // namespace macademy

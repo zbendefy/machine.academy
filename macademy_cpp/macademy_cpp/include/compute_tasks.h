@@ -39,10 +39,10 @@ struct NetworkResourceHandle
 
 using MutationDistribution = std::variant<UniformDistribution>;
 
-class IComputeDevice
+class ComputeTasks
 {
   public:
-    virtual ~IComputeDevice() {}
+    virtual ~ComputeTasks() {}
 
     virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) = 0;
 

@@ -5,7 +5,7 @@
 #include <memory>
 
 namespace macademy {
-class OpenCLBuffer
+class OpenCLBuffer : public IBuffer
 {
     std::unique_ptr<cl::Buffer> m_buffer;
     const size_t m_size = 0;
