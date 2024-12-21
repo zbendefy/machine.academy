@@ -5,7 +5,7 @@
 #include <string>
 
 namespace macademy::vk {
-    
+
 using SpirvBinary = std::vector<char>;
 
 constexpr const char* ValidationLayerExtensionStr = "VK_LAYER_KHRONOS_validation";
@@ -20,4 +20,4 @@ struct ComputePipelineDescriptor
     uint32_t m_push_constant_offset = 0;
     uint32_t m_push_constant_size = 0;
 };
-}
+} // namespace macademy::vk

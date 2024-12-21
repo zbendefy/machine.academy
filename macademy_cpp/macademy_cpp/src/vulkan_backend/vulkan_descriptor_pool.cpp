@@ -18,4 +18,3 @@ DescriptorPool::DescriptorPool(Device* device, const std::string& name, std::spa
     device->GetInstance()->SetDebugObjectName(device, uint64_t(m_descriptor_pool), name.c_str(), VK_OBJECT_TYPE_DESCRIPTOR_POOL);
 }
 } // namespace macademy::vk
-

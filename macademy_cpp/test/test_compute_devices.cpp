@@ -58,10 +58,10 @@ TEST_F(ComputeDevicesTest, CPUComputeDevice)
 
 TEST_F(ComputeDevicesTest, CPUComputeDeviceBatchEval)
 {
-    std::vector<float> input1{ 1, -2, 3, -10, 10 };
-    std::vector<float> input2{ -3, 1, 2, -5, 4 };
-    std::vector<float> input3{ 0.5f, -1, 3, 2, -1 };
-    std::vector<float> input4{ -7.41f, 1.23f, 1.3f, 3.4f, 7.8f };
+    std::vector<float> input1{1, -2, 3, -10, 10};
+    std::vector<float> input2{-3, 1, 2, -5, 4};
+    std::vector<float> input3{0.5f, -1, 3, 2, -1};
+    std::vector<float> input4{-7.41f, 1.23f, 1.3f, 3.4f, 7.8f};
 
     std::vector<float> batched_input{};
     std::copy(input1.begin(), input1.end(), std::back_inserter(batched_input));
@@ -72,7 +72,7 @@ TEST_F(ComputeDevicesTest, CPUComputeDeviceBatchEval)
     auto cpu_device = std::make_unique<CPUComputeDevice>();
     auto cpu_device_network = cpu_device->RegisterNetwork(*m_network);
 
-    auto result1 = cpu_device->Evaluate(*cpu_device_network, input1); //result1 is already checked by a previous test
+    auto result1 = cpu_device->Evaluate(*cpu_device_network, input1); // result1 is already checked by a previous test
     auto result2 = cpu_device->Evaluate(*cpu_device_network, input2);
     auto result3 = cpu_device->Evaluate(*cpu_device_network, input3);
     auto result4 = cpu_device->Evaluate(*cpu_device_network, input4);
@@ -118,11 +118,11 @@ TEST_F(ComputeDevicesTest, OpenCLComputeDevice)
 
 TEST_F(ComputeDevicesTest, OpenCLComputeDeviceBatchEval)
 {
-    std::vector<float> input{ 
-        1, -2, 3, -10, 10, // input1 
-        -3, 1, 2, -5, 4, //input2
-        0.5f, -1, 3, 2, -1, //input3
-        -7.41f, 1.23f, 1.3f, 3.4f, 7.8f //input4
+    std::vector<float> input{
+        1,      -2,    3,    -10,  10,  // input1
+        -3,     1,     2,    -5,   4,   // input2
+        0.5f,   -1,    3,    2,    -1,  // input3
+        -7.41f, 1.23f, 1.3f, 3.4f, 7.8f // input4
     };
 
     auto cpu_device = std::make_unique<CPUComputeDevice>();

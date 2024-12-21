@@ -24,4 +24,3 @@ class CommandPool
 };
 
 } // namespace macademy::vk
-

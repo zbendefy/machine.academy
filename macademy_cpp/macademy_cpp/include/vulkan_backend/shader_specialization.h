@@ -72,4 +72,4 @@ class ShaderSpecializationMap
     std::unordered_map<std::string, uint32_t> m_map;
     std::vector<Data> m_data;
 };
-} // namespace fxgl3::vk
+} // namespace macademy::vk

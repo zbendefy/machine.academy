@@ -425,38 +425,38 @@ void CPUComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle
 }
 #endif
 
-std::unique_ptr<IBuffer> CPUComputeDevice::CreateBuffer(size_t size, bool, std::span<uint8_t> initial_data)
+std::unique_ptr<IBuffer> CPUComputeDevice::CreateBuffer(size_t size, BufferUsage, const std::string& name)
 {
     auto ret = std::make_unique<CPUBuffer>();
     ret->m_data.resize(size);
 
-    if(!initial_data.empty())
-    {
-        if(initial_data.size() != size)
-        {
+    if (!initial_data.empty()) {
+        if (initial_data.size() != size) {
             throw std::exception("Invalid initial data size");
         }
 
         std::copy(initial_data.begin(), initial_data.end(), ret->m_data.begin());
     }
+
+    return ret;
 }
 
-void CPUComputeDevice::QueueWriteToBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) 
-{ 
-    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(buffer);
-
-    ASSERT(cpu_buffer->m_data.size() >= offset + data.size());
-
-    memcpy(cpu_buffer->m_data.data() + offset, data.data(), data.size());
-}
-
-void CPUComputeDevice::QueueReadFromBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) 
+void CPUComputeDevice::QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset)
 {
-    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(buffer);
+    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(dst_buffer);
 
-    ASSERT(cpu_buffer->m_data.size() >= offset + data.size());
+    ASSERT(cpu_buffer->m_data.size() >= buffer_offset + src.size());
 
-    memcpy(data.data(), cpu_buffer->m_data.data() + offset, data.size());
+    memcpy(cpu_buffer->m_data.data() + buffer_offset, src.data(), src.size());
+}
+
+void CPUComputeDevice::QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset)
+{
+    CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(src_buffer);
+
+    ASSERT(cpu_buffer->m_data.size() >= buffer_offset + dst.size());
+
+    memcpy(dst.data(), cpu_buffer->m_data.data() + buffer_offset, dst.size());
 }
 
 void CPUComputeDevice::QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t offset_bytes, size_t size_bytes)
@@ -468,23 +468,23 @@ void CPUComputeDevice::QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t of
     memset(cpu_buffer->m_data.data() + offset_bytes, data, size_bytes);
 }
 
-void CPUComputeDevice::SubmitQueue() { /*CPU doesn't queue operations*/ }
-
-void CPUComputeDevice::WaitQueueIdle()
-{
-    /*CPU doesn't queue operations*/ 
+void CPUComputeDevice::SubmitQueue()
+{ /*CPU doesn't queue operations*/
 }
 
+void CPUComputeDevice::WaitQueueIdle() { /*CPU doesn't queue operations*/ }
+
 void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
-                                            uint64_t weights_layer_offset, uint32_t batch_count)
+                                                 uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count)
 {
     const auto weights_f32 = BufferCast<const CPUBuffer>(weights_buffer)->As<const float>();
     const auto layer_input = BufferCast<const CPUBuffer>(layer_input_buffer)->As<const float>();
     auto layer_output = BufferCast<CPUBuffer>(layer_output_buffer)->As<float>();
     const auto layer_config = BufferCast<const CPUBuffer>(layer_config_buffer)->As<const uint32_t>();
 
-    const uint32_t layer_neuron_count = layer_config[2 + layer_id * 2]; // number of neurons
-    const uint32_t weights_per_neuron = layer_config[layer_id * 2];     // neurons in the prev layer
+    ASSERT(layer_config[2 + layer_id * 2] == layer_neuron_count); // value in the buffer should match
+
+    const uint32_t weights_per_neuron = layer_config[layer_id * 2]; // neurons in the prev layer
     const uint32_t activationFunctionId = layer_config[3 + layer_id * 2];
 
     std::for_each_n(std::execution::par_unseq, weights_f32, layer_neuron_count * batch_count, [&](const float& f) {
@@ -498,7 +498,7 @@ void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, 
 
         const uint32_t neuron_data_size = weights_per_neuron + 1; // weights in prev layer + 1 bias
 
-         const float* neuron_weights_biases = weights_f32 + weights_layer_offset + layer_neuron_id * neuron_data_size;
+        const float* neuron_weights_biases = weights_f32 + weights_layer_offset + layer_neuron_id * neuron_data_size;
 
         float acc = 0;
         for (int i = 0; i < weights_per_neuron; ++i) {
@@ -506,8 +506,32 @@ void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, 
         }
         acc += neuron_weights_biases[weights_per_neuron]; // bias
 
-        layer_output[layer_neuron_id] = CalculateActivationFunction( ActivationFunction(activationFunctionId), acc);
+        layer_output[layer_neuron_id] = CalculateActivationFunction(ActivationFunction(activationFunctionId), acc);
     });
+}
+
+std::string CPUComputeDevice::GetDeviceName() const
+{
+    hwinfo::CPU cpu;
+    return "CPU device: " + cpu.getModelName();
+}
+
+size_t CPUComputeDevice::GetTotalMemory() const
+{
+    hwinfo::RAM ram;
+    return size_t(ram.getTotalSize_Bytes());
+}
+
+bool CPUComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
+{
+    switch (format) {
+    case macademy::NetworkWeightFormat::Float16:
+        return true;
+    case macademy::NetworkWeightFormat::Float32:
+        return true;
+    }
+
+    throw std::runtime_error("CPUComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
 }
 
 } // namespace macademy

@@ -167,8 +167,8 @@ std::unique_ptr<Device::LoaderStagingBuffer> Device::GetLoaderStagingBuffer(size
         it->second = false;
         ret->m_staging_buffer = it->first.get();
     } else {
-        auto new_buffer = std::make_unique<Buffer>(this, "loader_staging_buffer_" + std::to_string(m_loader_staging_buffers.size()), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                   VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+        auto new_buffer = std::make_unique<Buffer>(this, "loader_staging_buffer_" + std::to_string(m_loader_staging_buffers.size()), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+                                                   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
         ret->m_staging_buffer = new_buffer.get();
         m_loader_staging_buffers.emplace_back(std::make_pair(std::move(new_buffer), false));
     }
@@ -189,4 +189,3 @@ Device::~Device()
 Device::LoaderStagingBuffer::~LoaderStagingBuffer() { m_device->RecycleLoaderBuffer(*this); }
 
 } // namespace macademy::vk
-

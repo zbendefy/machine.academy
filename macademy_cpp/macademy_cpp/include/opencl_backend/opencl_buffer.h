@@ -31,8 +31,8 @@ class OpenCLBuffer : public IBuffer
         queue.enqueueWriteBuffer(*m_buffer, blocking, offset, data.size_bytes(), data.data());
     }
 
-    size_t GetSize() const { return m_size; }
+    size_t GetSize() const override { return m_size; }
 
-    cl::Buffer& GetBuffer() { return *m_buffer; }
+    cl::Buffer& GetBuffer() const { return *m_buffer; }
 };
 } // namespace macademy

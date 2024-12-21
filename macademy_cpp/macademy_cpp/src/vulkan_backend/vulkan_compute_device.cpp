@@ -1,6 +1,7 @@
 #include "vulkan_backend/vulkan_compute_device.h"
 #include "vulkan_backend/vulkan_buffer.h"
 #include "vulkan_backend/shader_specialization.h"
+#include "vulkan_backend/vulkan_buffer.h"
 #include "network.h"
 #include "common.h"
 #include "utils.h"
@@ -10,82 +11,15 @@
 #include <sstream>
 
 namespace macademy {
-//#include "opencl_kernels.cl"
 
-class VulkanNetworkResourceHandle : public NetworkResourceHandle
+VkCommandBuffer& VulkanComputeDevice::GetCommandBuffer()
 {
-    vk::Device* m_device{};
-    std::unique_ptr<vk::VulkanBuffer> m_weights_buffer;
-    std::unique_ptr<vk::VulkanBuffer> m_layer_config_buffer;
-    mutable std::unique_ptr<vk::VulkanBuffer> m_layer_result_buffer_a;
-    mutable std::unique_ptr<vk::VulkanBuffer> m_layer_result_buffer_b;
-
-  public:
-    VulkanNetworkResourceHandle(vk::Device* device, Network& network) : m_device(device), NetworkResourceHandle(network)
-    {
-        std::vector<uint32_t> layer_config_buffer;
-
-        {
-            layer_config_buffer.emplace_back(network.GetInputCount());
-            layer_config_buffer.emplace_back(0u); // dummy value to make input layer 2 wide
-            for (const auto& layer : network.GetLayerConfig()) {
-                layer_config_buffer.emplace_back(layer.m_num_neurons);
-                layer_config_buffer.emplace_back(uint32_t(layer.m_activation));
-            }
-        }
-
-        m_weights_buffer = std::make_unique<vk::VulkanBuffer>(m_device, "m_weights_buffer", network.GetRawWeightData().size_bytes(), VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                                                              VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
-
-        //This is small enough to fit into the faster but smaller (at least 16kb) uniform buffer storage. (Note: on AMD/Intel gpus its not faster than storage buffers though)
-        m_layer_config_buffer = std::make_unique<vk::VulkanBuffer>(m_device, "m_layer_config_buffer", layer_config_buffer.size() * sizeof(uint32_t), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                                                   VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
-        
-        //This upload uses 2 commandbuffers and submits, TODO: upload these buffers in a single command buffer and submit.
-        m_weights_buffer->UpdateData(std::span<uint8_t>(std::bit_cast<uint8_t*>(network.GetRawWeightData().data()), network.GetRawWeightData().size_bytes()), 0);
-        m_layer_config_buffer->UpdateData(std::span<uint8_t>(std::bit_cast<uint8_t*>(network.GetRawWeightData().data()), network.GetRawWeightData().size() * sizeof(uint32_t)), 0);
+    if (m_current_command_buffer == VK_NULL_HANDLE) {
+        m_current_command_buffer = m_device->CreateCommandBuffer();
     }
 
-    void SynchronizeNetworkData() override {}
-
-    void AllocateBatchEvalResources(uint32_t batch_count) const
-    {
-        const size_t largest_layer_size_bytes = std::max(m_network->GetInputCount(), CalculateLargestLayerNeuronCount(m_network->GetLayerConfig())) * m_network->GetWeightByteSize();
-        const size_t largest_layer_buffer_required_size = largest_layer_size_bytes * batch_count;
-        
-        if (!m_layer_result_buffer_a || m_layer_result_buffer_a->GetSize() < largest_layer_buffer_required_size) {
-            m_layer_result_buffer_a.reset();
-            m_layer_result_buffer_a = std::make_unique<vk::VulkanBuffer>(m_device, "m_layer_result_buffer_a", largest_layer_buffer_required_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                                                                         VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
-        }
-
-        if (!m_layer_result_buffer_b || m_layer_result_buffer_b->GetSize() < largest_layer_buffer_required_size) {
-            m_layer_result_buffer_b.reset();
-            m_layer_result_buffer_b = std::make_unique<vk::VulkanBuffer>(m_device, "m_layer_result_buffer_b", largest_layer_buffer_required_size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-                                                                         VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
-        }
-    }
-
-    void AllocateMutationBuffer()
-    {
-    }
-
-    virtual void AllocateTrainingResources(uint32_t training_sample_count)
-    {
-    }
-
-    virtual void FreeCachedResources()
-    {
-        //m_input_buffer.reset();
-        //m_desired_output_buffer.reset();
-        //m_activations_zvalues_buffer.reset();
-        //m_delta_k_buffer.reset();
-        //m_gradient_buffer.reset();
-        m_layer_result_buffer_a.reset();
-        m_layer_result_buffer_b.reset();
-        //m_mutation_buffer.reset();
-    }
-};
+    return m_current_command_buffer;
+}
 
 VulkanComputeDevice::VulkanComputeDevice(vk::Device* device) : m_device(device)
 {
@@ -106,35 +40,59 @@ VulkanComputeDevice::VulkanComputeDevice(vk::Device* device) : m_device(device)
     kernel_calc_single_layer_pipeline_desc.m_push_constant_size = 0;
 
     m_kernel_calc_single_layer = std::make_unique<vk::ComputePipeline>(m_device, "kernel_calc_single_layer", kernel_calc_single_layer_pipeline_desc, shader_specialization);
-    
 }
 
-std::unique_ptr<NetworkResourceHandle> VulkanComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<VulkanNetworkResourceHandle>(network); }
-
-std::vector<float> VulkanComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const { return EvaluateBatch(1, network_handle, input); }
-
-std::vector<float> VulkanComputeDevice::EvaluateBatch(uint32_t batch_count, const NetworkResourceHandle& network_handle, std::span<const float> input) const 
-{ return {}; }
-
-void VulkanComputeDevice::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
+std::unique_ptr<IBuffer> VulkanComputeDevice::CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name)
 {
+    auto ret = std::make_unique<vk::VulkanBuffer>(m_device, name.c_str(), size, VK_BUFFER_USAGE_STORAGE_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
+
+    return ret;
 }
 
-std::vector<vk::Device*> VulkanComputeDevice::GetDeviceList()
+void VulkanComputeDevice::QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset) {}
+
+void VulkanComputeDevice::QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset) {}
+
+void VulkanComputeDevice::QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t offset_bytes, size_t size_bytes)
 {
-    static vk::Instance instance{true, true};
-    return instance.GetDevices();
+    auto vk_buffer = BufferCast<vk::VulkanBuffer>(buffer);
+    vkCmdFillBuffer(GetCommandBuffer(), vk_buffer->GetHandle(), VkDeviceSize(offset_bytes), VkDeviceSize(size_bytes), data);
+}
+
+void VulkanComputeDevice::SubmitQueue()
+{
+    if (m_current_command_buffer != VK_NULL_HANDLE) {
+        VkSubmitInfo submit_info{};
+        submit_info.commandBufferCount = 1;
+        submit_info.pCommandBuffers = &m_current_command_buffer;
+
+        vkQueueSubmit(m_device->GetComputeQueue(), 1, &submit_info, VK_NULL_HANDLE);
+    }
+}
+
+void VulkanComputeDevice::WaitQueueIdle()
+{
+    if (m_current_command_buffer != VK_NULL_HANDLE) {
+        vkQueueWaitIdle(m_device->GetComputeQueue());
+
+        // Invalidate command buffer
+        vkResetCommandBuffer(m_current_command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT); //??? revise
+        m_current_command_buffer = VK_NULL_HANDLE;
+    }
+}
+
+void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer,
+                                                    uint32_t layer_id, uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count)
+{
+    const auto weights_buffer_cl = BufferCast<const vk::VulkanBuffer>(weights_buffer);
+    const auto layer_config_buffer_cl = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
+    const auto layer_input_buffer_cl = BufferCast<const vk::VulkanBuffer>(layer_input_buffer);
+    auto layer_output_buffer_cl = BufferCast<vk::VulkanBuffer>(layer_output_buffer);
 }
 
 std::string VulkanComputeDevice::GetDeviceName() const { return "Vulkan Device: " + m_device->GetName(); }
 
 size_t VulkanComputeDevice::GetTotalMemory() const { return 0; }
-
-uint32_t VulkanComputeDevice::GetComputeUnits() const { return 0; }
-
-void VulkanComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
-{
-}
 
 bool VulkanComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
 {

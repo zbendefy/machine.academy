@@ -2,6 +2,7 @@
 
 #include "vulkan_backend/vulkan_common.h"
 #include "common.h"
+#include "i_buffer.h"
 
 #include <VmaUsage.h>
 #include <memory>
@@ -10,7 +11,7 @@ namespace macademy::vk {
 
 class Device;
 
-class VulkanBuffer
+class VulkanBuffer : public IBuffer
 {
     Device* m_device = nullptr;
     VmaAllocator& m_allocator;
@@ -29,7 +30,7 @@ class VulkanBuffer
 
     VkBuffer GetHandle() { return m_buffer; }
 
-    size_t GetSize() const { return m_size; }
+    size_t GetSize() const override { return m_size; }
 
     void* MapMemory()
     {

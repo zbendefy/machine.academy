@@ -8,15 +8,12 @@
 namespace macademy {
 class Network;
 class TrainingSuite;
+class IBuffer;
+class IComputeDevice;
 
-struct UniformDistribution 
+struct UniformDistribution
 {
     float range;
-};
-
-enum class NetworkWeightFormat
-{
-    Float16, Float32
 };
 
 /// <summary>
@@ -24,17 +21,32 @@ enum class NetworkWeightFormat
 /// </summary>
 struct NetworkResourceHandle
 {
-    virtual ~NetworkResourceHandle() {}
+    NetworkResourceHandle(Network& network, IComputeDevice& compute_device);
 
-    NetworkResourceHandle(Network& network) : m_network(&network) {}
+    void SynchronizeNetworkData();
 
-    virtual void SynchronizeNetworkData() {}
+    void AllocateTrainingResources(uint32_t training_sample_count);
+    void AllocateBatchEvalResources(uint32_t batch_count) const;
+    void AllocateMutationBuffer();
 
-    virtual void AllocateTrainingResources(uint32_t training_sample_count) {}
+    void FreeCachedResources();
 
-    virtual void FreeCachedResources() {}
+    IComputeDevice* GetComputeDevice() { return m_compute_device; }
 
+    IComputeDevice* m_compute_device = nullptr;
     Network* m_network = nullptr;
+
+    std::unique_ptr<IBuffer> m_weights;
+    std::unique_ptr<IBuffer> m_layer_config_buffer;
+    mutable std::unique_ptr<IBuffer> m_layer_result_buffer_a;
+    mutable std::unique_ptr<IBuffer> m_layer_result_buffer_b;
+
+    std::unique_ptr<IBuffer> m_mutation_buffer;
+    std::unique_ptr<IBuffer> m_input_buffer;
+    std::unique_ptr<IBuffer> m_desired_output_buffer;
+    std::unique_ptr<IBuffer> m_activations_zvalues_buffer;
+    std::unique_ptr<IBuffer> m_delta_k_buffer;
+    std::unique_ptr<IBuffer> m_gradient_buffer;
 };
 
 using MutationDistribution = std::variant<UniformDistribution>;
@@ -42,24 +54,13 @@ using MutationDistribution = std::variant<UniformDistribution>;
 class ComputeTasks
 {
   public:
-    virtual ~ComputeTasks() {}
+    std::vector<float> Evaluate(const NetworkResourceHandle& network, std::span<const float> input) const;
 
-    virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) = 0;
+    std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network, std::span<const float> input) const;
+#if 0
+    void ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution);
 
-    virtual std::vector<float> Evaluate(const NetworkResourceHandle& network, std::span<const float> input) const = 0;
-
-    virtual std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network, std::span<const float> input) const = 0;
-
-    virtual void ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution) = 0;
-
-    virtual void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const = 0;
-
-    virtual std::string GetDeviceName() const = 0;
-
-    virtual size_t GetTotalMemory() const = 0;
-
-    virtual bool SupportsWeightFormat(NetworkWeightFormat format) const = 0;
-
-    virtual uint32_t GetComputeUnits() const = 0;
+    void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const;
+#endif
 };
 } // namespace macademy

@@ -23,4 +23,3 @@ class DescriptorPool
 };
 
 } // namespace macademy::vk
-

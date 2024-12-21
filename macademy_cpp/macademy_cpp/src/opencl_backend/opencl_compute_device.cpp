@@ -8,109 +8,30 @@
 #include <fstream>
 #include <sstream>
 
-namespace
+namespace {
+size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
 {
-    size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
-    {
-        return ((desiredGlobalSize % localSize) == 0) ? desiredGlobalSize : (desiredGlobalSize + (localSize - (desiredGlobalSize % localSize)));
+    return ((desiredGlobalSize % localSize) == 0) ? desiredGlobalSize : (desiredGlobalSize + (localSize - (desiredGlobalSize % localSize)));
+}
+
+cl_mem_flags ToOpenCLBufferUsage(macademy::BufferUsage usage)
+{
+    switch (usage) {
+    case macademy::BufferUsage::ReadOnly:
+        return CL_MEM_READ_ONLY;
+    case macademy::BufferUsage::ReadWrite:
+        return CL_MEM_READ_WRITE;
+    case macademy::BufferUsage::WriteOnly:
+        return CL_MEM_WRITE_ONLY;
     }
 }
+
+} // namespace
 
 namespace macademy {
 #include "opencl_kernels.cl"
 
 void SetKernelArgs(cl::Kernel kernel, cl_uint index, OpenCLBuffer& buffer) { kernel.setArg(index, buffer.GetSize(), buffer.GetBuffer().get()); }
-
-
-struct OpenCLNetworkResourceHandle : public NetworkResourceHandle
-{
-    cl::Context& m_context;
-    cl::CommandQueue& m_command_queue;
-    std::unique_ptr<OpenCLBuffer> m_weights;
-    std::unique_ptr<OpenCLBuffer> m_layer_config_buffer;
-    mutable std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_a;
-    mutable std::unique_ptr<OpenCLBuffer> m_layer_result_buffer_b;
-
-    std::unique_ptr<OpenCLBuffer> m_mutation_buffer;
-    std::unique_ptr<OpenCLBuffer> m_input_buffer;
-    std::unique_ptr<OpenCLBuffer> m_desired_output_buffer;
-    std::unique_ptr<OpenCLBuffer> m_activations_zvalues_buffer;
-    std::unique_ptr<OpenCLBuffer> m_delta_k_buffer;
-    std::unique_ptr<OpenCLBuffer> m_gradient_buffer;
-
-    OpenCLNetworkResourceHandle(cl::Context& context, cl::CommandQueue& command_queue, Network& network) : m_context(context), m_command_queue(command_queue), NetworkResourceHandle(network)
-    {
-        std::vector<cl_uint> layer_config_buffer;
-
-        {
-            layer_config_buffer.emplace_back(network.GetInputCount());
-            layer_config_buffer.emplace_back(0u); // dummy value to make input layer 2 wide
-            for (const auto& layer : network.GetLayerConfig()) {
-                layer_config_buffer.emplace_back(layer.m_num_neurons);
-                layer_config_buffer.emplace_back(uint32_t(layer.m_activation));
-            }
-        }
-
-        m_weights = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, network.GetRawWeightData().size_bytes(), nullptr);
-        m_layer_config_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, layer_config_buffer.size() * sizeof(cl_uint), nullptr);
-
-        m_command_queue.enqueueWriteBuffer(m_weights->GetBuffer(), false, 0, network.GetRawWeightData().size_bytes(), network.GetRawWeightData().data());
-        m_command_queue.enqueueWriteBuffer(m_layer_config_buffer->GetBuffer(), false, 0, layer_config_buffer.size() * sizeof(cl_uint), layer_config_buffer.data());
-        m_command_queue.finish();
-
-        // Note: using COPY_HOST_PTR at buffer creation is not optimal, as it will copy it first to host memory, and then upload it at kernel runtime
-        // Enqueueing a writebuffer separately makes sure there are no 2 copies, and that the buffer is uploaded when this function returns.
-        // See: https://stackoverflow.com/questions/3832963/what-is-the-difference-between-creating-a-buffer-object-with-clcreatebuffer-cl
-    }
-
-    void SynchronizeNetworkData() override { m_command_queue.enqueueReadBuffer(m_weights->GetBuffer(), true, 0, m_weights->GetSize(), m_network->GetRawWeightData().data()); }
-
-    void AllocateBatchEvalResources(uint32_t batch_count) const
-    {
-        const size_t largest_layer_size_bytes = std::max(m_network->GetInputCount(), CalculateLargestLayerNeuronCount(m_network->GetLayerConfig())) * m_network->GetWeightByteSize();
-        const size_t largest_layer_buffer_required_size = largest_layer_size_bytes * batch_count;
-
-        if (!m_layer_result_buffer_a || m_layer_result_buffer_a->GetSize() < largest_layer_buffer_required_size ) {
-            m_layer_result_buffer_a.reset();
-            m_layer_result_buffer_a = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_buffer_required_size, nullptr);
-        }
-
-        if (!m_layer_result_buffer_b || m_layer_result_buffer_b->GetSize() < largest_layer_buffer_required_size) {
-            m_layer_result_buffer_b.reset();
-            m_layer_result_buffer_b = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, largest_layer_buffer_required_size, nullptr);
-        }
-    }
-
-    void AllocateMutationBuffer()
-    {
-        const auto total_weight_and_bias_count = m_network->GetRawWeightData().size() / m_network->GetWeightByteSize();
-
-        if (!m_mutation_buffer) {
-            m_mutation_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, m_network->GetRawWeightData().size_bytes(), nullptr);
-        }
-    }
-
-    virtual void AllocateTrainingResources(uint32_t training_sample_count)
-    {
-        m_input_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, training_sample_count * m_network->GetInputCount() * sizeof(float), nullptr);
-        m_desired_output_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_ONLY, training_sample_count * m_network->GetOutputCount() * sizeof(float), nullptr);
-        m_activations_zvalues_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, training_sample_count * m_network->GetNeuronCount() * 2 * sizeof(float), nullptr);
-        m_delta_k_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, training_sample_count * m_network->GetNeuronCount() * 2 * sizeof(float), nullptr);
-        m_gradient_buffer = std::make_unique<OpenCLBuffer>(m_context, CL_MEM_READ_WRITE, m_network->GetRawWeightData().size_bytes(), nullptr);
-    }
-
-    virtual void FreeCachedResources()
-    {
-        m_input_buffer.reset();
-        m_desired_output_buffer.reset();
-        m_activations_zvalues_buffer.reset();
-        m_delta_k_buffer.reset();
-        m_gradient_buffer.reset();
-        m_layer_result_buffer_a.reset();
-        m_layer_result_buffer_b.reset();
-        m_mutation_buffer.reset();
-    }
-};
 
 OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config)
     : m_device(device), m_device_config(advanced_config), m_context(device), m_command_queue(m_context, m_device)
@@ -154,61 +75,59 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig a
     m_kernel_train_apply_gradient = std::make_unique<KernelTrainingApplyGradient>(KernelTrainingApplyGradient(m_program, "trainingApplyGradient"));
 }
 
-std::unique_ptr<NetworkResourceHandle> OpenCLComputeDevice::RegisterNetwork(Network& network) { return std::make_unique<OpenCLNetworkResourceHandle>(m_context, m_command_queue, network); }
-
-std::vector<float> OpenCLComputeDevice::Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const { return EvaluateBatch(1, network_handle, input); }
-
-std::vector<float> OpenCLComputeDevice::EvaluateBatch(uint32_t batch_count, const NetworkResourceHandle& network_handle, std::span<const float> input) const 
+std::unique_ptr<IBuffer> OpenCLComputeDevice::CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name)
 {
-    const auto opencl_network = dynamic_cast<const OpenCLNetworkResourceHandle*>(&network_handle);
+    auto ret = std::make_unique<OpenCLBuffer>(m_context, ToOpenCLBufferUsage(buffer_usage), size, nullptr);
 
-    if (!opencl_network) {
-        throw std::runtime_error("Network was not created by an OpenCL compute device!");
+    if (!initial_data.empty()) {
+        QueueWriteToBuffer(ret.get(), initial_data, 0);
+        SubmitQueue();
+        WaitQueueIdle();
     }
 
-    Network& network = *network_handle.m_network;
-
-    if (input.size() != size_t(batch_count) * size_t(network.GetInputCount())) {
-        throw std::runtime_error("Invalid input length!");
-    }
-
-    opencl_network->AllocateBatchEvalResources(batch_count);
-
-    auto layer_config = network.GetLayerConfig();
-
-    auto layer_results_input = opencl_network->m_layer_result_buffer_a.get();
-    auto layer_results_output = opencl_network->m_layer_result_buffer_b.get();
-
-    // Write input into buffer for all batches
-    m_command_queue.enqueueWriteBuffer(opencl_network->m_layer_result_buffer_a->GetBuffer(), false, 0, input.size_bytes(), input.data());
-
-    cl_ulong weights_layer_offset = 0;
-
-    float* neuron_weight_data = network.GetRawWeightData().data();
-    for (uint32_t i = 0; i < layer_config.size(); ++i) {
-        const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
-        const uint32_t output_num = layer_config[i].m_num_neurons;
-
-        (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count),
-                                                      cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size, 1)),
-                                      opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), layer_results_input->GetBuffer(), layer_results_output->GetBuffer(),
-                                      i, weights_layer_offset);
-
-        const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
-        ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
-        weights_layer_offset += layer_weight_size_bytes; // advance the offset in the weights buffer for the next layer
-
-        std::swap(layer_results_input, layer_results_output); // output of this layer is input of the next
-    }
-
-    std::vector<float> result;
-    result.resize(size_t(network.GetOutputCount()) * size_t(batch_count));
-
-    m_command_queue.enqueueReadBuffer(layer_results_input->GetBuffer(), true, 0, size_t(network.GetOutputCount()) * size_t(network.GetWeightByteSize()) * size_t(batch_count), result.data());
-
-    return result;
+    return ret;
 }
 
+void OpenCLComputeDevice::QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset)
+{
+    auto cl_buffer = BufferCast<OpenCLBuffer>(dst_buffer);
+
+    m_command_queue.enqueueWriteBuffer(cl_buffer->GetBuffer(), false, cl::size_type(buffer_offset), cl::size_type(src.size()), src.data());
+}
+
+void OpenCLComputeDevice::QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset)
+{
+    auto cl_buffer = BufferCast<OpenCLBuffer>(src_buffer);
+
+    m_command_queue.enqueueReadBuffer(cl_buffer->GetBuffer(), false, cl::size_type(buffer_offset), cl::size_type(dst.size()), dst.data());
+}
+
+void OpenCLComputeDevice::QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t offset_bytes, size_t size_bytes)
+{
+    auto cl_buffer = BufferCast<OpenCLBuffer>(buffer);
+
+    m_command_queue.enqueueFillBuffer(cl_buffer->GetBuffer(), cl_uint(data), cl::size_type(offset_bytes), cl::size_type(size_bytes));
+}
+
+void OpenCLComputeDevice::SubmitQueue() { m_command_queue.flush(); }
+
+void OpenCLComputeDevice::WaitQueueIdle() { m_command_queue.finish(); }
+
+void OpenCLComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer,
+                                                    uint32_t layer_id, uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count)
+{
+    const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(weights_buffer);
+    const auto layer_config_buffer_cl = BufferCast<const OpenCLBuffer>(layer_config_buffer);
+    const auto layer_input_buffer_cl = BufferCast<const OpenCLBuffer>(layer_input_buffer);
+    auto layer_output_buffer_cl = BufferCast<OpenCLBuffer>(layer_output_buffer);
+
+    (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count),
+                                                  cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size, 1)),
+                                  weights_buffer_cl->GetBuffer(), layer_config_buffer_cl->GetBuffer(), layer_input_buffer_cl->GetBuffer(), layer_output_buffer_cl->GetBuffer(), layer_id,
+                                  weights_layer_offset);
+}
+
+#if 0
 void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
 {
     const auto opencl_network = dynamic_cast<const OpenCLNetworkResourceHandle*>(&network_handle);
@@ -321,6 +240,7 @@ void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const Tra
 
     m_command_queue.finish();
 }
+#endif
 
 std::vector<cl::Device> OpenCLComputeDevice::GetDeviceList()
 {
@@ -348,9 +268,7 @@ std::string OpenCLComputeDevice::GetDeviceName() const { return "OpenCL Device: 
 
 size_t OpenCLComputeDevice::GetTotalMemory() const { return size_t(m_device.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>()); }
 
-uint32_t OpenCLComputeDevice::GetComputeUnits() const { return size_t(m_device.getInfo<CL_DEVICE_MAX_COMPUTE_UNITS>()); }
-
-
+#if 0
 void OpenCLComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
 {
     auto opencl_network = dynamic_cast<OpenCLNetworkResourceHandle*>(&network_handle);
@@ -422,6 +340,7 @@ void OpenCLComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_han
 
     m_command_queue.finish();
 }
+#endif
 
 bool OpenCLComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
 {

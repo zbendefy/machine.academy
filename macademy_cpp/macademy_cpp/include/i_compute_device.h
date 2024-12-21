@@ -5,56 +5,51 @@
 #include <string>
 #include <variant>
 
+#include <i_buffer.h>
+
 namespace macademy {
 class Network;
 class TrainingSuite;
 
-struct UniformDistribution 
+enum class NetworkWeightFormat
 {
-    float range;
+    Float16,
+    Float32
 };
 
-class IBuffer
+template <typename T> std::span<const uint8_t> ToReadOnlyUi8Span(const T& container)
 {
-public:
-    virtual ~IBuffer() {}
-};
-
-template <typename T> T* BufferCast(IBuffer* i_buf) 
-{ 
-    T* ret = dynamic_cast<T*>(i_buf);
-    if (!ret) {
-        throw std::exception("Invalid buffer cast!");
-    }
-
-    return ret;
+    return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(container.data()), container.size() * sizeof(typename T::value_type));
+}
+template <typename T> std::span<const uint8_t> ToReadOnlyUi8Span(std::span<const T> container)
+{
+    return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(container.data()), container.size_bytes());
 }
 
-template <typename T> const T* BufferCast(const IBuffer* i_buf)
+template <typename T> std::span<uint8_t> ToWriteableUi8Span(T& container)
 {
-    T* ret = dynamic_cast<const T*>(i_buf);
-    if (!ret) {
-        throw std::exception("Invalid buffer cast!");
-    }
-
-    return ret;
+    return std::span<uint8_t>(reinterpret_cast<uint8_t*>(container.data()), container.size() * sizeof(typename T::value_type));
 }
+template <typename T> std::span<uint8_t> ToWriteableUi8Span(std::span<T> container) { return std::span<uint8_t>(reinterpret_cast<uint8_t*>(container.data()), container.size_bytes()); }
 
 class IComputeDevice
 {
   public:
     virtual ~IComputeDevice() {}
 
-    virtual std::unique_ptr<IBuffer> CreateBuffer(size_t size, bool is_read_only_from_device, std::span<uint8_t> initial_data) = 0;
+    virtual std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) = 0;
 
-    virtual void QueueWriteToBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) = 0;
-    virtual void QueueReadFromBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) = 0;
+    virtual void QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset) = 0;
+    virtual void QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset) = 0;
     virtual void QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t offset_bytes, size_t size_bytes) = 0;
     virtual void SubmitQueue() = 0;
     virtual void WaitQueueIdle() = 0;
 
-    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* const layer_input_buffer, IBuffer* layer_output_buffer,
-                                           uint32_t layer_id, uint64_t weights_layer_offset, uint32_t batch_count) = 0;
+    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
+                                           uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count) = 0;
 
+    virtual std::string GetDeviceName() const = 0;
+    virtual size_t GetTotalMemory() const = 0;
+    virtual bool SupportsWeightFormat(NetworkWeightFormat format) const = 0;
 };
 } // namespace macademy

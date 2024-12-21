@@ -4,7 +4,7 @@
 
 namespace macademy::vk {
 VulkanBuffer::VulkanBuffer(Device* device, const std::string& name, size_t size, VkBufferUsageFlags usage_flags, VmaMemoryUsage vma_memory_usage, VmaAllocationCreateFlags alloc_create_flags)
-    :m_device(device), m_allocator(device->GetVMAAllocator()), m_size(size), m_name(name)
+    : m_device(device), m_allocator(device->GetVMAAllocator()), m_size(size), m_name(name)
 {
     VkBufferCreateInfo bufCreateInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
     bufCreateInfo.size = size;
@@ -19,7 +19,7 @@ VulkanBuffer::VulkanBuffer(Device* device, const std::string& name, size_t size,
         throw std::runtime_error("Failed to create buffer: " + name);
     }
 
-    m_persistently_mapped_data = allocInfo.pMappedData; //nullptr if no persistently_mapped bit was requested
+    m_persistently_mapped_data = allocInfo.pMappedData; // nullptr if no persistently_mapped bit was requested
 
     device->GetInstance()->SetDebugObjectName(device, uint64_t(m_buffer), name.c_str(), VK_OBJECT_TYPE_BUFFER);
 }
@@ -45,9 +45,5 @@ void VulkanBuffer::UpdateData(const std::span<uint8_t>& data, size_t offset)
     }
 }
 
-VulkanBuffer::~VulkanBuffer()
-{
-    vmaDestroyBuffer(m_allocator, m_buffer, m_allocation);
-}
+VulkanBuffer::~VulkanBuffer() { vmaDestroyBuffer(m_allocator, m_buffer, m_allocation); }
 } // namespace macademy::vk
-

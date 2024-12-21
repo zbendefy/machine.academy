@@ -84,4 +84,3 @@ ComputePipeline::ComputePipeline(Device* device, std::string_view name, const Co
 }
 
 } // namespace macademy::vk
-

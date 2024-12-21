@@ -57,5 +57,4 @@ class ShaderModule
 
     ~ShaderModule() { vkDestroyShaderModule(m_device->GetHandle(), m_shader_module, nullptr); }
 };
-} // namespace fxgl3::vk
-
+} // namespace macademy::vk

@@ -34,4 +34,3 @@ class ComputePipeline
     VkPipelineLayout GetPipelineLayoutHandle() { return m_pipeline_layout; }
 };
 } // namespace macademy::vk
-

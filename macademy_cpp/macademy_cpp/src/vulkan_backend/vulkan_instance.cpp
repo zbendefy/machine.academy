@@ -135,8 +135,7 @@ void Instance::InitDevices()
 
     m_devices.resize(device_count);
 
-    for (uint32_t device_id = 0; device_id < device_count; ++device_id)
-    {
+    for (uint32_t device_id = 0; device_id < device_count; ++device_id) {
         VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
         constexpr auto CheckExtensionSupport = [](const std::vector<const char*>& required_extensions, VkPhysicalDevice device) {
@@ -242,4 +241,4 @@ VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugMessenger::DebugCallback(VkDebugUt
     return VK_FALSE;
 }
 
-}
+} // namespace macademy::vk

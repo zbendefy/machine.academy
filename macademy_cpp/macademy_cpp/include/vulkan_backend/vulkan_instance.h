@@ -39,10 +39,12 @@ class Instance
     static std::vector<VkLayerProperties> GetInstanceLayers();
 
     void InitDevices();
+
   public:
     Instance(bool enable_validation_layer = false, bool enable_debug_labels = false);
 
-    std::vector<Device*> GetDevices() { 
+    std::vector<Device*> GetDevices()
+    {
         std::vector<Device*> ret;
         ret.reserve(m_devices.size());
         for (const auto& device : m_devices) {
@@ -73,4 +75,3 @@ class Instance
     PFN_vkCmdEndDebugUtilsLabelEXT m_debug_label_end = nullptr;
 };
 } // namespace macademy::vk
-

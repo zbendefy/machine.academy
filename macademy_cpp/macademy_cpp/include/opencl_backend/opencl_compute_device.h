@@ -1,6 +1,6 @@
 #pragma once
 
-#include "i_compute_backend.h"
+#include "i_compute_device.h"
 #include "opencl_common.h"
 
 #include <optional>
@@ -43,15 +43,16 @@ class OpenCLComputeDevice : public IComputeDevice
   public:
     OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config = {});
 
-    virtual std::unique_ptr<NetworkResourceHandle> RegisterNetwork(Network& network) override;
+    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) = 0;
 
-    virtual std::vector<float> Evaluate(const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
+    void QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset) override;
+    void QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset) override;
+    void QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t offset, size_t size) override;
+    void SubmitQueue() override;
+    void WaitQueueIdle() override;
 
-    virtual std::vector<float> EvaluateBatch(uint32_t batch_count, const NetworkResourceHandle& network_handle, std::span<const float> input) const override;
-
-    virtual void ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution) override;
-
-    virtual void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const override;
+    void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
+                                   uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count) override;
 
     static std::vector<cl::Device> GetDeviceList();
 
@@ -60,8 +61,6 @@ class OpenCLComputeDevice : public IComputeDevice
     std::string GetDeviceName() const override;
 
     size_t GetTotalMemory() const override;
-
-    uint32_t GetComputeUnits() const override;
 
     bool SupportsWeightFormat(NetworkWeightFormat format) const override;
 };

@@ -14,7 +14,7 @@ namespace macademy::vk {
 class Instance;
 class Texture;
 class CommandPool;
-class Buffer;
+class VulkanBuffer;
 
 class Device
 {
@@ -62,8 +62,7 @@ class Device
     std::string GetName() { return m_device_props.deviceName; }
 
   private:
-    
-      void RecycleLoaderBuffer(LoaderStagingBuffer& loader_buffer);
+    void RecycleLoaderBuffer(LoaderStagingBuffer& loader_buffer);
 
     Instance* m_instance;
 
@@ -78,10 +77,9 @@ class Device
 
     std::unique_ptr<CommandPool> m_command_pool;
 
-    std::vector<std::pair<std::unique_ptr<Buffer>, bool>> m_loader_staging_buffers;
+    std::vector<std::pair<std::unique_ptr<VulkanBuffer>, bool>> m_loader_staging_buffers;
 
     VmaAllocator m_vma;
 };
 
 } // namespace macademy::vk
-
