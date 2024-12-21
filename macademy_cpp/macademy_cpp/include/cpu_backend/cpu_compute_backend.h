@@ -10,8 +10,13 @@ namespace macademy {
     {
       public:
         std::vector<uint8_t> m_data;
-    };
 
+        template <typename T>
+        T* As() { return reinterpret_cast<T*>(m_data.data()); }
+
+        template <typename T>
+        const T* As() const { return reinterpret_cast<const T*>(m_data.data()); }
+    };
     
     class CPUComputeDevice : public IComputeDevice
     {
@@ -24,7 +29,7 @@ namespace macademy {
         void SubmitQueue() override;
         void WaitQueueIdle() override;
 
-        void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* const layer_input_buffer, const IBuffer* layer_output_buffer,
+        void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* const layer_input_buffer, IBuffer* layer_output_buffer,
                                        uint32_t layer_id, uint64_t weights_layer_offset, uint32_t batch_count) override;
 
     };

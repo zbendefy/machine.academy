@@ -1,4 +1,4 @@
-#include "cpu_compute_backend.h"
+#include "cpu_backend/cpu_compute_backend.h"
 #include "network.h"
 #include "common.h"
 #include "utils.h"
@@ -91,6 +91,7 @@ inline float CalculateCostFunctionDelta(CostFunction cost_fnc, float z, float a,
 
 } // namespace
 
+#if 0
 void CPUComputeDevice::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
 {
     ASSERT(trainingDataBegin < trainingDataEnd);
@@ -422,6 +423,23 @@ void CPUComputeDevice::ApplyRandomMutation(NetworkResourceHandle& network_handle
         weights_per_neuron = layer_neuron_count;
     }
 }
+#endif
+
+std::unique_ptr<IBuffer> CPUComputeDevice::CreateBuffer(size_t size, bool, std::span<uint8_t> initial_data)
+{
+    auto ret = std::make_unique<CPUBuffer>();
+    ret->m_data.resize(size);
+
+    if(!initial_data.empty())
+    {
+        if(initial_data.size() != size)
+        {
+            throw std::exception("Invalid initial data size");
+        }
+
+        std::copy(initial_data.begin(), initial_data.end(), ret->m_data.begin());
+    }
+}
 
 void CPUComputeDevice::QueueWriteToBuffer(IBuffer* buffer, std::span<uint8_t> data, size_t offset) 
 { 
@@ -445,9 +463,9 @@ void CPUComputeDevice::QueueFillBuffer(IBuffer* buffer, uint32_t data, size_t of
 {
     CPUBuffer* cpu_buffer = BufferCast<CPUBuffer>(buffer);
 
-    ASSERT(cpu_buffer->m_data.size() >= offset + size);
+    ASSERT(cpu_buffer->m_data.size() >= offset_bytes + size_bytes);
 
-    memset(cpu_buffer->m_data.data() + offset, data, size);
+    memset(cpu_buffer->m_data.data() + offset_bytes, data, size_bytes);
 }
 
 void CPUComputeDevice::SubmitQueue() { /*CPU doesn't queue operations*/ }
@@ -457,25 +475,30 @@ void CPUComputeDevice::WaitQueueIdle()
     /*CPU doesn't queue operations*/ 
 }
 
-void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const layer_input_buffer, const IBuffer* layer_output_buffer, uint32_t layer_id,
+void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
                                             uint64_t weights_layer_offset, uint32_t batch_count)
 {
+    const auto weights_f32 = BufferCast<const CPUBuffer>(weights_buffer)->As<const float>();
+    const auto layer_input = BufferCast<const CPUBuffer>(layer_input_buffer)->As<const float>();
+    auto layer_output = BufferCast<CPUBuffer>(layer_output_buffer)->As<float>();
+    const auto layer_config = BufferCast<const CPUBuffer>(layer_config_buffer)->As<const uint32_t>();
+
     const uint32_t layer_neuron_count = layer_config[2 + layer_id * 2]; // number of neurons
     const uint32_t weights_per_neuron = layer_config[layer_id * 2];     // neurons in the prev layer
     const uint32_t activationFunctionId = layer_config[3 + layer_id * 2];
 
-    std::for_each_n(std::execution::par_unseq, network.GetRawWeightData().begin(), layer_neuron_count * batch_count, [&](const float& f) {
-        const uint32_t neuron_id = &f - &network.GetRawWeightData()[0];
+    std::for_each_n(std::execution::par_unseq, weights_f32, layer_neuron_count * batch_count, [&](const float& f) {
+        const uint32_t neuron_id = &f - weights_f32;
 
         const uint32_t layer_neuron_id = neuron_id % layer_neuron_count;
         const uint32_t batch_id = neuron_id / layer_neuron_count;
 
-        const float* input = layer_input_buffer + batch_id * weights_per_neuron;
-        float* output = layer_output_buffer + batch_id * layer_neuron_count;
+        const float* input = layer_input + batch_id * weights_per_neuron;
+        float* output = layer_output + batch_id * layer_neuron_count;
 
         const uint32_t neuron_data_size = weights_per_neuron + 1; // weights in prev layer + 1 bias
 
-         const float* neuron_weights_biases = weights_buffer + weights_layer_offset + layer_neuron_id * neuron_data_size;
+         const float* neuron_weights_biases = weights_f32 + weights_layer_offset + layer_neuron_id * neuron_data_size;
 
         float acc = 0;
         for (int i = 0; i < weights_per_neuron; ++i) {
@@ -483,7 +506,7 @@ void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, 
         }
         acc += neuron_weights_biases[weights_per_neuron]; // bias
 
-        output[layer_neuron_id] = CalculateActivationFunction( ActivationFunction(activationFunctionId), acc);
+        layer_output[layer_neuron_id] = CalculateActivationFunction( ActivationFunction(activationFunctionId), acc);
     });
 }
 

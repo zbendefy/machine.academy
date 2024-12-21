@@ -16,12 +16,23 @@ struct UniformDistribution
 
 class IBuffer
 {
+public:
     virtual ~IBuffer() {}
 };
 
 template <typename T> T* BufferCast(IBuffer* i_buf) 
 { 
     T* ret = dynamic_cast<T*>(i_buf);
+    if (!ret) {
+        throw std::exception("Invalid buffer cast!");
+    }
+
+    return ret;
+}
+
+template <typename T> const T* BufferCast(const IBuffer* i_buf)
+{
+    T* ret = dynamic_cast<const T*>(i_buf);
     if (!ret) {
         throw std::exception("Invalid buffer cast!");
     }
@@ -42,7 +53,7 @@ class IComputeDevice
     virtual void SubmitQueue() = 0;
     virtual void WaitQueueIdle() = 0;
 
-    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* const layer_input_buffer, const IBuffer* layer_output_buffer,
+    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* const layer_input_buffer, IBuffer* layer_output_buffer,
                                            uint32_t layer_id, uint64_t weights_layer_offset, uint32_t batch_count) = 0;
 
 };

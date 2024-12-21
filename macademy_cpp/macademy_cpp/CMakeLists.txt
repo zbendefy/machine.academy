@@ -48,8 +48,10 @@ endif()
 
 file(GLOB_RECURSE MACADEMY_SOURCE_FILES
     include/*.h
+    include/cpu_backend/*.h
 
     src/*.cpp
+    src/cpu_backend/*.cpp
 )
 
 add_library(${PROJECT_NAME}
