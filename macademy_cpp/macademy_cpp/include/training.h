@@ -2,6 +2,7 @@
 
 #include "network.h"
 #include "training_suite.h"
+#include "compute_tasks.h"
 
 #include <algorithm>
 
@@ -10,7 +11,7 @@ namespace macademy {
 class Training
 {
   public:
-    std::shared_ptr<const TrainingResultTracker> Train(NetworkResourceHandle& network, IComputeDevice& compute_device, std::shared_ptr<TrainingSuite> training_suite)
+    std::shared_ptr<const TrainingResultTracker> Train(NetworkResourceHandle& network, std::shared_ptr<TrainingSuite> training_suite)
     {
         auto training_result_tracker = std::make_shared<TrainingResultTracker>();
 
@@ -26,7 +27,7 @@ class Training
             throw std::runtime_error("Invalid training desired output size!");
         }
 
-        training_result_tracker->m_future = std::async(std::launch::async, [this, &compute_device, training_suite, &network, training_result_tracker]() {
+        training_result_tracker->m_future = std::async(std::launch::async, [this, training_suite, &network, training_result_tracker]() {
             std::random_device rd;
             std::mt19937 g(rd());
 
@@ -57,8 +58,10 @@ class Training
                 uint64_t trainingDataEnd =
                     training_suite->m_mini_batch_size ? std::min(*training_suite->m_mini_batch_size, training_suite->m_training_data.size()) : training_suite->m_training_data.size();
 
+                auto compute_device = network.GetComputeDevice();
+
                 while (true) {
-                    compute_device.Train(network, *training_suite, trainingDataBegin, trainingDataEnd);
+                    //compute_device->Train(network, *training_suite, trainingDataBegin, trainingDataEnd);
 
                     if (training_suite->m_mini_batch_size) {
                         if (trainingDataEnd >= training_suite->m_training_data.size()) {

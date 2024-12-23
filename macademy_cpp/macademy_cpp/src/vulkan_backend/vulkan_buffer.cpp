@@ -24,26 +24,5 @@ VulkanBuffer::VulkanBuffer(Device* device, const std::string& name, size_t size,
     device->GetInstance()->SetDebugObjectName(device, uint64_t(m_buffer), name.c_str(), VK_OBJECT_TYPE_BUFFER);
 }
 
-void VulkanBuffer::UpdateData(const std::span<uint8_t>& data, size_t offset)
-{
-    if (offset + data.size() > m_size) {
-        throw std::runtime_error("buffer update data failed");
-    }
-
-    if (m_persistently_mapped_data) {
-        // BAR region memory
-        auto data_ptr = (uint8_t*)m_persistently_mapped_data;
-        memcpy(data_ptr + offset, data.data(), data.size_bytes());
-    } else {
-
-        auto staging_buffer = m_device->GetLoaderStagingBuffer(data.size());
-        staging_buffer->m_staging_buffer->UpdateData(data, 0);
-
-        m_device->RunOneTimeComandBuffer([device = m_device, &staging_buffer, size = data.size(), offset, this](VkCommandBuffer& cmd_buffer) {
-            device->CmdCopyBuffer(cmd_buffer, staging_buffer->m_staging_buffer->GetHandle(), m_buffer, VkBufferCopy{.dstOffset = offset, .size = size});
-        });
-    }
-}
-
 VulkanBuffer::~VulkanBuffer() { vmaDestroyBuffer(m_allocator, m_buffer, m_allocation); }
 } // namespace macademy::vk

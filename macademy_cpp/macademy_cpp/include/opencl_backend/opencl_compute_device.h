@@ -41,9 +41,9 @@ class OpenCLComputeDevice : public IComputeDevice
     bool m_is_float16_supported = false;
 
   public:
-    OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config = {});
+    OpenCLComputeDevice(const ComputeDeviceInfo& device, OpenCLDeviceConfig advanced_config = {});
 
-    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) = 0;
+    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) override;
 
     void QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset) override;
     void QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset) override;
@@ -56,12 +56,15 @@ class OpenCLComputeDevice : public IComputeDevice
 
     static std::vector<cl::Device> GetDeviceList();
 
-    static cl::Device AutoSelectDevice();
-
     std::string GetDeviceName() const override;
 
     size_t GetTotalMemory() const override;
 
     bool SupportsWeightFormat(NetworkWeightFormat format) const override;
+    
+    static std::vector<ComputeDeviceInfo> GetOpenCLComputeDeviceInfo();
 };
+
+
+
 } // namespace macademy

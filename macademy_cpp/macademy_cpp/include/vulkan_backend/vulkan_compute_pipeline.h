@@ -19,7 +19,7 @@ class ComputePipeline
     VkPipeline m_compute_pipeline;
 
   public:
-    ComputePipeline(Device* device, std::string_view name, const ComputePipelineDescriptor& pipeline_desc, const ShaderSpecializationMap& specialization_parameters);
+    ComputePipeline(Device* device, const std::string& name, const ComputePipelineDescriptor& pipeline_desc, const ShaderSpecializationMap& specialization_parameters);
 
     ~ComputePipeline()
     {

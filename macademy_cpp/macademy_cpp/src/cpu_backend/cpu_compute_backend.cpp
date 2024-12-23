@@ -430,14 +430,6 @@ std::unique_ptr<IBuffer> CPUComputeDevice::CreateBuffer(size_t size, BufferUsage
     auto ret = std::make_unique<CPUBuffer>();
     ret->m_data.resize(size);
 
-    if (!initial_data.empty()) {
-        if (initial_data.size() != size) {
-            throw std::exception("Invalid initial data size");
-        }
-
-        std::copy(initial_data.begin(), initial_data.end(), ret->m_data.begin());
-    }
-
     return ret;
 }
 
@@ -506,7 +498,7 @@ void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, 
         }
         acc += neuron_weights_biases[weights_per_neuron]; // bias
 
-        layer_output[layer_neuron_id] = CalculateActivationFunction(ActivationFunction(activationFunctionId), acc);
+        output[layer_neuron_id] = CalculateActivationFunction(ActivationFunction(activationFunctionId), acc);
     });
 }
 
@@ -532,6 +524,13 @@ bool CPUComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
     }
 
     throw std::runtime_error("CPUComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
+}
+
+ComputeDeviceInfo CPUComputeDevice::GetCpuComputeDeviceInfo()
+{
+    hwinfo::CPU cpu;
+    hwinfo::RAM ram;
+    return ComputeDeviceInfo{.m_backend = "cpu", .m_device_index = 0, .m_device_name = cpu.getModelName(), .m_total_memory = uint64_t(ram.getTotalSize_Bytes())};
 }
 
 } // namespace macademy

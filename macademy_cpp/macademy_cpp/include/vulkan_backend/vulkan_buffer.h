@@ -13,7 +13,7 @@ class Device;
 
 class VulkanBuffer : public IBuffer
 {
-    Device* m_device = nullptr;
+    Device* m_device = nullptr; 
     VmaAllocator& m_allocator;
     VkBuffer m_buffer;
     VmaAllocation m_allocation;
@@ -25,8 +25,6 @@ class VulkanBuffer : public IBuffer
     VulkanBuffer(Device* device, const std::string& name, size_t size, VkBufferUsageFlags usage_flags, VmaMemoryUsage vma_memory_usage, VmaAllocationCreateFlags alloc_create_flags);
 
     const std::string& GetName() const { return m_name; }
-
-    void UpdateData(const std::span<uint8_t>& data, size_t offset);
 
     VkBuffer GetHandle() { return m_buffer; }
 

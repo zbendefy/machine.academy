@@ -17,7 +17,7 @@ size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
 
 namespace macademy {
 
-NetworkResourceHandle::NetworkResourceHandle(Network& network, IComputeDevice& compute_device)
+NetworkResourceHandle::NetworkResourceHandle(Network& network, IComputeDevice& compute_device) : m_network(&network)
 {
     m_compute_device = &compute_device;
 

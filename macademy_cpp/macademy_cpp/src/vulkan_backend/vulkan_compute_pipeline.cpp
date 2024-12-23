@@ -45,10 +45,10 @@ struct ShaderInfo
     }
 };
 
-ComputePipeline::ComputePipeline(Device* device, std::string_view name, const ComputePipelineDescriptor& pipeline_desc, const ShaderSpecializationMap& specialization_parameters)
+ComputePipeline::ComputePipeline(Device* device, const std::string& name, const ComputePipelineDescriptor& pipeline_desc, const ShaderSpecializationMap& specialization_parameters)
     : m_name(name), m_device(device)
 {
-    ShaderInfo cs_info{device, std::string(name), pipeline_desc.m_compute_shader, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_desc.m_compute_shader_entry_function, specialization_parameters};
+    ShaderInfo cs_info{device, name, pipeline_desc.m_compute_shader, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_desc.m_compute_shader_entry_function, specialization_parameters};
 
     VkPushConstantRange push_constant_range{};
     push_constant_range.offset = pipeline_desc.m_push_constant_offset;

@@ -63,4 +63,5 @@ class ComputeTasks
     void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const;
 #endif
 };
+
 } // namespace macademy

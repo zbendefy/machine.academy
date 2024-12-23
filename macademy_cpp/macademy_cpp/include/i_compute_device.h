@@ -11,6 +11,14 @@ namespace macademy {
 class Network;
 class TrainingSuite;
 
+struct ComputeDeviceInfo
+{
+    std::string m_backend;
+    uint32_t m_device_index;
+    std::string m_device_name;
+    uint64_t m_total_memory;
+};
+
 enum class NetworkWeightFormat
 {
     Float16,

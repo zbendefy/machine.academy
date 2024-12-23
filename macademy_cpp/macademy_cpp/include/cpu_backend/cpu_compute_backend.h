@@ -21,7 +21,7 @@ class CPUBuffer : public IBuffer
 class CPUComputeDevice : public IComputeDevice
 {
   public:
-    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) = 0;
+    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name);
 
     void QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset) override;
     void QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset) override;
@@ -35,6 +35,9 @@ class CPUComputeDevice : public IComputeDevice
     std::string GetDeviceName() const;
     size_t GetTotalMemory() const;
     bool SupportsWeightFormat(NetworkWeightFormat format) const;
+
+    static ComputeDeviceInfo GetCpuComputeDeviceInfo();
 };
+
 
 } // namespace macademy

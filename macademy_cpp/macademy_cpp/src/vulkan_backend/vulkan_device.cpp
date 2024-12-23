@@ -149,7 +149,7 @@ void Device::RunOneTimeComandBuffer(std::function<void(VkCommandBuffer&)>&& comm
 void Device::RecycleLoaderBuffer(LoaderStagingBuffer& loader_buffer)
 {
     auto it = std::find_if(m_loader_staging_buffers.begin(), m_loader_staging_buffers.end(),
-                           [&loader_buffer](const std::pair<std::unique_ptr<Buffer>, bool>& buf) { return buf.first.get() == loader_buffer.m_staging_buffer; });
+                           [&loader_buffer](const std::pair<std::unique_ptr<VulkanBuffer>, bool>& buf) { return buf.first.get() == loader_buffer.m_staging_buffer; });
 
     ASSERT(it != m_loader_staging_buffers.end());
     it->second = true;
@@ -161,13 +161,14 @@ std::unique_ptr<Device::LoaderStagingBuffer> Device::GetLoaderStagingBuffer(size
     ret->m_device = this;
 
     auto it = std::find_if(m_loader_staging_buffers.begin(), m_loader_staging_buffers.end(),
-                           [size](const std::pair<std::unique_ptr<Buffer>, bool>& buf) { return buf.second && buf.first->GetSize() >= size; });
+                           [size](const std::pair<std::unique_ptr<VulkanBuffer>, bool>& buf) { return buf.second && buf.first->GetSize() >= size; });
 
     if (it != m_loader_staging_buffers.end()) {
         it->second = false;
         ret->m_staging_buffer = it->first.get();
     } else {
-        auto new_buffer = std::make_unique<Buffer>(this, "loader_staging_buffer_" + std::to_string(m_loader_staging_buffers.size()), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VMA_MEMORY_USAGE_AUTO,
+        auto new_buffer = std::make_unique<VulkanBuffer>(this, "loader_staging_buffer_" + std::to_string(m_loader_staging_buffers.size()), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                                         VMA_MEMORY_USAGE_AUTO,
                                                    VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
         ret->m_staging_buffer = new_buffer.get();
         m_loader_staging_buffers.emplace_back(std::make_pair(std::move(new_buffer), false));

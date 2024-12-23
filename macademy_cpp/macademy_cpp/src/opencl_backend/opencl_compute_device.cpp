@@ -24,17 +24,36 @@ cl_mem_flags ToOpenCLBufferUsage(macademy::BufferUsage usage)
     case macademy::BufferUsage::WriteOnly:
         return CL_MEM_WRITE_ONLY;
     }
+
+    throw std::runtime_error("invalid buffer usage!");
 }
 
 } // namespace
 
 namespace macademy {
+
+std::vector<ComputeDeviceInfo> OpenCLComputeDevice::GetOpenCLComputeDeviceInfo()
+{
+    auto devices = OpenCLComputeDevice::GetDeviceList();
+
+    std::vector<ComputeDeviceInfo> ret;
+
+    uint32_t idx = 0;
+
+    for (auto& it : devices) {
+        ret.push_back(
+            ComputeDeviceInfo{.m_backend = "opencl", .m_device_index = idx++, .m_device_name = it.getInfo<CL_DEVICE_NAME>(), .m_total_memory = uint64_t(it.getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>())});
+    }
+
+    return ret;
+}
+
 #include "opencl_kernels.cl"
 
 void SetKernelArgs(cl::Kernel kernel, cl_uint index, OpenCLBuffer& buffer) { kernel.setArg(index, buffer.GetSize(), buffer.GetBuffer().get()); }
 
-OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig advanced_config)
-    : m_device(device), m_device_config(advanced_config), m_context(device), m_command_queue(m_context, m_device)
+OpenCLComputeDevice::OpenCLComputeDevice(const ComputeDeviceInfo& device_info, OpenCLDeviceConfig advanced_config)
+    : m_device(GetDeviceList()[device_info.m_device_index]), m_device_config(advanced_config), m_context(m_device), m_command_queue(m_context, m_device)
 {
     auto extensions = m_device.getInfo<CL_DEVICE_EXTENSIONS>() + " ";
 
@@ -78,12 +97,6 @@ OpenCLComputeDevice::OpenCLComputeDevice(cl::Device device, OpenCLDeviceConfig a
 std::unique_ptr<IBuffer> OpenCLComputeDevice::CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name)
 {
     auto ret = std::make_unique<OpenCLBuffer>(m_context, ToOpenCLBufferUsage(buffer_usage), size, nullptr);
-
-    if (!initial_data.empty()) {
-        QueueWriteToBuffer(ret.get(), initial_data, 0);
-        SubmitQueue();
-        WaitQueueIdle();
-    }
 
     return ret;
 }
@@ -256,12 +269,6 @@ std::vector<cl::Device> OpenCLComputeDevice::GetDeviceList()
     }
 
     return all_devices;
-}
-
-cl::Device OpenCLComputeDevice::AutoSelectDevice()
-{
-    auto all_devices = GetDeviceList();
-    return all_devices[0];
 }
 
 std::string OpenCLComputeDevice::GetDeviceName() const { return "OpenCL Device: " + m_device.getInfo<CL_DEVICE_NAME>(); }

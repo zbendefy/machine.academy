@@ -12,8 +12,8 @@ namespace macademy {
 
 class VulkanComputeDevice : public IComputeDevice
 {
-    vk::Instance* m_instance;
-    vk::Device* m_device;
+    std::unique_ptr<vk::Instance> m_instance = nullptr;
+    std::unique_ptr<vk::Device> m_device = nullptr;
 
     mutable std::unique_ptr<vk::ComputePipeline> m_kernel_calc_single_layer;
 
@@ -27,14 +27,16 @@ class VulkanComputeDevice : public IComputeDevice
     uint32_t m_kernel_training_apply_gradient_ideal_workgroup_size = 64;
     bool m_is_float16_supported = false;
 
-    VkCommandBuffer m_current_command_buffer;
+    VkCommandBuffer m_current_command_buffer = VK_NULL_HANDLE;
+    VkDescriptorSetLayout m_descriptor_set_layout = VK_NULL_HANDLE;
 
     VkCommandBuffer& GetCommandBuffer();
 
   public:
-    VulkanComputeDevice(vk::Device* device);
+    VulkanComputeDevice(const ComputeDeviceInfo& device);
+    ~VulkanComputeDevice();
 
-    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) = 0;
+    std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name);
 
     void QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset) override;
     void QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset) override;
@@ -45,10 +47,15 @@ class VulkanComputeDevice : public IComputeDevice
     void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
                                    uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count) override;
 
+    static std::vector<VkPhysicalDevice> GetDeviceList();
+
     std::string GetDeviceName() const override;
 
     size_t GetTotalMemory() const override;
 
     bool SupportsWeightFormat(NetworkWeightFormat format) const override;
+
+    
+    static std::vector<ComputeDeviceInfo> GetVulkanComputeDeviceInfo();
 };
 } // namespace macademy
