@@ -118,69 +118,11 @@ Instance::Instance(bool enable_validation_layer, bool enable_debug_labels) : m_i
         m_debug_label_begin = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetInstanceProcAddr(m_instance, "vkCmdBeginDebugUtilsLabelEXT");
         m_debug_label_end = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetInstanceProcAddr(m_instance, "vkCmdEndDebugUtilsLabelEXT");
     }
-
-    InitDevices();
-}
-
-void Instance::InitDevices()
-{
-    m_devices.clear();
-
-    uint32_t device_count = 0;
-    vkEnumeratePhysicalDevices(m_instance, &device_count, nullptr);
-    std::vector<VkPhysicalDevice> vk_devices(device_count);
-    vkEnumeratePhysicalDevices(m_instance, &device_count, vk_devices.data());
-
-    const std::vector<const char*> required_extensions = {};
-
-    m_devices.resize(device_count);
-
-    for (uint32_t device_id = 0; device_id < device_count; ++device_id) {
-        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-
-        constexpr auto CheckExtensionSupport = [](const std::vector<const char*>& required_extensions, VkPhysicalDevice device) {
-            VkPhysicalDeviceProperties2 deviceProperties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
-            VkPhysicalDeviceFeatures2 deviceFeatures{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, nullptr};
-
-            vkGetPhysicalDeviceProperties2(device, &deviceProperties);
-            vkGetPhysicalDeviceFeatures2(device, &deviceFeatures);
-
-            if (deviceProperties.properties.apiVersion < VK_API_VERSION_1_3) {
-                return false;
-            }
-
-            uint32_t extensionCount;
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-
-            std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-            vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-            std::set<std::string> requiredExtensions_set(required_extensions.begin(), required_extensions.end());
-
-            for (const auto& extension : availableExtensions) {
-                requiredExtensions_set.erase(extension.extensionName);
-            }
-
-            return true;
-        };
-
-        physicalDevice = vk_devices[device_id];
-
-        if (!CheckExtensionSupport(required_extensions, physicalDevice)) {
-            throw std::runtime_error("The selected vulkan device does not support the required extensions!");
-        }
-
-        VkPhysicalDeviceProperties deviceProperties;
-        vkGetPhysicalDeviceProperties(physicalDevice, &deviceProperties);
-
-        m_devices[device_id] = std::make_unique<Device>(this, physicalDevice, m_is_validation_layer_enabled);
-    }
 }
 
 Instance::~Instance()
 {
     m_debug_messenger.reset();
-    m_devices.clear();
     vkDestroyInstance(m_instance, nullptr);
 }
 
@@ -227,7 +169,11 @@ Instance::DebugMessenger::~DebugMessenger()
 VKAPI_ATTR VkBool32 VKAPI_CALL Instance::DebugMessenger::DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
                                                                        const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-    printf("Vulkan validation message: %s", pCallbackData->pMessage);
+    if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        printf("Vulkan validation error: %s\n", pCallbackData->pMessage);
+    } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        printf("Vulkan validation warning: %s\n", pCallbackData->pMessage);
+    }
     /*if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
         LogError(pCallbackData->pMessage);
     } else if (messageSeverity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {

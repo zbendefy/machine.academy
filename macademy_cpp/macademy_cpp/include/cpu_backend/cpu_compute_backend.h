@@ -39,5 +39,4 @@ class CPUComputeDevice : public IComputeDevice
     static ComputeDeviceInfo GetCpuComputeDeviceInfo();
 };
 
-
 } // namespace macademy

@@ -61,10 +61,8 @@ class OpenCLComputeDevice : public IComputeDevice
     size_t GetTotalMemory() const override;
 
     bool SupportsWeightFormat(NetworkWeightFormat format) const override;
-    
+
     static std::vector<ComputeDeviceInfo> GetOpenCLComputeDeviceInfo();
 };
-
-
 
 } // namespace macademy

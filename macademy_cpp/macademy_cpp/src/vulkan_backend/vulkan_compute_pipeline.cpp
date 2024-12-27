@@ -53,7 +53,7 @@ ComputePipeline::ComputePipeline(Device* device, const std::string& name, const 
     VkPushConstantRange push_constant_range{};
     push_constant_range.offset = pipeline_desc.m_push_constant_offset;
     push_constant_range.size = pipeline_desc.m_push_constant_size;
-    push_constant_range.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
+    push_constant_range.stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
 
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;

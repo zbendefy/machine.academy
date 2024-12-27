@@ -16,12 +16,12 @@
 
 namespace macademy::ComputeDeviceFactory {
 
-std::vector<ComputeDeviceInfo> EnumerateComputeDevices() 
+std::vector<ComputeDeviceInfo> EnumerateComputeDevices()
 {
     std::vector<ComputeDeviceInfo> ret;
 
     ret.emplace_back(CPUComputeDevice::GetCpuComputeDeviceInfo());
-    
+
 #ifdef MACADEMY_OPENCL_BACKEND
     auto opencl_devices = OpenCLComputeDevice::GetOpenCLComputeDeviceInfo();
     std::copy(opencl_devices.begin(), opencl_devices.end(), std::back_inserter(ret));
@@ -35,8 +35,8 @@ std::vector<ComputeDeviceInfo> EnumerateComputeDevices()
     return ret;
 }
 
-std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info) 
-{ 
+std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info)
+{
     if (compute_device_info.m_backend == "cpu") {
         return std::make_unique<CPUComputeDevice>();
     }
@@ -56,4 +56,4 @@ std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& com
     throw std::runtime_error("Invalid device info!");
 }
 
-} // namespace macademy
+} // namespace macademy::ComputeDeviceFactory

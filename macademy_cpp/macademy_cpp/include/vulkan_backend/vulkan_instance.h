@@ -38,21 +38,8 @@ class Instance
 
     static std::vector<VkLayerProperties> GetInstanceLayers();
 
-    void InitDevices();
-
   public:
     Instance(bool enable_validation_layer = false, bool enable_debug_labels = false);
-
-    std::vector<Device*> GetDevices()
-    {
-        std::vector<Device*> ret;
-        ret.reserve(m_devices.size());
-        for (const auto& device : m_devices) {
-            ret.emplace_back(device.get());
-        }
-
-        return ret;
-    }
 
     VkInstance GetHandle() { return m_instance; }
 
@@ -66,7 +53,6 @@ class Instance
 
   private:
     VkInstance m_instance;
-    std::vector<std::unique_ptr<Device>> m_devices;
 
     bool m_is_validation_layer_enabled;
     std::unique_ptr<DebugMessenger> m_debug_messenger;

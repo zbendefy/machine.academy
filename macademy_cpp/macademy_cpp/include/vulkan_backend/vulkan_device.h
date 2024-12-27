@@ -49,8 +49,6 @@ class Device
 
     void RunOneTimeComandBuffer(std::function<void(VkCommandBuffer&)>&& commands);
 
-    void CmdCopyBuffer(VkCommandBuffer& command_buffer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkBufferCopy copy_region);
-
     VkCommandBuffer CreateCommandBuffer();
 
     std::unique_ptr<Device::LoaderStagingBuffer> GetLoaderStagingBuffer(size_t size);

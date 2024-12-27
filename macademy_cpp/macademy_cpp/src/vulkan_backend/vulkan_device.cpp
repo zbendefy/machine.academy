@@ -51,17 +51,6 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
     vkGetPhysicalDeviceFeatures(physical_device, &m_device_features);
     vkGetPhysicalDeviceMemoryProperties(physical_device, &m_memory_props);
 
-    VkPhysicalDeviceFeatures selected_device_features{};
-
-    VkPhysicalDeviceTimelineSemaphoreFeatures timelineSemaphoreFeatures{};
-    timelineSemaphoreFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
-    timelineSemaphoreFeatures.timelineSemaphore = VK_TRUE;
-
-    VkPhysicalDeviceFeatures2 physicalDeviceFeatures2{};
-    physicalDeviceFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    physicalDeviceFeatures2.features = selected_device_features;
-    physicalDeviceFeatures2.pNext = &timelineSemaphoreFeatures;
-
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.queueCreateInfoCount = queueCreateInfos.size();
@@ -75,7 +64,6 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
     } else {
         createInfo.enabledLayerCount = 0;
     }
-    createInfo.pNext = &physicalDeviceFeatures2;
 
     if (vkCreateDevice(m_physical_device, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
@@ -167,9 +155,9 @@ std::unique_ptr<Device::LoaderStagingBuffer> Device::GetLoaderStagingBuffer(size
         it->second = false;
         ret->m_staging_buffer = it->first.get();
     } else {
-        auto new_buffer = std::make_unique<VulkanBuffer>(this, "loader_staging_buffer_" + std::to_string(m_loader_staging_buffers.size()), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                         VMA_MEMORY_USAGE_AUTO,
-                                                   VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
+        auto new_buffer =
+            std::make_unique<VulkanBuffer>(this, "loader_staging_buffer_" + std::to_string(m_loader_staging_buffers.size()), size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+                                           VMA_MEMORY_USAGE_AUTO, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
         ret->m_staging_buffer = new_buffer.get();
         m_loader_staging_buffers.emplace_back(std::make_pair(std::move(new_buffer), false));
     }

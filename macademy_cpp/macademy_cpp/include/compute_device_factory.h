@@ -8,13 +8,12 @@ namespace macademy {
 struct ComputeDeviceInfo;
 class IComputeDevice;
 
-namespace ComputeDeviceFactory
-{
+namespace ComputeDeviceFactory {
 
-	std::vector<ComputeDeviceInfo> EnumerateComputeDevices();
+std::vector<ComputeDeviceInfo> EnumerateComputeDevices();
 
-	std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info);
+std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info);
 
-}
+} // namespace ComputeDeviceFactory
 
-}
+} // namespace macademy

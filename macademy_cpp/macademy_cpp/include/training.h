@@ -61,7 +61,7 @@ class Training
                 auto compute_device = network.GetComputeDevice();
 
                 while (true) {
-                    //compute_device->Train(network, *training_suite, trainingDataBegin, trainingDataEnd);
+                    // compute_device->Train(network, *training_suite, trainingDataBegin, trainingDataEnd);
 
                     if (training_suite->m_mini_batch_size) {
                         if (trainingDataEnd >= training_suite->m_training_data.size()) {

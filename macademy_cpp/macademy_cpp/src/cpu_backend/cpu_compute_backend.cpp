@@ -464,7 +464,9 @@ void CPUComputeDevice::SubmitQueue()
 { /*CPU doesn't queue operations*/
 }
 
-void CPUComputeDevice::WaitQueueIdle() { /*CPU doesn't queue operations*/ }
+void CPUComputeDevice::WaitQueueIdle()
+{ /*CPU doesn't queue operations*/
+}
 
 void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
                                                  uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count)

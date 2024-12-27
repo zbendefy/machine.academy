@@ -47,4 +47,6 @@ void ExportNetworkAsBinary(const Network& network, std::ostream& stream);
 
 std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file);
 
+std::string base64_decode(const std::string& in);
+
 } // namespace macademy

@@ -28,14 +28,18 @@ endif()
 
 if (MACADEMY_BACKEND_VULKAN)
     message("VULKAN_SDK env var is set to: '$ENV{VULKAN_SDK}'")
+    message("RENDERDOC_PATH env var is set to: '$ENV{RENDERDOC_PATH}'")
 
     file(GLOB_RECURSE VULKAN_SOURCE_FILES 
         include/vulkan_backend/*.h
+        include/vulkan_backend/shaders/*.h
+
         src/vulkan_backend/*.cpp
     )
     set(VULKAN_INCLUDE_DIRS 
             $ENV{VULKAN_SDK}/include
             ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/VulkanMemoryAllocator/src
+            $ENV{RENDERDOC_PATH}
     )
     set(VULKAN_LINK_DIRECTORY $ENV{VULKAN_SDK}/lib)
     set(VULKAN_LINK_LIBS ::vulkan_sdk ::spirv_reflect VulkanMemoryAllocator)

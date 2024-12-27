@@ -13,7 +13,7 @@ class Device;
 
 class VulkanBuffer : public IBuffer
 {
-    Device* m_device = nullptr; 
+    Device* m_device = nullptr;
     VmaAllocator& m_allocator;
     VkBuffer m_buffer;
     VmaAllocation m_allocation;
@@ -26,7 +26,7 @@ class VulkanBuffer : public IBuffer
 
     const std::string& GetName() const { return m_name; }
 
-    VkBuffer GetHandle() { return m_buffer; }
+    VkBuffer GetHandle() const { return m_buffer; }
 
     size_t GetSize() const override { return m_size; }
 
