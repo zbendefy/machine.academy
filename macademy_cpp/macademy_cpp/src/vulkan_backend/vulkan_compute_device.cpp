@@ -75,10 +75,9 @@ VkDescriptorSet KernelResources::GetDescriptorSet(const std::vector<const vk::Vu
 }
 
 void KernelResources::FreeDescriptorSets()
-{
-    for (auto it : m_descriptor_sets) {
-        vkFreeDescriptorSets(m_device, m_descriptor_pool, 1, &it.second); // TODO batch?
-    }
+{ 
+    //Its more efficient to reset the pool, than freeing descriptor sets individually.
+    vkResetDescriptorPool(m_device, m_descriptor_pool, 0);
 
     m_descriptor_sets.clear();
 }
@@ -257,7 +256,9 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info)
     }
 }
 
-inline VulkanComputeDevice::~VulkanComputeDevice() {}
+inline VulkanComputeDevice::~VulkanComputeDevice() { 
+    printf("alma");
+}
 
 std::unique_ptr<IBuffer> VulkanComputeDevice::CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name)
 {
@@ -340,6 +341,8 @@ void VulkanComputeDevice::WaitQueueIdle()
             memcpy(it.m_dst.data(), src_memory, it.m_dst.size_bytes());
             it.m_host_buffer->m_staging_buffer->UnmapMemory();
         }
+
+        m_memory_reads.clear();
 
         m_device->ClearLoadingBuffers();
 
@@ -466,7 +469,7 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
     m_push_constant_data.weights_layer_offset = weights_layer_offset;
     vkCmdPushConstants(command_buffer, m_kernel_calc_single_layer->m_pipeline->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
-    vkCmdDispatch(command_buffer, ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), 1, 1);
+    vkCmdDispatch(command_buffer, ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count, 1);
 
     m_dirty_buffers.emplace(layer_output_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }

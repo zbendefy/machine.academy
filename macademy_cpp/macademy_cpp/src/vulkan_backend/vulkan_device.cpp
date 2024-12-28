@@ -77,7 +77,7 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
         allocatorInfo.physicalDevice = m_physical_device;
         allocatorInfo.device = m_device;
         allocatorInfo.instance = m_instance->GetHandle();
-        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_0;
         vmaCreateAllocator(&allocatorInfo, &m_vma);
     }
 

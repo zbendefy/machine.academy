@@ -48,15 +48,6 @@ class VulkanComputeDevice : public IComputeDevice
         std::span<uint8_t> m_dst;
     };
 
-    PushConstantData m_push_constant_data{};
-
-    std::unique_ptr<vk::Instance> m_instance = nullptr;
-    std::unique_ptr<vk::Device> m_device = nullptr;
-
-    std::vector<MemoryReadback> m_memory_reads;
-
-    std::unique_ptr<KernelResources> m_kernel_calc_single_layer;
-
     enum class BufferSynchronizationEvent
     {
         TransferWrite = 1 << 0,
@@ -68,6 +59,14 @@ class VulkanComputeDevice : public IComputeDevice
         ComputeShaderRead = 1 << 0,
         TransferRead = 1 << 1
     };
+
+    std::unique_ptr<vk::Instance> m_instance = nullptr;
+    std::unique_ptr<vk::Device> m_device = nullptr;
+
+    std::unique_ptr<KernelResources> m_kernel_calc_single_layer;
+
+    PushConstantData m_push_constant_data{};
+    std::vector<MemoryReadback> m_memory_reads;
 
     std::map<const vk::VulkanBuffer*, BufferSynchronizationEvent> m_dirty_buffers;
 

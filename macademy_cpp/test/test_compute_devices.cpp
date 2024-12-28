@@ -171,13 +171,13 @@ TEST_F(ComputeDevicesTest, VulkanComputeDevice)
     auto cpu_network_resources = std::make_unique<NetworkResourceHandle>(*m_network, *cpu_compute_device);
     auto reference_results = m_compute_tasks.Evaluate(*cpu_network_resources, input);
 
-    auto opencl_devices = VulkanComputeDevice::GetVulkanComputeDeviceInfo();
+    auto vk_devices = VulkanComputeDevice::GetVulkanComputeDeviceInfo();
 
-    for (auto cl_device_info : opencl_devices) {
-        std::cout << "Testing Vulkan Device #" << cl_device_info.m_device_index << " - " << cl_device_info.m_device_name << std::endl;
-        auto opencl_compute_device = ComputeDeviceFactory::CreateComputeDevice(cl_device_info);
-        auto opencl_network_resources = std::make_unique<NetworkResourceHandle>(*m_network, *opencl_compute_device);
-        auto result = m_compute_tasks.Evaluate(*opencl_network_resources, input);
+    for (auto vk_device_info : vk_devices) {
+        std::cout << "Testing Vulkan Device #" << vk_device_info.m_device_index << " - " << vk_device_info.m_device_name << std::endl;
+        auto vk_compute_device = ComputeDeviceFactory::CreateComputeDevice(vk_device_info);
+        auto vk_network_resources = std::make_unique<NetworkResourceHandle>(*m_network, *vk_compute_device);
+        auto result = m_compute_tasks.Evaluate(*vk_network_resources, input);
 
         ASSERT_EQ(reference_results.size(), result.size());
         for (size_t i = 0; i < result.size(); ++i) {
@@ -186,7 +186,7 @@ TEST_F(ComputeDevicesTest, VulkanComputeDevice)
     }
 }
 
-/*TEST_F(ComputeDevicesTest, VulkanComputeDeviceBatchEval)
+TEST_F(ComputeDevicesTest, VulkanComputeDeviceBatchEval)
 {
     std::vector<float> input{
         1,      -2,    3,    -10,  10,  // input1
@@ -201,21 +201,19 @@ TEST_F(ComputeDevicesTest, VulkanComputeDevice)
 
     auto reference_results = m_compute_tasks.EvaluateBatch(4, *cpu_network_resources, input);
 
-    auto cl_devices = VulkanComputeDevice::GetDeviceList();
+    auto vk_devices = VulkanComputeDevice::GetVulkanComputeDeviceInfo();
 
-    auto opencl_devices = VulkanComputeDevice::GetVulkanComputeDeviceInfo();
-
-    for (auto cl_device_info : opencl_devices) {
-        std::cout << "Testing Vulkan Device #" << cl_device_info.m_device_index << " - " << cl_device_info.m_device_name << std::endl;
-        auto opencl_compute_device = ComputeDeviceFactory::CreateComputeDevice(cl_device_info);
-        auto opencl_network_resources = std::make_unique<NetworkResourceHandle>(*m_network, *opencl_compute_device);
-        auto result = m_compute_tasks.EvaluateBatch(4, *opencl_network_resources, input);
+    for (auto vk_device_info : vk_devices) {
+        std::cout << "Testing Vulkan Device #" << vk_device_info.m_device_index << " - " << vk_device_info.m_device_name << std::endl;
+        auto vk_compute_device = ComputeDeviceFactory::CreateComputeDevice(vk_device_info);
+        auto vk_network_resources = std::make_unique<NetworkResourceHandle>(*m_network, *vk_compute_device);
+        auto result = m_compute_tasks.EvaluateBatch(4, *vk_network_resources, input);
 
         ASSERT_EQ(reference_results.size(), result.size());
         for (size_t i = 0; i < result.size(); ++i) {
             EXPECT_NEAR(reference_results[i], result[i], 1e-3);
         }
     }
-}*/
+}
 
 #endif
