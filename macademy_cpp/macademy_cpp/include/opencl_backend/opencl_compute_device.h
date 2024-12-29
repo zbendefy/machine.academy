@@ -53,6 +53,8 @@ class OpenCLComputeDevice : public IComputeDevice
 
     void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
                                    uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count) override;
+    void QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer, uint32_t output_num,
+                               uint32_t layer_id, uint64_t weights_layer_offset, uint32_t num_training_samples, uint32_t total_neuron_count) override;
 
     static std::vector<cl::Device> GetDeviceList();
 

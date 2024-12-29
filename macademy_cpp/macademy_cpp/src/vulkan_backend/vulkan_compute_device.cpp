@@ -25,63 +25,6 @@ namespace macademy {
 
 #include "vulkan_backend/shaders/kernel_calc_single_layer.glsl.h"
 
-VkDescriptorSet KernelResources::GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers)
-{
-    auto it = m_descriptor_sets.find(storage_buffers);
-    if (it == m_descriptor_sets.end()) {
-
-        // Allocate a descriptor set from the pool, and write the buffer handles into it, then return it
-
-        VkDescriptorSetAllocateInfo allocInfo = {};
-        allocInfo.pNext = nullptr;
-        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        allocInfo.descriptorPool = m_descriptor_pool;
-        allocInfo.descriptorSetCount = 1;
-        allocInfo.pSetLayouts = &m_descriptor_set_layout;
-
-        VkDescriptorSet descriptor_set;
-        vkAllocateDescriptorSets(m_device, &allocInfo, &descriptor_set);
-
-        thread_local std::vector<VkDescriptorBufferInfo> buffer_infos;
-        buffer_infos.resize(storage_buffers.size());
-        for (int i = 0; i < int(storage_buffers.size()); ++i) {
-            buffer_infos[i].buffer = storage_buffers[i]->GetHandle();
-            buffer_infos[i].offset = 0;
-            buffer_infos[i].range = storage_buffers[i]->GetSize();
-        }
-
-        thread_local std::vector<VkWriteDescriptorSet> descriptor_writes;
-        descriptor_writes.resize(buffer_infos.size());
-
-        for (int i = 0; i < storage_buffers.size(); ++i) {
-            descriptor_writes[i] = VkWriteDescriptorSet{};
-            descriptor_writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            descriptor_writes[i].pNext = nullptr;
-            descriptor_writes[i].dstBinding = i;
-            descriptor_writes[i].dstSet = descriptor_set;
-            descriptor_writes[i].descriptorCount = 1;
-            descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            descriptor_writes[i].pBufferInfo = &buffer_infos[i];
-        }
-
-        vkUpdateDescriptorSets(m_device, descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
-
-        m_descriptor_sets.emplace(storage_buffers, descriptor_set);
-
-        return descriptor_set;
-    } else {
-        return it->second;
-    }
-}
-
-void KernelResources::FreeDescriptorSets()
-{ 
-    //Its more efficient to reset the pool, than freeing descriptor sets individually.
-    vkResetDescriptorPool(m_device, m_descriptor_pool, 0);
-
-    m_descriptor_sets.clear();
-}
-
 namespace {
 
 size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
@@ -113,6 +56,110 @@ vk::SpirvBinary base64_decode_spirv(const std::string& in)
 }
 } // namespace
 
+KernelResources::KernelResources(vk::Device* device, uint32_t storage_buffer_count, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary,
+                                 const vk::ShaderSpecializationMap& shader_specialization)
+    : m_device(device)
+{
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    bindings.resize(storage_buffer_count);
+
+    for (int i = 0; i < bindings.size(); ++i) {
+        bindings[i] = VkDescriptorSetLayoutBinding{};
+        bindings[i].binding = i;
+        bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        bindings[i].descriptorCount = 1;
+        bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = bindings.size();
+    layoutInfo.pBindings = bindings.data();
+    layoutInfo.flags = 0;
+
+    if (vkCreateDescriptorSetLayout(m_device->GetHandle(), &layoutInfo, nullptr, &m_descriptor_set_layout) != VK_SUCCESS) {
+        throw std::runtime_error("failed to create descriptor set layout!");
+    }
+
+    ASSERT(spirv_binary.size() % 4 == 0);
+
+    vk::ComputePipelineDescriptor kernel_calc_single_layer_pipeline_desc{};
+    kernel_calc_single_layer_pipeline_desc.m_compute_shader = spirv_binary;
+    kernel_calc_single_layer_pipeline_desc.m_compute_shader_entry_function = "main";
+    kernel_calc_single_layer_pipeline_desc.m_descriptor_set_layout = m_descriptor_set_layout;
+    kernel_calc_single_layer_pipeline_desc.m_push_constant_size = sizeof(VulkanComputeDevice::PushConstantData);
+
+    m_pipeline = std::make_unique<vk::ComputePipeline>(m_device, "kernel_calc_single_layer", kernel_calc_single_layer_pipeline_desc, shader_specialization);
+
+    std::array<VkDescriptorPoolSize, 1> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storage_buffer_count * max_descriptor_sets}};
+
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = 0;
+    pool_info.maxSets = max_descriptor_sets;
+    pool_info.poolSizeCount = (uint32_t)sizes.size();
+    pool_info.pPoolSizes = sizes.data();
+
+    vkCreateDescriptorPool(m_device->GetHandle(), &pool_info, nullptr, &m_descriptor_pool);
+}
+
+VkDescriptorSet KernelResources::GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers)
+{
+    auto it = m_descriptor_sets.find(storage_buffers);
+    if (it == m_descriptor_sets.end()) {
+
+        // Allocate a descriptor set from the pool, and write the buffer handles into it, then return it
+
+        VkDescriptorSetAllocateInfo allocInfo = {};
+        allocInfo.pNext = nullptr;
+        allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        allocInfo.descriptorPool = m_descriptor_pool;
+        allocInfo.descriptorSetCount = 1;
+        allocInfo.pSetLayouts = &m_descriptor_set_layout;
+
+        VkDescriptorSet descriptor_set;
+        vkAllocateDescriptorSets(m_device->GetHandle(), &allocInfo, &descriptor_set);
+
+        thread_local std::vector<VkDescriptorBufferInfo> buffer_infos;
+        buffer_infos.resize(storage_buffers.size());
+        for (int i = 0; i < int(storage_buffers.size()); ++i) {
+            buffer_infos[i].buffer = storage_buffers[i]->GetHandle();
+            buffer_infos[i].offset = 0;
+            buffer_infos[i].range = storage_buffers[i]->GetSize();
+        }
+
+        thread_local std::vector<VkWriteDescriptorSet> descriptor_writes;
+        descriptor_writes.resize(buffer_infos.size());
+
+        for (int i = 0; i < storage_buffers.size(); ++i) {
+            descriptor_writes[i] = VkWriteDescriptorSet{};
+            descriptor_writes[i].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            descriptor_writes[i].pNext = nullptr;
+            descriptor_writes[i].dstBinding = i;
+            descriptor_writes[i].dstSet = descriptor_set;
+            descriptor_writes[i].descriptorCount = 1;
+            descriptor_writes[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            descriptor_writes[i].pBufferInfo = &buffer_infos[i];
+        }
+
+        vkUpdateDescriptorSets(m_device->GetHandle(), descriptor_writes.size(), descriptor_writes.data(), 0, nullptr);
+
+        m_descriptor_sets.emplace(storage_buffers, descriptor_set);
+
+        return descriptor_set;
+    } else {
+        return it->second;
+    }
+}
+
+void KernelResources::FreeDescriptorSets()
+{
+    // Its more efficient to reset the pool, than freeing descriptor sets individually.
+    vkResetDescriptorPool(m_device->GetHandle(), m_descriptor_pool, 0);
+
+    m_descriptor_sets.clear();
+}
+
 std::vector<ComputeDeviceInfo> VulkanComputeDevice::GetVulkanComputeDeviceInfo()
 {
     VkApplicationInfo appInfo{};
@@ -121,7 +168,7 @@ std::vector<ComputeDeviceInfo> VulkanComputeDevice::GetVulkanComputeDeviceInfo()
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "foxglove3_macademy";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_3;
+    appInfo.apiVersion = VK_API_VERSION_1_0;
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -177,6 +224,7 @@ VkCommandBuffer& VulkanComputeDevice::GetCommandBuffer()
 
         VkCommandBufferBeginInfo cmd_buffer_begin_info{};
         cmd_buffer_begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        cmd_buffer_begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
         vkBeginCommandBuffer(m_current_command_buffer, &cmd_buffer_begin_info);
     }
@@ -205,60 +253,14 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info)
     m_device = std::make_unique<vk::Device>(m_instance.get(), physical_devices[device_info.m_device_index], true);
 
     {
-        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device->GetHandle());
-
         vk::ShaderSpecializationMap shader_specialization;
 
-        constexpr int used_storage_buffers = 4;
-        constexpr int max_simultaneous_descriptor_sets = 2;
-
-        std::array<VkDescriptorSetLayoutBinding, used_storage_buffers> bindings;
-
-        for (int i = 0; i < bindings.size(); ++i) {
-            bindings[i] = VkDescriptorSetLayoutBinding{};
-            bindings[i].binding = i;
-            bindings[i].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            bindings[i].descriptorCount = 1;
-            bindings[i].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-        }
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo{};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = bindings.size();
-        layoutInfo.pBindings = bindings.data();
-        layoutInfo.flags = 0;
-
-        if (vkCreateDescriptorSetLayout(m_device->GetHandle(), &layoutInfo, nullptr, &m_kernel_calc_single_layer->m_descriptor_set_layout) != VK_SUCCESS) {
-            throw std::runtime_error("failed to create descriptor set layout!");
-        }
-
-        vk::SpirvBinary shader_spirv = base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64);
-        ASSERT(shader_spirv.size() % 4 == 0);
-
-        vk::ComputePipelineDescriptor kernel_calc_single_layer_pipeline_desc{};
-        kernel_calc_single_layer_pipeline_desc.m_compute_shader = shader_spirv;
-        kernel_calc_single_layer_pipeline_desc.m_compute_shader_entry_function = "main";
-        kernel_calc_single_layer_pipeline_desc.m_descriptor_set_layout = m_kernel_calc_single_layer->m_descriptor_set_layout;
-        kernel_calc_single_layer_pipeline_desc.m_push_constant_size = sizeof(PushConstantData);
-
-        m_kernel_calc_single_layer->m_pipeline = std::make_unique<vk::ComputePipeline>(m_device.get(), "kernel_calc_single_layer", kernel_calc_single_layer_pipeline_desc, shader_specialization);
-
-        std::array<VkDescriptorPoolSize, 1> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, used_storage_buffers * max_simultaneous_descriptor_sets}};
-
-        VkDescriptorPoolCreateInfo pool_info = {};
-        pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        pool_info.flags = 0;
-        pool_info.maxSets = max_simultaneous_descriptor_sets; // there should be at most only 2 different descriptor sets
-        pool_info.poolSizeCount = (uint32_t)sizes.size();
-        pool_info.pPoolSizes = sizes.data();
-
-        vkCreateDescriptorPool(m_device->GetHandle(), &pool_info, nullptr, &m_kernel_calc_single_layer->m_descriptor_pool);
+        // Note: there should be currently at most 2 simultaneous descriptor sets, but I used 8 here just in case the compute tasks api gets used in some unintended way.
+        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), 4, 8, base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
     }
 }
 
-inline VulkanComputeDevice::~VulkanComputeDevice() { 
-    printf("alma");
-}
+inline VulkanComputeDevice::~VulkanComputeDevice() { printf("alma"); }
 
 std::unique_ptr<IBuffer> VulkanComputeDevice::CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name)
 {
@@ -332,7 +334,7 @@ void VulkanComputeDevice::WaitQueueIdle()
         vkQueueWaitIdle(m_device->GetComputeQueue());
 
         // Invalidate command buffer
-        vkResetCommandBuffer(m_current_command_buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT); //??? TODO revise command buffer reuse
+        vkResetCommandBuffer(m_current_command_buffer, 0);
         m_current_command_buffer = VK_NULL_HANDLE;
 
         for (auto& it : m_memory_reads) {
@@ -461,13 +463,13 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->m_pipeline->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->m_pipeline->GetHandle());
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetHandle());
 
     m_push_constant_data.layer_id = layer_id;
     m_push_constant_data.weights_layer_offset = weights_layer_offset;
-    vkCmdPushConstants(command_buffer, m_kernel_calc_single_layer->m_pipeline->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
+    vkCmdPushConstants(command_buffer, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
     vkCmdDispatch(command_buffer, ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count, 1);
 

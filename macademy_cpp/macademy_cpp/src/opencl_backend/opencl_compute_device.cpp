@@ -140,6 +140,22 @@ void OpenCLComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
                                   weights_layer_offset);
 }
 
+void OpenCLComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
+                                                uint32_t output_num, uint32_t layer_id, uint64_t weights_layer_offset, uint32_t num_training_samples, uint32_t total_neuron_count)
+{
+    const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(weights_buffer);
+    const auto layer_config_buffer_cl = BufferCast<const OpenCLBuffer>(layer_config_buffer);
+    const auto activations_zvalues_buffer_cl = BufferCast<const OpenCLBuffer>(m_activations_zvalues_buffer);
+    const auto input_buffer_cl = BufferCast<OpenCLBuffer>(input_buffer);
+
+    (*m_kernel_train_forward_pass)(cl::EnqueueArgs(m_command_queue,
+                                                   cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
+                                                               ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
+                                                   cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
+                                   weights_buffer_cl->GetBuffer(), layer_config_buffer_cl->GetBuffer(), activations_zvalues_buffer_cl->GetBuffer(), input_buffer_cl->GetBuffer(), layer_id,
+                                   weights_layer_offset, num_training_samples, total_neuron_count);
+}
+
 #if 0
 void OpenCLComputeDevice::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
 {

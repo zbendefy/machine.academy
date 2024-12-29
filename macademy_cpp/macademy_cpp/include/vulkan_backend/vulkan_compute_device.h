@@ -11,24 +11,29 @@
 
 namespace macademy {
 
-struct KernelResources
+class KernelResources
 {
-    KernelResources(VkDevice device) : m_device(device) {}
+  public:
+    KernelResources(vk::Device* device, uint32_t storage_buffer_count, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary, const vk::ShaderSpecializationMap& shader_specialization);
 
     ~KernelResources()
     {
+        FreeDescriptorSets();
+
         if (m_descriptor_set_layout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_device, m_descriptor_set_layout, nullptr);
+            vkDestroyDescriptorSetLayout(m_device->GetHandle(), m_descriptor_set_layout, nullptr);
         }
         if (m_descriptor_pool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(m_device, m_descriptor_pool, nullptr);
+            vkDestroyDescriptorPool(m_device->GetHandle(), m_descriptor_pool, nullptr);
         }
     }
 
     VkDescriptorSet GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers);
     void FreeDescriptorSets();
+    vk::ComputePipeline* GetPipeline() { return m_pipeline.get(); }
 
-    VkDevice m_device;
+  private:
+    vk::Device* m_device;
     VkDescriptorSetLayout m_descriptor_set_layout = VK_NULL_HANDLE;
     VkDescriptorPool m_descriptor_pool = VK_NULL_HANDLE;
     mutable std::unique_ptr<vk::ComputePipeline> m_pipeline;
@@ -39,9 +44,10 @@ struct KernelResources
 
 class VulkanComputeDevice : public IComputeDevice
 {
+  public:
 #define VK_CONSTANTS_HOST
 #include "vulkan_backend/shaders/constants.h"
-
+  private:
     struct MemoryReadback
     {
         std::unique_ptr<vk::Device::LoaderStagingBuffer> m_host_buffer;

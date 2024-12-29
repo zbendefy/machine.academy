@@ -57,10 +57,12 @@ class ComputeTasks
     std::vector<float> Evaluate(const NetworkResourceHandle& network, std::span<const float> input) const;
 
     std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network, std::span<const float> input) const;
+
+    void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const;
+
 #if 0
     void ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution);
 
-    void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const;
 #endif
 };
 
