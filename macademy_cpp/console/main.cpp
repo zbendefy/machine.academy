@@ -43,11 +43,7 @@ class SineTrainerApp : public ConsoleApp
                 }
             }
 
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
             auto training_suite = std::make_shared<TrainingSuite>();
 
@@ -71,7 +67,7 @@ class SineTrainerApp : public ConsoleApp
                 training_suite->m_training_data.push_back(training_data);
             }
 
-            auto tracker = m_trainer.Train(*network_on_device->second, *m_selected_device, training_suite);
+            auto tracker = m_trainer.Train(*m_network_resources, training_suite);
 
             std::cout << std::endl;
 
@@ -91,15 +87,11 @@ class SineTrainerApp : public ConsoleApp
                 }
             }
 
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
             input = ConvertInputToNetworkInput(input);
 
-            auto result = m_selected_device->Evaluate(*network_on_device->second, std::span<float>(&input, 1));
+            auto result = m_compute_tasks.Evaluate(*m_network_resources, std::span<float>(&input, 1));
 
             std::cout << "Result is: " << ConvertNetworkOutputToOutput(result[0]);
 
@@ -134,11 +126,7 @@ class SimpleTrainerApp : public ConsoleApp
                 }
             }
 
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
             auto training_suite = std::make_shared<TrainingSuite>();
 
@@ -160,7 +148,7 @@ class SimpleTrainerApp : public ConsoleApp
                 training_suite->m_training_data.push_back(training_data);
             }
 
-            auto tracker = m_trainer.Train(*network_on_device->second, *m_selected_device, training_suite);
+            auto tracker = m_trainer.Train(*m_network_resources, training_suite);
 
             TrainingDisplay(*tracker);
 
@@ -178,13 +166,9 @@ class SimpleTrainerApp : public ConsoleApp
                 }
             }
 
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
-            auto result = m_selected_device->Evaluate(*network_on_device->second, std::span<float>(&input, 1));
+            auto result = m_compute_tasks.Evaluate(*m_network_resources, std::span<float>(&input, 1));
 
             std::cout << "Result is: " << result[0];
 
@@ -197,55 +181,6 @@ int main()
 {
     // SineTrainerApp app;
     SimpleTrainerApp app;
-
-    app.AddCommand("test_all_devices", ConsoleApp::Command{.m_description = "Test", .m_handler = [](const std::vector<std::string>&) {
-                                                               std::vector<macademy::LayerConfig> layers;
-                                                               layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 4});
-                                                               layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::ReLU, .m_num_neurons = 15});
-                                                               layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2});
-                                                               layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2048});
-                                                               layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 2048});
-                                                               layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 8});
-                                                               auto network = macademy::NetworkFactory::Build("test", 4, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
-
-                                                               network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
-
-                                                               std::vector<std::unique_ptr<macademy::IComputeDevice>> devices;
-                                                               std::vector<std::unique_ptr<macademy::NetworkResourceHandle>> uploaded_networks;
-
-                                                               {
-                                                                   auto cpu_device = std::make_unique<macademy::CPUComputeDevice>();
-                                                                   uploaded_networks.emplace_back(cpu_device->RegisterNetwork(*network));
-                                                                   devices.emplace_back(std::move(cpu_device));
-                                                               }
-
-                                                               for (const auto& opencl_device : macademy::OpenCLComputeDevice::GetDeviceList()) {
-                                                                   auto device = std::make_unique<macademy::OpenCLComputeDevice>(opencl_device);
-                                                                   uploaded_networks.emplace_back(device->RegisterNetwork(*network));
-                                                                   devices.emplace_back(std::move(device));
-                                                               }
-
-                                                               std::vector<float> input{1, 2, 3, 4};
-
-                                                               for (size_t i = 0; i < devices.size(); ++i) {
-                                                                   std::cout << devices[i]->GetDeviceName() << std::endl;
-                                                                   std::cout << "  Compute units: " << devices[i]->GetComputeUnits() << std::endl;
-                                                                   std::cout << "  Total memory: " << (devices[i]->GetTotalMemory() / (1024 * 1024)) << "MB" << std::endl;
-
-                                                                   auto start = std::chrono::steady_clock::now();
-                                                                   auto result = devices[i]->Evaluate(*uploaded_networks[i], input);
-                                                                   auto end = std::chrono::steady_clock::now();
-
-                                                                   std::cout << "Result finished in: " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms"
-                                                                             << std::endl;
-                                                                   for (auto r : result) {
-                                                                       std::cout << r << std::endl;
-                                                                   }
-
-                                                                   std::cout << std::endl;
-                                                               }
-                                                               return false;
-                                                           }});
 
     app.Run();
     return 0;

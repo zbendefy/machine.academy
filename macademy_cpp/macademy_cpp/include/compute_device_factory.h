@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <memory>
+#include <nlohmann/json.hpp>
 
 namespace macademy {
 
@@ -12,7 +13,7 @@ namespace ComputeDeviceFactory {
 
 std::vector<ComputeDeviceInfo> EnumerateComputeDevices();
 
-std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info);
+std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info, const nlohmann::json& device_config = {});
 
 } // namespace ComputeDeviceFactory
 

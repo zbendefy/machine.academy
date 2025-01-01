@@ -7,7 +7,7 @@
 
 namespace macademy {
 class Network;
-class TrainingSuite;
+struct TrainingSuite;
 class IBuffer;
 class IComputeDevice;
 
@@ -33,8 +33,8 @@ struct NetworkResourceHandle
 
     IComputeDevice* GetComputeDevice() { return m_compute_device; }
 
-    IComputeDevice* m_compute_device = nullptr;
-    Network* m_network = nullptr;
+    IComputeDevice* const m_compute_device = nullptr;
+    Network* const m_network = nullptr;
 
     std::unique_ptr<IBuffer> m_weights;
     std::unique_ptr<IBuffer> m_layer_config_buffer;
@@ -58,7 +58,7 @@ class ComputeTasks
 
     std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network, std::span<const float> input) const;
 
-    void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const;
+    void Train(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint64_t trainingDataBegin, uint64_t trainingDataEnd) const;
 
 #if 0
     void ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution);

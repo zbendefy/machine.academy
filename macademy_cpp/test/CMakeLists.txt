@@ -8,6 +8,7 @@ project("macademy_cpp_test")
 
 add_executable(${PROJECT_NAME}
     test_main.cpp
+    test_training.cpp
     test_compute_devices.cpp
 )
     

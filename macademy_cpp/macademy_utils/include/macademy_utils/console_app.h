@@ -3,18 +3,14 @@
 #include <iostream>
 #include <chrono>
 #include <functional>
+#include <optional>
 
 #include "network.h"
 #include "default_weight_initializer.h"
-#include "cpu_compute_backend.h"
-#ifdef MACADEMY_OPENCL_BACKEND
-#include "opencl_backend/opencl_compute_device.h"
-#endif
-#ifdef MACADEMY_VULKAN_BACKEND
-#include "vulkan_backend/vulkan_compute_device.h"
-#endif
 #include "training_suite.h"
 #include "training.h"
+#include "i_compute_device.h"
+#include "compute_tasks.h"
 #include <set>
 #include <chrono>
 #include <map>
@@ -24,6 +20,8 @@ using namespace std::chrono_literals;
 using namespace macademy;
 
 namespace macademy {
+
+struct NetworkResourceHandle;
 
 class ConsoleApp
 {
@@ -35,15 +33,19 @@ class ConsoleApp
     };
 
   protected:
-    std::vector<std::unique_ptr<IComputeDevice>> m_devices;
-    std::map<IComputeDevice*, std::unique_ptr<NetworkResourceHandle>> m_uploaded_networks;
+    std::vector<ComputeDeviceInfo> m_devices;
     std::unordered_map<std::string, Command> m_commands;
-    IComputeDevice* m_selected_device = nullptr;
+    ComputeDeviceInfo m_selected_device_info;
+    std::unique_ptr<IComputeDevice> m_compute_device;
+    std::unique_ptr<NetworkResourceHandle> m_network_resources;
+    ComputeTasks m_compute_tasks;
     std::unique_ptr<Network> m_network;
 
     std::vector<std::string> Split(const std::string& src, const char delimiter);
 
     void TrainingDisplay(const TrainingResultTracker& tracker);
+
+    void EnsureNetworkResources();
 
   public:
     void AddCommand(const std::string& name, Command&& cmd) { m_commands[name] = std::move(cmd); }

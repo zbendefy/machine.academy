@@ -11,7 +11,9 @@
 #include <array>
 #include <sstream>
 
+#ifndef NDEBUG
 #define DEBUG_RENDERDOC
+#endif
 
 #ifdef DEBUG_RENDERDOC
 
@@ -232,17 +234,27 @@ VkCommandBuffer& VulkanComputeDevice::GetCommandBuffer()
     return m_current_command_buffer;
 }
 
-VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info)
+VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, const nlohmann::json& device_config)
 {
 #ifdef DEBUG_RENDERDOC
     if (HMODULE mod = GetModuleHandleA("renderdoc.dll")) {
         pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_1_2, (void**)&rdoc_api);
+        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
         ASSERT(ret == 1);
     }
 #endif
 
-    m_instance = std::make_unique<vk::Instance>(false, true);
+    bool validation_layer_enabled = false;
+    bool debug_labels_enabled = false;
+
+    if (device_config.contains("validation_layer_enabled") && device_config["validation_layer_enabled"].is_boolean()) {
+        validation_layer_enabled = device_config["validation_layer_enabled"].get<bool>();
+    }
+    if (device_config.contains("debug_labels_enabled") && device_config["debug_labels_enabled"].is_boolean()) {
+        debug_labels_enabled = device_config["debug_labels_enabled"].get<bool>();
+    }
+
+    m_instance = std::make_unique<vk::Instance>(validation_layer_enabled, debug_labels_enabled);
 
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(m_instance->GetHandle(), &deviceCount, nullptr);
@@ -474,6 +486,23 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
     vkCmdDispatch(command_buffer, ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count, 1);
 
     m_dirty_buffers.emplace(layer_output_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
+}
+
+void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
+                                                uint32_t layer_neuron_count, uint32_t layer_id, uint64_t weights_layer_offset, uint32_t num_training_samples, uint32_t total_neuron_count)
+{
+}
+
+void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
+                                                 IBuffer* delta_k_vector, IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t layer_id, uint32_t layer_count,
+                                                 uint32_t numTrainingSamples, uint32_t total_neuron_count, CostFunction costFunction, uint32_t largest_layer_neuron_count,
+                                                 uint64_t layer_weights_offset)
+{
+}
+
+void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t layer_id,
+                                              uint64_t weights_layer_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
+{
 }
 
 std::vector<VkPhysicalDevice> VulkanComputeDevice::GetDeviceList() { return std::vector<VkPhysicalDevice>(); }

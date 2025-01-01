@@ -35,7 +35,7 @@ std::vector<ComputeDeviceInfo> EnumerateComputeDevices()
     return ret;
 }
 
-std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info)
+std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& compute_device_info, const nlohmann::json& device_config)
 {
     if (compute_device_info.m_backend == "cpu") {
         return std::make_unique<CPUComputeDevice>();
@@ -43,13 +43,13 @@ std::unique_ptr<IComputeDevice> CreateComputeDevice(const ComputeDeviceInfo& com
 
 #ifdef MACADEMY_OPENCL_BACKEND
     if (compute_device_info.m_backend == "opencl") {
-        return std::make_unique<OpenCLComputeDevice>(compute_device_info);
+        return std::make_unique<OpenCLComputeDevice>(compute_device_info, device_config);
     }
 #endif
 
 #ifdef MACADEMY_VULKAN_BACKEND
     if (compute_device_info.m_backend == "vulkan") {
-        return std::make_unique<VulkanComputeDevice>(compute_device_info);
+        return std::make_unique<VulkanComputeDevice>(compute_device_info, device_config);
     }
 #endif
 

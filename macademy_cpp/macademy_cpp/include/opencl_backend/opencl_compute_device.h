@@ -4,6 +4,7 @@
 #include "opencl_common.h"
 
 #include <optional>
+#include <nlohmann/json.hpp>
 
 namespace macademy {
 
@@ -41,7 +42,7 @@ class OpenCLComputeDevice : public IComputeDevice
     bool m_is_float16_supported = false;
 
   public:
-    OpenCLComputeDevice(const ComputeDeviceInfo& device, OpenCLDeviceConfig advanced_config = {});
+    OpenCLComputeDevice(const ComputeDeviceInfo& device, const nlohmann::json& device_config);
 
     std::unique_ptr<IBuffer> CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name) override;
 
@@ -53,8 +54,13 @@ class OpenCLComputeDevice : public IComputeDevice
 
     void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
                                    uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count) override;
-    void QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer, uint32_t output_num,
+    void QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer, uint32_t layer_neuron_count,
                                uint32_t layer_id, uint64_t weights_layer_offset, uint32_t num_training_samples, uint32_t total_neuron_count) override;
+    void QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer, IBuffer* delta_k_vector,
+                                IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t layer_id, uint32_t layer_count, uint32_t numTrainingSamples,
+                                uint32_t totalActivationCount, CostFunction costFunction, uint32_t largest_layer_neuron_count, uint64_t layer_weights_offset) override;
+    void QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t layer_id, uint64_t weights_layer_offset,
+                             float regularization_term_1, float regularization_term_2, float normalized_learning_rate) override;
 
     static std::vector<cl::Device> GetDeviceList();
 

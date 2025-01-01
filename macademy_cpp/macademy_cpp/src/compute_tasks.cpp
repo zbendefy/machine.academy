@@ -17,10 +17,8 @@ size_t ExtendGlobalWorkSize(size_t desiredGlobalSize, size_t localSize)
 
 namespace macademy {
 
-NetworkResourceHandle::NetworkResourceHandle(Network& network, IComputeDevice& compute_device) : m_network(&network)
+NetworkResourceHandle::NetworkResourceHandle(Network& network, IComputeDevice& compute_device) : m_network(&network), m_compute_device(&compute_device)
 {
-    m_compute_device = &compute_device;
-
     std::vector<uint32_t> layer_config_buffer;
 
     {
@@ -146,7 +144,7 @@ std::vector<float> ComputeTasks::EvaluateBatch(uint32_t batch_count, const Netwo
     return result;
 }
 
-void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint32_t trainingDataBegin, uint32_t trainingDataEnd) const
+void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint64_t trainingDataBegin, uint64_t trainingDataEnd) const
 {
     Network& network = *network_handle.m_network;
     IComputeDevice& compute_device = *network_handle.m_compute_device;
@@ -216,7 +214,9 @@ void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSu
         weights_layer_offset -= layer_weight_size_bytes; // advance the offset backwards in the weights buffer
 
         compute_device.QueueTrainBackwardPass(network_handle.m_weights.get(), network_handle.m_layer_config_buffer.get(), network_handle.m_activations_zvalues_buffer.get(),
-                                              network_handle.m_input_buffer.get(), output_num, i, weights_layer_offset, num_training_samples, total_neuron_count);
+                                              network_handle.m_input_buffer.get(), network_handle.m_delta_k_buffer.get(), network_handle.m_gradient_buffer.get(),
+                                              network_handle.m_desired_output_buffer.get(), output_num, i, layer_config.size(), num_training_samples, total_neuron_count,
+                                              training_suite.m_cost_function, largest_layer_neuron_count, weights_layer_offset);
 
         /*(*m_kernel_train_backward_pass)(cl::EnqueueArgs(m_command_queue,
                                                         cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
@@ -247,10 +247,12 @@ void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSu
         const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
         const uint32_t output_num = layer_config[i].m_num_neurons;
 
-        (*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
+        compute_device.QueueApplyGradients(network_handle.m_weights.get(), network_handle.m_gradient_buffer.get(), network_handle.m_layer_config_buffer.get(), output_num, i, weights_layer_offset,
+                                           regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);
+        /*(*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
                                                          cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
                                          opencl_network->m_weights->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), i,
-                                         weights_layer_offset, regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);
+                                         weights_layer_offset, regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);*/
 
         const uint64_t layer_weight_size_bytes = uint64_t(input_num) * output_num + output_num;
         ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
@@ -260,6 +262,7 @@ void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSu
     compute_device.SubmitQueue();
     compute_device.WaitQueueIdle();
 }
+
 #if 0
 std::vector<cl::Device> ComputeTasks::GetDeviceList()
 {

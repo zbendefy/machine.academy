@@ -95,17 +95,13 @@ class MnistTrainerApp : public ConsoleApp
                 }
             }
 
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
             m_training_suite->m_epochs = epochs;
 
             auto time_begin = std::chrono::high_resolution_clock::now();
 
-            auto tracker = m_trainer.Train(*network_on_device->second, *m_selected_device, m_training_suite);
+            auto tracker = m_trainer.Train(*m_network_resources, m_training_suite);
 
             std::cout << std::endl;
 
@@ -139,11 +135,7 @@ class MnistTrainerApp : public ConsoleApp
                 }
             }
 
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
             std::vector<TrainingData>* dataset = nullptr;
 
@@ -175,7 +167,7 @@ class MnistTrainerApp : public ConsoleApp
 
                 auto label = std::max_element(test_data.m_desired_output.begin(), test_data.m_desired_output.end()) - test_data.m_desired_output.begin();
 
-                auto result = m_selected_device->Evaluate(*network_on_device->second, test_data.m_input);
+                auto result = m_compute_tasks.Evaluate(*m_network_resources, test_data.m_input);
                 auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
 
                 std::cout << std::endl << "Label: " << label << std::endl;
@@ -197,13 +189,9 @@ class MnistTrainerApp : public ConsoleApp
 
         m_commands["test"].m_description = "Test on the 10k test dataset";
         m_commands["test"].m_handler = [this](const std::vector<std::string>& args) {
-            auto network_on_device = m_uploaded_networks.find(m_selected_device);
-            if (network_on_device == m_uploaded_networks.end()) {
-                m_uploaded_networks[m_selected_device] = m_selected_device->RegisterNetwork(*m_network);
-                network_on_device = m_uploaded_networks.find(m_selected_device);
-            }
+            EnsureNetworkResources();
 
-            size_t good_answers = TestNetwork(*network_on_device->second);
+            size_t good_answers = TestNetwork(*m_network_resources);
 
             std::cout << "Test dataset count: " << m_test_data.size() << std::endl;
             std::cout << "Good answers: " << good_answers << std::endl;
@@ -217,7 +205,7 @@ class MnistTrainerApp : public ConsoleApp
     {
         size_t good_answers = 0;
         for (size_t i = 0; i < m_test_data.size(); ++i) {
-            auto result = m_selected_device->Evaluate(network, m_test_data[i].m_input);
+            auto result = m_compute_tasks.Evaluate(network, m_test_data[i].m_input);
             auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
             auto reference_solution = std::max_element(m_test_data[i].m_desired_output.begin(), m_test_data[i].m_desired_output.end()) - m_test_data[i].m_desired_output.begin();
             if (guessed_number == reference_solution) {

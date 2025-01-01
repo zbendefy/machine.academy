@@ -44,6 +44,12 @@ enum class Regularization
     L2
 };
 
+enum class NetworkWeightFormat
+{
+    Float16,
+    Float32
+};
+
 struct TrainingResultTracker
 {
     std::atomic<float> m_epoch_progress = 0;

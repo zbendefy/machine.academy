@@ -1,4 +1,6 @@
 #include "macademy_utils/console_app.h"
+#include "compute_device_factory.h"
+#include "i_compute_device.h"
 #include "utils.h"
 #include <sstream>
 
@@ -47,24 +49,19 @@ void ConsoleApp::TrainingDisplay(const TrainingResultTracker& tracker)
     }
 }
 
+void ConsoleApp::EnsureNetworkResources()
+{
+    if (!m_network_resources) {
+        m_network_resources = std::make_unique<NetworkResourceHandle>(*m_network, *m_compute_device);
+    }
+}
+
 ConsoleApp::ConsoleApp()
 {
-    m_devices.emplace_back(std::make_unique<CPUComputeDevice>());
-    m_selected_device = m_devices.begin()->get();
+    m_devices = ComputeDeviceFactory::EnumerateComputeDevices();
 
-#ifdef MACADEMY_OPENCL_BACKEND
-    auto opencl_devices = OpenCLComputeDevice::GetDeviceList();
-    for (const auto cl_device : opencl_devices) {
-        m_devices.emplace_back(std::make_unique<OpenCLComputeDevice>(cl_device));
-    }
-#endif
-
-#ifdef MACADEMY_VULKAN_BACKEND
-    auto vulkan_devices = VulkanComputeDevice::GetDeviceList();
-    for (const auto vk_device : vulkan_devices) {
-        m_devices.emplace_back(std::make_unique<VulkanComputeDevice>(vk_device));
-    }
-#endif
+    m_selected_device_info = m_devices[0];
+    m_compute_device = ComputeDeviceFactory::CreateComputeDevice(m_selected_device_info);
 
     m_commands["quit"].m_description = "Exits the application";
     m_commands["quit"].m_handler = [](const std::vector<std::string>&) { return true; };
@@ -81,13 +78,13 @@ ConsoleApp::ConsoleApp()
     m_commands["list_devices"].m_handler = [this](const std::vector<std::string>&) {
         uint32_t id = 0;
         for (const auto& device : m_devices) {
-            if (device.get() == m_selected_device) {
+            if (device == m_selected_device_info) {
                 std::cout << "* " << id << ": ";
             } else {
                 std::cout << "  " << id << ": ";
             }
             ++id;
-            std::cout << device->GetDeviceName() << std::endl;
+            std::cout << "[" << device.m_backend << "] " << device.m_device_name << std::endl;
         }
         return false;
     };
@@ -104,8 +101,9 @@ ConsoleApp::ConsoleApp()
         }
 
         if (device_id >= 0 && device_id < m_devices.size()) {
-            m_selected_device = m_devices[device_id].get();
-            std::cout << "Selected device: " << m_selected_device->GetDeviceName() << std::endl;
+            m_selected_device_info = m_devices[device_id];
+            m_compute_device = ComputeDeviceFactory::CreateComputeDevice(m_selected_device_info);
+            std::cout << "Selected device: " << m_selected_device_info.m_device_name << std::endl;
         } else {
             std::cout << "Invalid device id!" << std::endl;
         }
@@ -115,24 +113,20 @@ ConsoleApp::ConsoleApp()
 
     m_commands["device_info"].m_description = "List info about the currently selected device";
     m_commands["device_info"].m_handler = [this](const std::vector<std::string>&) {
-        if (m_selected_device) {
-            const bool float16_supported = m_selected_device->SupportsWeightFormat(NetworkWeightFormat::Float16);
-            const bool float32_supported = m_selected_device->SupportsWeightFormat(NetworkWeightFormat::Float32);
+        const bool float16_supported = false; // m_selected_device_info.SupportsWeightFormat(NetworkWeightFormat::Float16);
+        const bool float32_supported = true;  // m_selected_device_info.SupportsWeightFormat(NetworkWeightFormat::Float32);
 
-            std::cout << "Name: " << m_selected_device->GetDeviceName() << std::endl;
-            std::cout << "Compute units: " << m_selected_device->GetComputeUnits() << std::endl;
-            std::cout << "Memory: " << (m_selected_device->GetTotalMemory() / (1024 * 1024)) << "MB" << std::endl;
-            std::cout << "Supported formats: "
-                      << "Float16: " << (float16_supported ? "Yes" : "No") << ", Float32: " << (float32_supported ? "Yes" : "No") << std::endl;
-        } else {
-            std::cout << "No selected device!";
-        }
+        std::cout << "Name: " << m_selected_device_info.m_device_name << std::endl;
+        std::cout << "Memory: " << (m_selected_device_info.m_total_memory / (1024 * 1024)) << "MB" << std::endl;
+        std::cout << "Supported formats: "
+                  << "Float16: " << (float16_supported ? "Yes" : "No") << ", Float32: " << (float32_supported ? "Yes" : "No") << std::endl;
+
         return false;
     };
 
     m_commands["benchmark_device"].m_description = "Benchmark the currently selected device";
     m_commands["benchmark_device"].m_handler = [this](const std::vector<std::string>&) {
-        if (m_selected_device) {
+        if (m_compute_device) {
             std::cout << "Generating network..." << std::endl;
             std::vector<macademy::LayerConfig> layers;
             layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
@@ -144,17 +138,18 @@ ConsoleApp::ConsoleApp()
             auto network = macademy::NetworkFactory::Build("benchmark", 16, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
 
             // network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
-            auto uploaded_network = m_selected_device->RegisterNetwork(*network);
+
+            auto network_resources = std::make_unique<NetworkResourceHandle>(*network, *m_compute_device);
             std::vector<float> input{};
             input.reserve(network->GetInputCount());
             for (int i = 0; i < network->GetInputCount(); ++i) {
                 input.emplace_back(float(i) / (network->GetInputCount() - 1));
             }
 
-            std::cout << "Running benchmark on device: " << m_selected_device->GetDeviceName() << std::endl;
+            std::cout << "Running benchmark on device: " << m_compute_device->GetDeviceName() << std::endl;
 
             auto start = std::chrono::system_clock::now();
-            auto result = m_selected_device->Evaluate(*uploaded_network, input);
+            auto result = m_compute_tasks.Evaluate(*network_resources, input);
             auto end = std::chrono::system_clock::now();
             auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
             std::cout << "Evaluation time: " << elapsed.count() << "ms";
@@ -165,7 +160,7 @@ ConsoleApp::ConsoleApp()
         return false;
     };
 
-    m_commands["export"].m_description = "Test on the 10k test dataset";
+    m_commands["export"].m_description = "Export a neural network to file";
     m_commands["export"].m_handler = [this](const std::vector<std::string>& args) {
         if (!m_network) {
             std::cout << "Error! There is no network to be exported!" << std::endl;
@@ -196,7 +191,7 @@ ConsoleApp::ConsoleApp()
         return false;
     };
 
-    m_commands["import"].m_description = "Test on the 10k test dataset";
+    m_commands["import"].m_description = "Import a neural network from file";
     m_commands["import"].m_handler = [this](const std::vector<std::string>& args) {
         std::string filename = "output.bin";
         for (int i = 1; i < args.size(); ++i) {
@@ -206,8 +201,6 @@ ConsoleApp::ConsoleApp()
         std::ifstream f{filename, std::ios::in | std::ios::binary};
         m_network = ImportNetworkFromBinary(f);
         f.close();
-
-        m_uploaded_networks.clear();
 
         return false;
     };
