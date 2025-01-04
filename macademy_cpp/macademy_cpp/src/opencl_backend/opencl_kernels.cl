@@ -68,7 +68,7 @@ float ActivationFunctionPrime(int functionId, float x)
     }
 }
 
-float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, float a, float desiredOutput)
+float CostFunctionDelta(uint costFunctionId, uint activationFunctionId, float z, float a, float desiredOutput)
 {
 	switch(costFunctionId)
 	{
@@ -165,7 +165,7 @@ __kernel void trainingForwardPass(__global const float* weights_biases,
 
     __global const float* neuron_weights_biases = weights_biases + weights_layer_offset + layer_neuron_id * neuron_data_size;
 
-    const int training_sample_activation_offset = totalActivationCount * trainingSampleId;
+    const uint training_sample_activation_offset = totalActivationCount * trainingSampleId;
 
     const uint input_layer_neuron_count = layer_config[0];
     __global const float* prevActivations = layer_id == 0 ?
@@ -181,8 +181,8 @@ __kernel void trainingForwardPass(__global const float* weights_biases,
     acc += neuron_weights_biases[weights_per_neuron]; //bias
 
     //Store ZValues and the result of the activation function
-    const int layer_activation_offset = training_sample_activation_offset + GetLayerNeuronCountOffset(layer_id, layer_config);
-    const int layer_zvalue_offset = layer_activation_offset + (numTrainingSamples * totalActivationCount); //zvalues are stored after activations, so shift by the number of total activations
+    const uint layer_activation_offset = training_sample_activation_offset + GetLayerNeuronCountOffset(layer_id, layer_config);
+    const uint layer_zvalue_offset = layer_activation_offset + (numTrainingSamples * totalActivationCount); //zvalues are stored after activations, so shift by the number of total activations
     activationsAndZValues[layer_zvalue_offset+layer_neuron_id] = acc;
     activationsAndZValues[layer_activation_offset+layer_neuron_id] = ActivationFunction(activationFunctionId, acc);
 }
@@ -218,12 +218,12 @@ __kernel void trainingBackwardPass(__global const float* weightsAndBiases,
         return;
     }
     
-    const int delta_k_read_offset = deltaKVectorStride * 2 * trainingSampleId + ((layer_id % 2) * deltaKVectorStride);
-    const int delta_k_write_offset = deltaKVectorStride * 2 * trainingSampleId + (((layer_id+1) % 2) * deltaKVectorStride);
+    const uint delta_k_read_offset = deltaKVectorStride * 2 * trainingSampleId + ((layer_id % 2) * deltaKVectorStride);
+    const uint delta_k_write_offset = deltaKVectorStride * 2 * trainingSampleId + (((layer_id+1) % 2) * deltaKVectorStride);
 
-    const int training_sample_activation_offset = totalActivationCount * trainingSampleId;
-    const int current_layer_activation_offset = training_sample_activation_offset + GetLayerNeuronCountOffset(layer_id, layer_config);
-    const int current_layer_z_values_offset = current_layer_activation_offset + (numTrainingSamples * totalActivationCount); //shift by table size
+    const uint training_sample_activation_offset = totalActivationCount * trainingSampleId;
+    const uint current_layer_activation_offset = training_sample_activation_offset + GetLayerNeuronCountOffset(layer_id, layer_config);
+    const uint current_layer_z_values_offset = current_layer_activation_offset + (numTrainingSamples * totalActivationCount); //shift by table size
 
     const uint input_layer_neuron_count = layer_config[0];
     __global const float* prevActivations = layer_id == 0 ?

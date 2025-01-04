@@ -221,12 +221,11 @@ int main(int argc, const char** argv)
 {
     std::string mnist_dir = "";
 
-    if (argc >= 2)
-    {
+    if (argc >= 2) {
         mnist_dir = argv[1];
     }
 
-    MnistTrainerApp app{ mnist_dir };
+    MnistTrainerApp app{mnist_dir};
 
     app.Run();
     return 0;

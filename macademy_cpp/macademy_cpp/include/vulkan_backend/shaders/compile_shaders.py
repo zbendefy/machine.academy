@@ -10,7 +10,12 @@ shader_folder = "."
 output_folder = "."
 config = "debug"
 macros = []
-shader_sources = ["kernel_calc_single_layer.glsl"]
+shader_sources = [
+    "kernel_calc_single_layer.glsl",
+    "kernel_training_forward_pass.glsl",
+    "kernel_training_backward_pass.glsl",
+    "kernel_apply_gradient.glsl"
+                  ]
 
 VulkanSDKFolder = os.environ['VULKAN_SDK']
 print("Vulkan SDK folder: '{}'".format(VulkanSDKFolder))
@@ -50,11 +55,17 @@ def CompileVulkanShader(shader_folder, shader_filename, glslc_args):
             base64_content = encoded_data.decode("utf-8")
         with open(shader_filename + ".h", "w") as text_file:
             name = shader_filename.replace(".", "_")
-            text_file.write('constexpr const char* vulkan_kernel_source_{}_b64 = "{}";'.format(name, base64_content))
+            text_file.write('constexpr const char* vulkan_kernel_source_{}_b64 = '.format(name))
+            while len(base64_content) > 0:
+                fragment_size = min(len(base64_content), 80)
+                fragment = base64_content[:fragment_size]
+                base64_content = base64_content[fragment_size:]
+                text_file.write('"{}"\n'.format(fragment))
+            text_file.write(";")
 
     return result == 0
 
-success = False
+success = True
 
 print("Compiling vulkan shaders")
 glslc_args = "-O0" if config.lower() == "debug" else "-O"

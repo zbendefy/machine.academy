@@ -35,7 +35,7 @@ float ActivationFunction(uint functionId, float x)
     }
 }
 
-float ActivationFunctionPrime(int functionId, float x)
+float ActivationFunctionPrime(uint functionId, float x)
 {
 	switch (functionId) {
     case Activation_Sigmoid: {
@@ -63,7 +63,7 @@ float ActivationFunctionPrime(int functionId, float x)
     }
 }
 
-float CostFunctionDelta(int costFunctionId, int activationFunctionId, float z, float a, float desiredOutput)
+float CostFunctionDelta(uint costFunctionId, uint activationFunctionId, float z, float a, float desiredOutput)
 {
 	switch(costFunctionId)
 	{

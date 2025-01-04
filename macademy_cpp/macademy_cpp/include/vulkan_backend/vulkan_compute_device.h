@@ -15,7 +15,8 @@ namespace macademy {
 class KernelResources
 {
   public:
-    KernelResources(vk::Device* device, uint32_t storage_buffer_count, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary, const vk::ShaderSpecializationMap& shader_specialization);
+    KernelResources(vk::Device* device, const std::string& name, uint32_t storage_buffer_count, uint32_t push_constant_size, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary,
+                    const vk::ShaderSpecializationMap& shader_specialization);
 
     ~KernelResources();
 

@@ -26,6 +26,9 @@ RENDERDOC_API_1_6_0* rdoc_api = NULL;
 namespace macademy {
 
 #include "vulkan_backend/shaders/kernel_calc_single_layer.glsl.h"
+#include "vulkan_backend/shaders/kernel_training_forward_pass.glsl.h"
+#include "vulkan_backend/shaders/kernel_training_backward_pass.glsl.h"
+#include "vulkan_backend/shaders/kernel_apply_gradient.glsl.h"
 
 namespace {
 
@@ -58,8 +61,8 @@ vk::SpirvBinary base64_decode_spirv(const std::string& in)
 }
 } // namespace
 
-KernelResources::KernelResources(vk::Device* device, uint32_t storage_buffer_count, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary,
-                                 const vk::ShaderSpecializationMap& shader_specialization)
+KernelResources::KernelResources(vk::Device* device, const std::string& name, uint32_t storage_buffer_count, uint32_t push_constant_size, uint32_t max_descriptor_sets,
+                                 const vk::SpirvBinary& spirv_binary, const vk::ShaderSpecializationMap& shader_specialization)
     : m_device(device)
 {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
@@ -89,9 +92,9 @@ KernelResources::KernelResources(vk::Device* device, uint32_t storage_buffer_cou
     kernel_calc_single_layer_pipeline_desc.m_compute_shader = spirv_binary;
     kernel_calc_single_layer_pipeline_desc.m_compute_shader_entry_function = "main";
     kernel_calc_single_layer_pipeline_desc.m_descriptor_set_layout = m_descriptor_set_layout;
-    kernel_calc_single_layer_pipeline_desc.m_push_constant_size = sizeof(VulkanComputeDevice::PushConstantData);
+    kernel_calc_single_layer_pipeline_desc.m_push_constant_size = push_constant_size;
 
-    m_pipeline = std::make_unique<vk::ComputePipeline>(m_device, "kernel_calc_single_layer", kernel_calc_single_layer_pipeline_desc, shader_specialization);
+    m_pipeline = std::make_unique<vk::ComputePipeline>(m_device, name.c_str(), kernel_calc_single_layer_pipeline_desc, shader_specialization);
 
     std::array<VkDescriptorPoolSize, 1> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storage_buffer_count * max_descriptor_sets}};
 
@@ -256,8 +259,8 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
     }
 #endif
 
-    bool validation_layer_enabled = false;
-    bool debug_labels_enabled = false;
+    bool validation_layer_enabled = true;
+    bool debug_labels_enabled = true;
 
     if (device_config.contains("validation_layer_enabled") && device_config["validation_layer_enabled"].is_boolean()) {
         validation_layer_enabled = device_config["validation_layer_enabled"].get<bool>();
@@ -280,29 +283,32 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
         vk::ShaderSpecializationMap shader_specialization;
 
         // Note: there should be currently at most 2 simultaneous descriptor sets, but I used 8 here just in case the compute tasks api gets used in some unintended way.
-        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), 4, 8, base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
+        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), "kernel_calc_single_layer", 4, uint32_t(sizeof(PushConstantData)), 8,
+                                                                       base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
     }
 
-    /* {
+    {
         vk::ShaderSpecializationMap shader_specialization;
-
-        m_kernel_train_forward_pass = std::make_unique<KernelResources>(m_device.get(), 4, 8, base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
+        m_kernel_train_forward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_forward_pass", 4, uint32_t(sizeof(PushConstantData)), 8,
+                                                                        base64_decode_spirv(vulkan_kernel_source_kernel_training_forward_pass_glsl_b64), shader_specialization);
     }
 
     {
         vk::ShaderSpecializationMap shader_specialization;
 
-        m_kernel_train_backward_pass = std::make_unique<KernelResources>(m_device.get(), 7, 8, base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
+        m_kernel_train_backward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_backward_pass", 7, uint32_t(sizeof(PushConstantData)), 8,
+                                                                         base64_decode_spirv(vulkan_kernel_source_kernel_training_backward_pass_glsl_b64), shader_specialization);
     }
 
     {
         vk::ShaderSpecializationMap shader_specialization;
 
-        m_kernel_train_apply_gradient = std::make_unique<KernelResources>(m_device.get(), 3, 8, base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
-    }*/
+        m_kernel_train_apply_gradient = std::make_unique<KernelResources>(m_device.get(), "kernel_train_apply_gradient", 3, uint32_t(sizeof(PushConstantData)), 8,
+                                                                          base64_decode_spirv(vulkan_kernel_source_kernel_apply_gradient_glsl_b64), shader_specialization);
+    }
 }
 
-inline VulkanComputeDevice::~VulkanComputeDevice() { printf("alma"); }
+VulkanComputeDevice::~VulkanComputeDevice() {}
 
 std::unique_ptr<IBuffer> VulkanComputeDevice::CreateBuffer(size_t size, BufferUsage buffer_usage, const std::string& name)
 {
@@ -497,10 +503,10 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
     thread_local std::vector<const vk::VulkanBuffer*> buffers;
 
     buffers.resize(4);
-    buffers[0] = BufferCast<const vk::VulkanBuffer>(weights_buffer);
-    buffers[1] = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
-    buffers[2] = BufferCast<const vk::VulkanBuffer>(layer_input_buffer);
-    buffers[3] = BufferCast<vk::VulkanBuffer>(layer_output_buffer);
+    buffers[0] = weights_buffer_vk;
+    buffers[1] = layer_config_buffer_vk;
+    buffers[2] = layer_input_buffer_vk;
+    buffers[3] = layer_output_buffer_vk;
 
     auto command_buffer = GetCommandBuffer();
     auto descriptor_set = m_kernel_calc_single_layer->GetDescriptorSet(buffers);
@@ -531,10 +537,10 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
     thread_local std::vector<const vk::VulkanBuffer*> buffers;
 
     buffers.resize(4);
-    buffers[0] = BufferCast<const vk::VulkanBuffer>(weights_buffer);
-    buffers[1] = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
-    buffers[2] = BufferCast<vk::VulkanBuffer>(activations_zvalues_buffer_vk);
-    buffers[3] = BufferCast<const vk::VulkanBuffer>(input_buffer_vk);
+    buffers[0] = weights_buffer_vk;
+    buffers[1] = layer_config_buffer_vk;
+    buffers[2] = activations_zvalues_buffer_vk;
+    buffers[3] = input_buffer_vk;
 
     auto command_buffer = GetCommandBuffer();
     auto descriptor_set = m_kernel_train_forward_pass->GetDescriptorSet(buffers);
@@ -561,11 +567,83 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
                                                  uint32_t numTrainingSamples, uint32_t total_neuron_count, CostFunction costFunction, uint32_t largest_layer_neuron_count,
                                                  uint64_t layer_weights_offset)
 {
+    const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
+    const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
+    const auto activations_zvalues_buffer_vk = BufferCast<const vk::VulkanBuffer>(m_activations_zvalues_buffer);
+    const auto input_buffer_vk = BufferCast<const vk::VulkanBuffer>(input_buffer);
+    auto delta_k_vector_vk = BufferCast<vk::VulkanBuffer>(delta_k_vector);
+    auto gradient_vk = BufferCast<vk::VulkanBuffer>(gradient);
+    const auto desiredOutputs_vk = BufferCast<const vk::VulkanBuffer>(desiredOutputs);
+
+    thread_local std::vector<const vk::VulkanBuffer*> buffers;
+
+    buffers.resize(7);
+    buffers[0] = weights_buffer_vk;
+    buffers[1] = weights_buffer_vk;
+    buffers[2] = activations_zvalues_buffer_vk;
+    buffers[3] = input_buffer_vk;
+    buffers[4] = delta_k_vector_vk;
+    buffers[5] = gradient_vk;
+    buffers[6] = desiredOutputs_vk;
+
+    auto command_buffer = GetCommandBuffer();
+    auto descriptor_set = m_kernel_train_backward_pass->GetDescriptorSet(buffers);
+
+    SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
+
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetHandle());
+
+    m_push_constant_data.layer_id = layer_id;
+    m_push_constant_data.layer_count = layer_count;
+    m_push_constant_data.numTrainingSamples = numTrainingSamples;
+    m_push_constant_data.totalActivationCount = total_neuron_count;
+    m_push_constant_data.costFunctionId = uint32_t(costFunction);
+    m_push_constant_data.largest_layer_neuron_count = largest_layer_neuron_count;
+    m_push_constant_data.layer_weights_offset = layer_weights_offset;
+    vkCmdPushConstants(command_buffer, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
+
+    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), numTrainingSamples, 1);
+
+    m_dirty_buffers.emplace(delta_k_vector_vk, BufferSynchronizationEvent::ComputeShaderWrite);
+    m_dirty_buffers.emplace(gradient_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
 
 void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t layer_id,
                                               uint64_t weights_layer_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
 {
+
+    auto weights_buffer_vk = BufferCast<vk::VulkanBuffer>(weights_buffer);
+    const auto gradient_vk = BufferCast<const vk::VulkanBuffer>(gradient_buffer);
+    const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
+
+    thread_local std::vector<const vk::VulkanBuffer*> buffers;
+
+    buffers.resize(3);
+    buffers[0] = BufferCast<const vk::VulkanBuffer>(weights_buffer);
+    buffers[1] = BufferCast<const vk::VulkanBuffer>(gradient_vk);
+    buffers[2] = BufferCast<const vk::VulkanBuffer>(layer_config_buffer_vk);
+
+    auto command_buffer = GetCommandBuffer();
+    auto descriptor_set = m_kernel_train_apply_gradient->GetDescriptorSet(buffers);
+
+    SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
+
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetHandle());
+
+    m_push_constant_data.layer_id = layer_id;
+    m_push_constant_data.weights_layer_offset = weights_layer_offset;
+    m_push_constant_data.regularization_term_1 = regularization_term_1;
+    m_push_constant_data.regularization_term_2 = regularization_term_2;
+    m_push_constant_data.normalized_learning_rate = normalized_learning_rate;
+    vkCmdPushConstants(command_buffer, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
+
+    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), 1, 1);
+
+    m_dirty_buffers.emplace(weights_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
 
 std::vector<VkPhysicalDevice> VulkanComputeDevice::GetDeviceList() { return std::vector<VkPhysicalDevice>(); }
