@@ -17,17 +17,7 @@ class KernelResources
   public:
     KernelResources(vk::Device* device, uint32_t storage_buffer_count, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary, const vk::ShaderSpecializationMap& shader_specialization);
 
-    ~KernelResources()
-    {
-        FreeDescriptorSets();
-
-        if (m_descriptor_set_layout != VK_NULL_HANDLE) {
-            vkDestroyDescriptorSetLayout(m_device->GetHandle(), m_descriptor_set_layout, nullptr);
-        }
-        if (m_descriptor_pool != VK_NULL_HANDLE) {
-            vkDestroyDescriptorPool(m_device->GetHandle(), m_descriptor_pool, nullptr);
-        }
-    }
+    ~KernelResources();
 
     VkDescriptorSet GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers);
     void FreeDescriptorSets();
@@ -71,16 +61,14 @@ class VulkanComputeDevice : public IComputeDevice
     std::unique_ptr<vk::Device> m_device = nullptr;
 
     std::unique_ptr<KernelResources> m_kernel_calc_single_layer;
+    std::unique_ptr<KernelResources> m_kernel_train_forward_pass;
+    std::unique_ptr<KernelResources> m_kernel_train_backward_pass;
+    std::unique_ptr<KernelResources> m_kernel_train_apply_gradient;
 
     PushConstantData m_push_constant_data{};
     std::vector<MemoryReadback> m_memory_reads;
 
     std::map<const vk::VulkanBuffer*, BufferSynchronizationEvent> m_dirty_buffers;
-
-    // mutable std::unique_ptr<KernelEval> m_kernel_calc_single_layer;
-    // mutable std::unique_ptr<KernelTrainingForwardPass> m_kernel_train_forward_pass;
-    // mutable std::unique_ptr<KernelTrainingBackwardPass> m_kernel_train_backward_pass;
-    // mutable std::unique_ptr<KernelTrainingApplyGradient> m_kernel_train_apply_gradient;
 
     uint32_t m_kernel_calc_single_layer_ideal_workgroup_size = 64;
     uint32_t m_kernel_training_ideal_workgroup_size = 16;

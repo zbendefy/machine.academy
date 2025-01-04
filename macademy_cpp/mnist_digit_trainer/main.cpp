@@ -217,9 +217,16 @@ class MnistTrainerApp : public ConsoleApp
     }
 };
 
-int main()
+int main(int argc, const char** argv)
 {
-    MnistTrainerApp app{"D:/Dev/macademy_datasets/mnist_digits"};
+    std::string mnist_dir = "";
+
+    if (argc >= 2)
+    {
+        mnist_dir = argv[1];
+    }
+
+    MnistTrainerApp app{ mnist_dir };
 
     app.Run();
     return 0;
