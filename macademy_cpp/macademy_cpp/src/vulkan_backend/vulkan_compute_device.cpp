@@ -397,6 +397,9 @@ void VulkanComputeDevice::WaitQueueIdle()
         m_memory_reads.clear();
 
         m_kernel_calc_single_layer->FreeDescriptorSets();
+        m_kernel_train_forward_pass->FreeDescriptorSets();
+        m_kernel_train_backward_pass->FreeDescriptorSets();
+        m_kernel_train_apply_gradient->FreeDescriptorSets();
 
         m_device->ClearLoadingBuffers();
         m_dirty_buffers.clear();
