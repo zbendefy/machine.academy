@@ -200,9 +200,9 @@ void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSu
                                        opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), opencl_network->m_activations_zvalues_buffer->GetBuffer(),
                                        opencl_network->m_input_buffer->GetBuffer(), i, weights_layer_offset, num_training_samples, total_neuron_count);*/
 
-        const uint64_t layer_weight_size_bytes = uint64_t(input_num) * output_num + output_num;
-        ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
-        weights_layer_offset += layer_weight_size_bytes; // advance the offset in the weights buffer for the next layer
+        const uint64_t layer_weight_count = uint64_t(input_num) * output_num + output_num;
+        ASSERTM(weights_layer_offset + layer_weight_count > weights_layer_offset, "Layer weights offset overflow!");
+        weights_layer_offset += layer_weight_count; // advance the offset in the weights buffer for the next layer
     }
 
     // Backwards pass (accumulated gradient calculation)
@@ -210,8 +210,8 @@ void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSu
         const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
         const uint32_t output_num = layer_config[i].m_num_neurons;
 
-        const uint64_t layer_weight_size_bytes = uint64_t(input_num) * output_num + output_num;
-        weights_layer_offset -= layer_weight_size_bytes; // advance the offset backwards in the weights buffer
+        const uint64_t layer_weight_count = uint64_t(input_num) * output_num + output_num;
+        weights_layer_offset -= layer_weight_count; // advance the offset backwards in the weights buffer
 
         compute_device.QueueTrainBackwardPass(network_handle.m_weights.get(), network_handle.m_layer_config_buffer.get(), network_handle.m_activations_zvalues_buffer.get(),
                                               network_handle.m_input_buffer.get(), network_handle.m_delta_k_buffer.get(), network_handle.m_gradient_buffer.get(),

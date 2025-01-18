@@ -1,4 +1,6 @@
 #version 460
+#extension GL_EXT_shader_atomic_float : enable
+
 ///
 /// Vulkan kernels implementing network calculations, and backpropagation
 ///
@@ -32,7 +34,7 @@ layout(std430, binding = 6) readonly buffer desiredOutputs_buf {
 
 #include "common.glsl"
 
-layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 void main()
 {
@@ -49,6 +51,8 @@ void main()
         return;
     }
     
+    const bool is_first_layer = pc.layer_id == 0;
+
     const uint delta_k_read_offset = deltaKVectorStride * 2 * trainingSampleId + ((pc.layer_id % 2) * deltaKVectorStride);
     const uint delta_k_write_offset = deltaKVectorStride * 2 * trainingSampleId + (((pc.layer_id+1) % 2) * deltaKVectorStride);
 
@@ -58,15 +62,9 @@ void main()
 
     const uint input_layer_neuron_count = layer_config[0];
 
-    
     const uint prev_layer_input_values_idx = input_layer_neuron_count * trainingSampleId;
-    const uint prev_layer_activations_idx = training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id - 1);
-    const bool is_first_layer = pc.layer_id == 0;
+    const uint prev_layer_activations_idx = is_first_layer ? 0 : (training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id - 1));
 
-    /*__global const float* prevActivations = pc.layer_id == 0 ?
-         (inputValues + input_layer_neuron_count * trainingSampleId) :
-         (activationsAndZValues + (training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id - 1)) );*/
-         
     const float zValue = activationsAndZValues[current_layer_z_values_offset + layer_neuron_id];
 
     float delta_k;
@@ -82,7 +80,7 @@ void main()
     {
         //Hidden layer
         delta_k = 0;
-        const uint next_layer_weights_offset = pc.layer_weights_offset + (layer_neuron_count * (weights_per_neuron + 1));
+        const uint next_layer_weights_offset = pc.weights_layer_offset + (layer_neuron_count * (weights_per_neuron + 1));
         const uint next_layer_weight_offset_for_processed_neuron = next_layer_weights_offset + layer_neuron_id;
         const uint next_layer_neuron_count = layer_config[2 + (pc.layer_id+1) * 2]; //number of neurons
         const uint next_layer_neuron_data_size = layer_neuron_count + 1; //weights + bias
@@ -93,14 +91,14 @@ void main()
         delta_k *= ActivationFunctionPrime(activationFunctionId, zValue);
     }
 
-    const uint gradientBaseOffset = pc.layer_weights_offset + layer_neuron_id * (weights_per_neuron + 1);
+    const uint gradientBaseOffset = pc.weights_layer_offset + layer_neuron_id * (weights_per_neuron + 1);
 
     for(int i = 0; i < weights_per_neuron; ++i)
     {
        const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx] : activationsAndZValues[prev_layer_activations_idx];
-        //atomicAdd_g_f(gradient + gradientBaseOffset + i, delta_k * prev_activation);
+        atomicAdd(gradient[gradientBaseOffset + i], delta_k * prev_activation);
     }
-    //atomicAdd_g_f(gradient + gradientBaseOffset + weights_per_neuron, delta_k );
+    atomicAdd(gradient[gradientBaseOffset + weights_per_neuron], delta_k );
 
     if ( pc.layer_id != 0 )
     {

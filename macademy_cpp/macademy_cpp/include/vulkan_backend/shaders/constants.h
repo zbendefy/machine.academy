@@ -16,7 +16,6 @@ layout(push_constant) uniform constants_
     uint totalActivationCount;
     uint costFunctionId;
     uint largest_layer_neuron_count;
-    uint layer_weights_offset; // ulong?
     float regularization_term_1;
     float regularization_term_2;
     float normalized_learning_rate;

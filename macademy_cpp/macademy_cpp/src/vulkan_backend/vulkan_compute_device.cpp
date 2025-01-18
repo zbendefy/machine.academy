@@ -122,7 +122,9 @@ KernelResources::~KernelResources()
 
 VkDescriptorSet KernelResources::GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers)
 {
+    //descriptor sets bound to specific buffers are cached (as there are many cases where a ping-pong calculation is done that would require the same 2 descriptor sets many times)
     auto it = m_descriptor_sets.find(storage_buffers);
+
     if (it == m_descriptor_sets.end()) {
 
         // Allocate a descriptor set from the pool, and write the buffer handles into it, then return it
@@ -185,7 +187,7 @@ std::vector<ComputeDeviceInfo> VulkanComputeDevice::GetVulkanComputeDeviceInfo()
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
     appInfo.pEngineName = "foxglove3_macademy";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_0;
+    appInfo.apiVersion = VK_API_VERSION_1_1;
 
     VkInstanceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -259,7 +261,7 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
     }
 #endif
 
-    bool validation_layer_enabled = true;
+    bool validation_layer_enabled = false;
     bool debug_labels_enabled = true;
 
     if (device_config.contains("validation_layer_enabled") && device_config["validation_layer_enabled"].is_boolean()) {
@@ -397,6 +399,7 @@ void VulkanComputeDevice::WaitQueueIdle()
         m_kernel_calc_single_layer->FreeDescriptorSets();
 
         m_device->ClearLoadingBuffers();
+        m_dirty_buffers.clear();
 
 #ifdef DEBUG_RENDERDOC
         if (rdoc_api) {
@@ -410,8 +413,9 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
 {
     thread_local std::vector<VkBufferMemoryBarrier> buffer_memory_barriers;
 
-    const auto Synchronize = [this, &buffers, command_buffer](BufferSynchronizationEvent buffer_event, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask,
-                                                              VkPipelineStageFlagBits dstStageMask) {
+    const auto CollectBarriers = [this, &buffers](BufferSynchronizationEvent buffer_event, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask) {
+        ASSERT(buffer_event == BufferSynchronizationEvent::TransferWrite && src_access_mask == VK_ACCESS_TRANSFER_WRITE_BIT || buffer_event == BufferSynchronizationEvent::ComputeShaderWrite && src_access_mask == VK_ACCESS_SHADER_WRITE_BIT);
+
         for (int i = 0; i < int(buffers.size()); ++i) {
 
             auto it = m_dirty_buffers.find(buffers[i]);
@@ -428,23 +432,19 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
                 bufferMemoryBarrier.size = VK_WHOLE_SIZE; // Whole buffer
             }
         }
+    };
 
+    const auto InsertBarrier = [command_buffer](VkDependencyFlags srcStageMask, VkDependencyFlags dstStageMask) {
         if (!buffer_memory_barriers.empty()) {
             VkPipelineStageFlagBits srcStageMask = VkPipelineStageFlagBits(0);
 
-            if (buffer_event == BufferSynchronizationEvent::TransferWrite) {
-                srcStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-            } else if (buffer_event == BufferSynchronizationEvent::ComputeShaderWrite) {
-                srcStageMask = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-            }
-
             vkCmdPipelineBarrier(command_buffer,
-                                 srcStageMask,                                                 // Source stage: Transfer (copy) is the source stage
-                                 dstStageMask,                                                 // Destination stage: Compute shader is the destination stage
-                                 0,                                                            // No additional flags
-                                 0, nullptr,                                                   // No memory barriers
-                                 buffer_memory_barriers.size(), buffer_memory_barriers.data(), // Buffer memory barrier to ensure the copy is done before compute shader reads the buffer
-                                 0, nullptr                                                    // No image barriers
+                srcStageMask,                                                 // Source stage: Transfer (copy) is the source stage
+                dstStageMask,                                                 // Destination stage: Compute shader is the destination stage
+                0,                                                            // No additional flags
+                0, nullptr,                                                   // No memory barriers
+                buffer_memory_barriers.size(), buffer_memory_barriers.data(), // Buffer memory barrier to ensure the copy is done before compute shader reads the buffer
+                0, nullptr                                                    // No image barriers
             );
         }
 
@@ -452,40 +452,27 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
     };
 
     if (action == SynchronizationAction::ComputeShaderRead) {
-        Synchronize(BufferSynchronizationEvent::TransferWrite, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+        //A compute shader wants to read a buffer...
+        
+        //Add barriers for buffers that are currently being transferred to...
+        CollectBarriers(BufferSynchronizationEvent::TransferWrite, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+        InsertBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
+        //Add barriers for buffers that are currently being written by an earlier compute shader...
+        CollectBarriers(BufferSynchronizationEvent::ComputeShaderWrite, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
+        InsertBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+
     } else if (action == SynchronizationAction::TransferRead) {
-        Synchronize(BufferSynchronizationEvent::TransferWrite, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+        //Host side wants to read back a buffer
+
+        //Add barriers for buffers that are currently being transferred to...
+        CollectBarriers(BufferSynchronizationEvent::TransferWrite, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+        InsertBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+
+        //Add barriers for buffers that are currently being written by an earlier compute shader...
+        CollectBarriers(BufferSynchronizationEvent::ComputeShaderWrite, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
+        InsertBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
-
-    for (int i = 0; i < int(buffers.size()); ++i) {
-
-        auto it = m_dirty_buffers.find(buffers[i]);
-
-        if (it != m_dirty_buffers.end() && (uint32_t(it->second) & uint32_t(BufferSynchronizationEvent::ComputeShaderWrite)) != 0) {
-            auto& bufferMemoryBarrier = buffer_memory_barriers.emplace_back(VkBufferMemoryBarrier{});
-            bufferMemoryBarrier.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-            bufferMemoryBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;  // The compute shader writes to the buffer
-            bufferMemoryBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT; // The copy operation will read from the buffer
-            bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            bufferMemoryBarrier.buffer = buffers[i]->GetHandle();
-            bufferMemoryBarrier.offset = 0;
-            bufferMemoryBarrier.size = VK_WHOLE_SIZE; // Whole buffer
-        }
-    }
-
-    if (!buffer_memory_barriers.empty()) {
-        vkCmdPipelineBarrier(command_buffer,
-                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,                         // Source stage: Transfer (copy) is the source stage
-                             VK_PIPELINE_STAGE_TRANSFER_BIT,                               // Destination stage: Compute shader is the destination stage
-                             0,                                                            // No additional flags
-                             0, nullptr,                                                   // No memory barriers
-                             buffer_memory_barriers.size(), buffer_memory_barriers.data(), // Buffer memory barrier to ensure the copy is done before compute shader reads the buffer
-                             0, nullptr                                                    // No image barriers
-        );
-    }
-
-    buffer_memory_barriers.clear();
 
     for (int i = 0; i < int(buffers.size()); ++i) {
         m_dirty_buffers.erase(buffers[i]);
@@ -513,9 +500,9 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
-
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetHandle());
+    
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
     m_push_constant_data.layer_id = layer_id;
     m_push_constant_data.weights_layer_offset = weights_layer_offset;
@@ -547,9 +534,9 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
-
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_forward_pass->GetPipeline()->GetHandle());
+
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
     m_push_constant_data.layer_id = layer_id;
     m_push_constant_data.weights_layer_offset = weights_layer_offset;
@@ -557,7 +544,7 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
     m_push_constant_data.totalActivationCount = total_neuron_count;
     vkCmdPushConstants(command_buffer, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), num_training_samples, 1);
+    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size), 1);
 
     m_dirty_buffers.emplace(activations_zvalues_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
@@ -579,7 +566,7 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
 
     buffers.resize(7);
     buffers[0] = weights_buffer_vk;
-    buffers[1] = weights_buffer_vk;
+    buffers[1] = layer_config_buffer_vk;
     buffers[2] = activations_zvalues_buffer_vk;
     buffers[3] = input_buffer_vk;
     buffers[4] = delta_k_vector_vk;
@@ -591,9 +578,9 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
-
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetHandle());
+    
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
     m_push_constant_data.layer_id = layer_id;
     m_push_constant_data.layer_count = layer_count;
@@ -601,10 +588,10 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
     m_push_constant_data.totalActivationCount = total_neuron_count;
     m_push_constant_data.costFunctionId = uint32_t(costFunction);
     m_push_constant_data.largest_layer_neuron_count = largest_layer_neuron_count;
-    m_push_constant_data.layer_weights_offset = layer_weights_offset;
+    m_push_constant_data.weights_layer_offset = layer_weights_offset;
     vkCmdPushConstants(command_buffer, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), numTrainingSamples, 1);
+    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size), 1);
 
     m_dirty_buffers.emplace(delta_k_vector_vk, BufferSynchronizationEvent::ComputeShaderWrite);
     m_dirty_buffers.emplace(gradient_vk, BufferSynchronizationEvent::ComputeShaderWrite);
@@ -613,7 +600,6 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
 void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t layer_id,
                                               uint64_t weights_layer_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
 {
-
     auto weights_buffer_vk = BufferCast<vk::VulkanBuffer>(weights_buffer);
     const auto gradient_vk = BufferCast<const vk::VulkanBuffer>(gradient_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
@@ -630,9 +616,9 @@ void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBu
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
-
     vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetHandle());
+
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
     m_push_constant_data.layer_id = layer_id;
     m_push_constant_data.weights_layer_offset = weights_layer_offset;

@@ -35,7 +35,7 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
         throw std::runtime_error("Could not find a compute capable queue!");
     }
 
-    std::vector<const char*> device_extensions{};
+    std::vector<const char*> device_extensions{ VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME };
 
     float queuePriority = 1.0f;
     VkDeviceQueueCreateInfo computeQueueCreateInfo{};
@@ -51,11 +51,20 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
     vkGetPhysicalDeviceFeatures(physical_device, &m_device_features);
     vkGetPhysicalDeviceMemoryProperties(physical_device, &m_memory_props);
 
+    VkPhysicalDeviceShaderAtomicFloatFeaturesEXT atomic_float_extension_features{};
+    atomic_float_extension_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
+    atomic_float_extension_features.shaderBufferFloat32AtomicAdd = true;
+
+    VkPhysicalDeviceFeatures2 device_features{};
+    device_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+    device_features.pNext = &atomic_float_extension_features;
+
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.queueCreateInfoCount = queueCreateInfos.size();
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.pEnabledFeatures = nullptr; // Comes from VkPhysicalDeviceFeatures2
+    createInfo.pNext = &device_features; // Comes from VkPhysicalDeviceFeatures2
     createInfo.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
     createInfo.ppEnabledExtensionNames = device_extensions.data();
     if (enable_validation_layer) {
@@ -66,7 +75,7 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
     }
 
     if (vkCreateDevice(m_physical_device, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create logical device!");
+        throw std::runtime_error("Failed to create vulkan device!");
     }
 
     vkGetDeviceQueue(m_device, compute_queue_index.value(), 0, &m_compute_queue);
@@ -77,7 +86,7 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
         allocatorInfo.physicalDevice = m_physical_device;
         allocatorInfo.device = m_device;
         allocatorInfo.instance = m_instance->GetHandle();
-        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_0;
+        allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_1;
         vmaCreateAllocator(&allocatorInfo, &m_vma);
     }
 

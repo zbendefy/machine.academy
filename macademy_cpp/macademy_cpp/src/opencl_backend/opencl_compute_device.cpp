@@ -149,8 +149,8 @@ void OpenCLComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
     const auto input_buffer_cl = BufferCast<const OpenCLBuffer>(input_buffer);
 
     (*m_kernel_train_forward_pass)(cl::EnqueueArgs(m_command_queue,
-                                                   cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size),
-                                                               ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
+                                                   cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_ideal_workgroup_size),
+                                                               ExtendGlobalWorkSize(num_training_samples, m_kernel_training_ideal_workgroup_size)),
                                                    cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
                                    weights_buffer_cl->GetBuffer(), layer_config_buffer_cl->GetBuffer(), activations_zvalues_buffer_cl->GetBuffer(), input_buffer_cl->GetBuffer(), layer_id,
                                    weights_layer_offset, num_training_samples, total_neuron_count);
@@ -170,8 +170,8 @@ void OpenCLComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
     const auto desiredOutputs_cl = BufferCast<const OpenCLBuffer>(desiredOutputs);
 
     (*m_kernel_train_backward_pass)(cl::EnqueueArgs(m_command_queue,
-                                                    cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size),
-                                                                ExtendGlobalWorkSize(numTrainingSamples, m_kernel_calc_single_layer_ideal_workgroup_size)),
+                                                    cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_ideal_workgroup_size),
+                                                                ExtendGlobalWorkSize(numTrainingSamples, m_kernel_training_ideal_workgroup_size)),
                                                     cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
                                     weights_buffer_cl->GetBuffer(), layer_config_buffer_cl->GetBuffer(), activations_zvalues_buffer_cl->GetBuffer(), input_buffer_cl->GetBuffer(), layer_id,
                                     layer_count, numTrainingSamples, total_neuron_count, cl_uint(costFunction), largest_layer_neuron_count, layer_weights_offset, delta_k_vector_cl->GetBuffer(),

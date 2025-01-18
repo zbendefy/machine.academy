@@ -1,4 +1,5 @@
 #version 460
+
 ///
 /// Vulkan kernels implementing network calculations, and backpropagation
 ///
@@ -20,7 +21,7 @@ layout(std430, binding = 3) readonly buffer input_buf {
 
 #include "common.glsl"
 
-layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 void main()
 {
@@ -36,20 +37,21 @@ void main()
         return;
     }
 
+    const bool is_first_layer = pc.layer_id == 0;
+
     const uint neuron_data_size = weights_per_neuron + 1; //weights in prev layer + 1 bias
 
-   const uint neuron_weights_biases_idx = pc.weights_layer_offset + layer_neuron_id * neuron_data_size;
+    const uint neuron_weights_biases_idx = pc.weights_layer_offset + layer_neuron_id * neuron_data_size;
 
     const uint training_sample_activation_offset = pc.totalActivationCount * trainingSampleId;
 
     const uint input_layer_neuron_count = layer_config[0];
 
     const uint prev_layer_input_values_idx = input_layer_neuron_count * trainingSampleId;
-    const uint prev_layer_activations_idx = training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id - 1);
+    const uint prev_layer_activations_idx = is_first_layer ? 0 : (training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id - 1));
 
     //Calculate ZValues for layer
     float acc = 0;
-    const bool is_first_layer = pc.layer_id == 0;
     for(int i = 0; i < weights_per_neuron; ++i)
     {
         const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx] : activationsAndZValues[prev_layer_activations_idx];
