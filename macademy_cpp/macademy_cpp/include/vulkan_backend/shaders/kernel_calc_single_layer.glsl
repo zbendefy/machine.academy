@@ -42,7 +42,7 @@ void main()
     uint neuron_weights_biases_begin_idx = pc.weights_layer_offset + layer_neuron_id * neuron_data_size;
 
     float acc = 0;
-    for(int i = 0; i < weights_per_neuron; ++i)
+    for(uint i = 0; i < weights_per_neuron; ++i)
     {
         acc += weights_biases[neuron_weights_biases_begin_idx + i] * input_buffer[input_begin_idx + i];
     }

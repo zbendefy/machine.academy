@@ -52,7 +52,7 @@ void main()
 
     //Calculate ZValues for layer
     float acc = 0;
-    for(int i = 0; i < weights_per_neuron; ++i)
+    for(uint i = 0; i < weights_per_neuron; ++i)
     {
         const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx] : activationsAndZValues[prev_layer_activations_idx];
         acc += weights_biases[i + neuron_weights_biases_idx] * prev_activation;

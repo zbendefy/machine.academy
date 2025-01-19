@@ -93,10 +93,10 @@ void main()
 
     const uint gradientBaseOffset = pc.weights_layer_offset + layer_neuron_id * (weights_per_neuron + 1);
 
-    for(int i = 0; i < weights_per_neuron; ++i)
+    for(uint i = 0; i < weights_per_neuron; ++i)
     {
-       const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx] : activationsAndZValues[prev_layer_activations_idx];
-        atomicAdd(gradient[gradientBaseOffset + i], delta_k * prev_activation);
+       const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx + i] : activationsAndZValues[prev_layer_activations_idx + i];
+       atomicAdd(gradient[gradientBaseOffset + i], delta_k * prev_activation);
     }
     atomicAdd(gradient[gradientBaseOffset + weights_per_neuron], delta_k );
 

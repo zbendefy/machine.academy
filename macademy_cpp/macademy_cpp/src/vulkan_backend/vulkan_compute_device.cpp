@@ -261,7 +261,7 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
     }
 #endif
 
-    bool validation_layer_enabled = false;
+    bool validation_layer_enabled = true;
     bool debug_labels_enabled = true;
 
     if (device_config.contains("validation_layer_enabled") && device_config["validation_layer_enabled"].is_boolean()) {
@@ -439,8 +439,6 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
 
     const auto InsertBarrier = [command_buffer](VkDependencyFlags srcStageMask, VkDependencyFlags dstStageMask) {
         if (!buffer_memory_barriers.empty()) {
-            VkPipelineStageFlagBits srcStageMask = VkPipelineStageFlagBits(0);
-
             vkCmdPipelineBarrier(command_buffer,
                 srcStageMask,                                                 // Source stage: Transfer (copy) is the source stage
                 dstStageMask,                                                 // Destination stage: Compute shader is the destination stage
