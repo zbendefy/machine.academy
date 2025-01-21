@@ -21,8 +21,8 @@ class Device
   public:
     struct LoaderStagingBuffer
     {
-        Device* m_device;
-        VulkanBuffer* m_staging_buffer;
+        Device* m_device = nullptr;
+        VulkanBuffer* m_staging_buffer = nullptr;
 
         ~LoaderStagingBuffer();
     };
@@ -52,8 +52,6 @@ class Device
     VkCommandBuffer CreateCommandBuffer();
 
     std::unique_ptr<Device::LoaderStagingBuffer> GetLoaderStagingBuffer(size_t size);
-
-    void ClearLoadingBuffers();
 
     ~Device();
 

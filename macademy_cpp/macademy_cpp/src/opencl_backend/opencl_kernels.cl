@@ -16,7 +16,7 @@ enum ActivationFunction
     Activation_ArcTan,
 };
 
-float ActivationFunction(int functionId, float x)
+float ActivationFunction(uint functionId, float x)
 {
 	switch (functionId) {
     case Activation_Sigmoid:
@@ -40,7 +40,7 @@ float ActivationFunction(int functionId, float x)
     }
 }
 
-float ActivationFunctionPrime(int functionId, float x)
+float ActivationFunctionPrime(uint functionId, float x)
 {
 	switch (functionId) {
     case Activation_Sigmoid: {
@@ -105,7 +105,7 @@ __kernel void evaluateLayerBatched(__global const float* weights_biases,
     __global const float* neuron_weights_biases = weights_biases + weights_layer_offset + layer_neuron_id * neuron_data_size;
 
     float acc = 0;
-    for(int i = 0; i < weights_per_neuron; ++i)
+    for(uint i = 0; i < weights_per_neuron; ++i)
     {
         acc += neuron_weights_biases[i] * input[i];
     }
@@ -129,10 +129,10 @@ void atomicAdd_g_f(volatile __global float *addr, float val)
     } while( current.u32 != expected.u32 );
 }
 
-int GetLayerNeuronCountOffset(int layerId, __constant const uint* layer_config)
+uint GetLayerNeuronCountOffset(uint layerId, __constant const uint* layer_config)
 {
-    int offset = 0;
-    for(int i = 0; i < layerId; ++i){
+    uint offset = 0;
+    for(uint i = 0; i < layerId; ++i){
         offset += layer_config[2 + i * 2]; //neuron count of i-th layer 
     }
     return offset;
@@ -174,7 +174,7 @@ __kernel void trainingForwardPass(__global const float* weights_biases,
     
     //Calculate ZValues for layer
     float acc = 0;
-    for(int i = 0; i < weights_per_neuron; ++i)
+    for(uint i = 0; i < weights_per_neuron; ++i)
     {
         acc += neuron_weights_biases[i] * prevActivations[i];
     }
@@ -207,11 +207,8 @@ __kernel void trainingBackwardPass(__global const float* weightsAndBiases,
     const uint activationFunctionId = layer_config[3 + layer_id * 2]; 
     const uint deltaKVectorStride = largest_layer_neuron_count; //Table size of delta_k vector
 
-
-    //__constant const int* layerNeuronCountBegin = config+8;
-
-    const int layer_neuron_id = get_global_id(0);
-    const int trainingSampleId = get_global_id(1);
+    const uint layer_neuron_id = get_global_id(0);
+    const uint trainingSampleId = get_global_id(1);
 
     if (trainingSampleId >= numTrainingSamples || layer_neuron_id >= layer_neuron_count)
     {
@@ -258,7 +255,7 @@ __kernel void trainingBackwardPass(__global const float* weightsAndBiases,
 
     const uint gradientBaseOffset = layer_weights_offset + layer_neuron_id * (weights_per_neuron + 1);
 
-    for(int i = 0; i < weights_per_neuron; ++i)
+    for(uint i = 0; i < weights_per_neuron; ++i)
     {
         atomicAdd_g_f(gradient + gradientBaseOffset + i, delta_k * prevActivations[i]);
     }

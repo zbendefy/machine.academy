@@ -46,7 +46,7 @@ void main()
     const uint layer_neuron_id = gl_GlobalInvocationID.x;
     const uint trainingSampleId = gl_GlobalInvocationID.y;
 
-    if (trainingSampleId >= pc.layer_count || layer_neuron_id >= layer_neuron_count)
+    if (trainingSampleId >= pc.numTrainingSamples || layer_neuron_id >= layer_neuron_count)
     {
         return;
     }

@@ -53,7 +53,7 @@ std::shared_ptr<const TrainingResultTracker> Training::Train(NetworkResourceHand
             ComputeTasks compute_tasks;
 
             while (true) {
-                compute_tasks.Train(network, *training_suite, trainingDataBegin, trainingDataEnd);
+                compute_tasks.TrainMinibatch(network, *training_suite, trainingDataBegin, trainingDataEnd);
 
                 if (training_suite->m_mini_batch_size) {
                     if (trainingDataEnd >= training_suite->m_training_data.size()) {

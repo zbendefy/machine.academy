@@ -7,7 +7,7 @@ namespace macademy {
 
 const uint32_t Network::BINARY_VERSION = 0x00010000;
 
-Network::Network(const std::string& name, uint32_t input_count, std::span<LayerConfig> layer_config, std::span<float> weights)
+Network::Network(const std::string& name, uint32_t input_count, std::span<const LayerConfig> layer_config, std::span<float> weights)
     : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
 {
     if (layer_config.empty()) {

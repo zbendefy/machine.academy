@@ -36,10 +36,10 @@ class KernelResources
 
 class VulkanComputeDevice : public IComputeDevice
 {
-  public:
+public:
 #define VK_CONSTANTS_HOST
 #include "vulkan_backend/shaders/constants.h"
-  private:
+private:
     struct MemoryReadback
     {
         std::unique_ptr<vk::Device::LoaderStagingBuffer> m_host_buffer;
@@ -70,6 +70,7 @@ class VulkanComputeDevice : public IComputeDevice
     std::vector<MemoryReadback> m_memory_reads;
 
     std::map<const vk::VulkanBuffer*, BufferSynchronizationEvent> m_dirty_buffers;
+    std::vector<std::unique_ptr<vk::Device::LoaderStagingBuffer>> m_staging_buffers;
 
     uint32_t m_kernel_calc_single_layer_ideal_workgroup_size = 64;
     uint32_t m_kernel_training_ideal_workgroup_size = 16;

@@ -325,7 +325,7 @@ std::unique_ptr<IBuffer> VulkanComputeDevice::CreateBuffer(size_t size, BufferUs
 void VulkanComputeDevice::QueueWriteToBuffer(IBuffer* dst_buffer, std::span<const uint8_t> src, size_t buffer_offset)
 {
     auto vk_buffer = BufferCast<vk::VulkanBuffer>(dst_buffer);
-    auto staging_buffer = m_device->GetLoaderStagingBuffer(src.size());
+    auto& staging_buffer = m_staging_buffers.emplace_back(m_device->GetLoaderStagingBuffer(src.size()));
 
     auto dst_memory = staging_buffer->m_staging_buffer->MapMemory();
     ASSERT(dst_memory); // loader staging buffers should be host_visible, and therefore mappable!
@@ -341,7 +341,7 @@ void VulkanComputeDevice::QueueWriteToBuffer(IBuffer* dst_buffer, std::span<cons
 void VulkanComputeDevice::QueueReadFromBuffer(IBuffer* src_buffer, std::span<uint8_t> dst, size_t buffer_offset)
 {
     auto vk_buffer = BufferCast<vk::VulkanBuffer>(src_buffer);
-    auto staging_buffer = m_device->GetLoaderStagingBuffer(dst.size());
+    auto& staging_buffer = m_staging_buffers.emplace_back(m_device->GetLoaderStagingBuffer(dst.size()));
     auto command_buffer = GetCommandBuffer();
 
     std::array<const vk::VulkanBuffer*, 1> alma{{vk_buffer}};
@@ -401,7 +401,7 @@ void VulkanComputeDevice::WaitQueueIdle()
         m_kernel_train_backward_pass->FreeDescriptorSets();
         m_kernel_train_apply_gradient->FreeDescriptorSets();
 
-        m_device->ClearLoadingBuffers();
+        m_staging_buffers.clear();
         m_dirty_buffers.clear();
 
 #ifdef DEBUG_RENDERDOC

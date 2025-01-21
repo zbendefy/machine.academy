@@ -174,8 +174,6 @@ std::unique_ptr<Device::LoaderStagingBuffer> Device::GetLoaderStagingBuffer(size
     return ret;
 }
 
-void Device::ClearLoadingBuffers() { m_loader_staging_buffers.clear(); }
-
 Device::~Device()
 {
     vkDeviceWaitIdle(m_device);

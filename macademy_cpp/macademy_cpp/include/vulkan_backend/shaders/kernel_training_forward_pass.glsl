@@ -54,7 +54,7 @@ void main()
     float acc = 0;
     for(uint i = 0; i < weights_per_neuron; ++i)
     {
-        const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx] : activationsAndZValues[prev_layer_activations_idx];
+        const float prev_activation = is_first_layer ? inputValues[prev_layer_input_values_idx + i] : activationsAndZValues[prev_layer_activations_idx + i];
         acc += weights_biases[i + neuron_weights_biases_idx] * prev_activation;
     }
     acc += weights_biases[weights_per_neuron + neuron_weights_biases_idx]; //bias

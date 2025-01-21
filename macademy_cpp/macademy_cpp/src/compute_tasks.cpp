@@ -144,7 +144,7 @@ std::vector<float> ComputeTasks::EvaluateBatch(uint32_t batch_count, const Netwo
     return result;
 }
 
-void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint64_t trainingDataBegin, uint64_t trainingDataEnd) const
+void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const TrainingSuite& training_suite, uint64_t trainingDataBegin, uint64_t trainingDataEnd) const
 {
     Network& network = *network_handle.m_network;
     IComputeDevice& compute_device = *network_handle.m_compute_device;
@@ -196,7 +196,7 @@ void ComputeTasks::Train(NetworkResourceHandle& network_handle, const TrainingSu
         /*(*m_kernel_train_forward_pass)(cl::EnqueueArgs(m_command_queue,
                                                        cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
                                                                    ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
-                                                       cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
+                                                        cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
                                        opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), opencl_network->m_activations_zvalues_buffer->GetBuffer(),
                                        opencl_network->m_input_buffer->GetBuffer(), i, weights_layer_offset, num_training_samples, total_neuron_count);*/
 
