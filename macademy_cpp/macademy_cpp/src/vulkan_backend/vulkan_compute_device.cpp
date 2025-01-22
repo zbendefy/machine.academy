@@ -1,7 +1,5 @@
 #include "vulkan_backend/vulkan_compute_device.h"
 #include "vulkan_backend/vulkan_buffer.h"
-#include "vulkan_backend/shader_specialization.h"
-#include "vulkan_backend/vulkan_buffer.h"
 #include "network.h"
 #include "common.h"
 #include "utils.h"
@@ -11,7 +9,7 @@
 #include <array>
 #include <sstream>
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && RDOC_ENABLED
 #define DEBUG_RENDERDOC
 #endif
 
@@ -19,15 +17,23 @@
 
 #include "renderdoc_app.h"
 
-RENDERDOC_API_1_6_0* rdoc_api = NULL;
+RENDERDOC_API_1_2_0* rdoc_api = NULL;
 
 #endif
 
 namespace macademy {
 
+#define VK_CONSTANTS_HOST
+#include "vulkan_backend/shaders/kernel_calc_single_layer_constants.h"
 #include "vulkan_backend/shaders/kernel_calc_single_layer.glsl.h"
+
+#include "vulkan_backend/shaders/kernel_training_forward_pass_constants.h"
 #include "vulkan_backend/shaders/kernel_training_forward_pass.glsl.h"
+
+#include "vulkan_backend/shaders/kernel_training_backward_pass_constants.h"
 #include "vulkan_backend/shaders/kernel_training_backward_pass.glsl.h"
+
+#include "vulkan_backend/shaders/kernel_training_apply_gradient_constants.h"
 #include "vulkan_backend/shaders/kernel_apply_gradient.glsl.h"
 
 namespace {
@@ -88,13 +94,14 @@ KernelResources::KernelResources(vk::Device* device, const std::string& name, ui
 
     ASSERT(spirv_binary.size() % 4 == 0);
 
-    vk::ComputePipelineDescriptor kernel_calc_single_layer_pipeline_desc{};
-    kernel_calc_single_layer_pipeline_desc.m_compute_shader = spirv_binary;
-    kernel_calc_single_layer_pipeline_desc.m_compute_shader_entry_function = "main";
-    kernel_calc_single_layer_pipeline_desc.m_descriptor_set_layout = m_descriptor_set_layout;
-    kernel_calc_single_layer_pipeline_desc.m_push_constant_size = push_constant_size;
+    vk::ComputePipelineDescriptor pipeline_desc{};
+    pipeline_desc.m_compute_shader = spirv_binary;
+    pipeline_desc.m_compute_shader_entry_function = "main";
+    pipeline_desc.m_descriptor_set_layout = m_descriptor_set_layout;
+    pipeline_desc.m_push_constant_size = push_constant_size;
+    pipeline_desc.m_shader_specialization = shader_specialization;
 
-    m_pipeline = std::make_unique<vk::ComputePipeline>(m_device, name.c_str(), kernel_calc_single_layer_pipeline_desc, shader_specialization);
+    m_pipeline = std::make_unique<vk::ComputePipeline>(m_device, name.c_str(), pipeline_desc);
 
     std::array<VkDescriptorPoolSize, 1> sizes = {{VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, storage_buffer_count * max_descriptor_sets}};
 
@@ -179,6 +186,21 @@ void KernelResources::FreeDescriptorSets()
     m_descriptor_sets.clear();
 }
 
+void KernelResources::Bind(VkCommandBuffer command_buffer, const std::vector<const vk::VulkanBuffer*>& buffers, std::span<const uint8_t> push_constant_data) 
+{
+    auto descriptor_set = GetDescriptorSet(buffers);
+
+    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline->GetHandle());
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_pipeline->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
+
+    vkCmdPushConstants(command_buffer, m_pipeline->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, push_constant_data.size_bytes(), push_constant_data.data());
+}
+
+void KernelResources::Dispatch(VkCommandBuffer command_buffer, uint32_t threadgroup_count_x, uint32_t threadgroup_count_y, uint32_t threadgroup_count_z)
+{
+    vkCmdDispatch(command_buffer, threadgroup_count_x, threadgroup_count_y, threadgroup_count_z);
+}
+
 std::vector<ComputeDeviceInfo> VulkanComputeDevice::GetVulkanComputeDeviceInfo()
 {
     VkApplicationInfo appInfo{};
@@ -256,19 +278,24 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
 #ifdef DEBUG_RENDERDOC
     if (HMODULE mod = GetModuleHandleA("renderdoc.dll")) {
         pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(mod, "RENDERDOC_GetAPI");
-        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&rdoc_api);
+        int ret = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_2_0, (void**)&rdoc_api);
         ASSERT(ret == 1);
     }
 #endif
 
+#ifdef DEBUG_RENDERDOC
+    constexpr bool debug_label_default_enabled = true;
+#else
+    constexpr bool debug_label_default_enabled = false;
+#endif
+
     bool validation_layer_enabled = GetBoolFlagFromJson(device_config, "validation_layer_enabled", false);
-    bool debug_labels_enabled = GetBoolFlagFromJson(device_config, "debug_labels_enabled", false);
+    bool debug_labels_enabled = GetBoolFlagFromJson(device_config, "debug_labels_enabled", debug_label_default_enabled);
 
     m_kernel_calc_single_layer_ideal_workgroup_size = GetIntFromJson(device_config, "eval_threadgroup_size", m_kernel_calc_single_layer_ideal_workgroup_size);
     m_kernel_training_ideal_workgroup_size_x = GetIntFromJson(device_config, "training_threadgroup_size_x", m_kernel_training_ideal_workgroup_size_x);
     m_kernel_training_ideal_workgroup_size_y = GetIntFromJson(device_config, "training_threadgroup_size_x", m_kernel_training_ideal_workgroup_size_y);
     m_kernel_training_apply_gradient_ideal_workgroup_size = GetIntFromJson(device_config, "gradient_apply_threadgroup_size", m_kernel_training_apply_gradient_ideal_workgroup_size);
-
 
     m_instance = std::make_unique<vk::Instance>(validation_layer_enabled, debug_labels_enabled);
 
@@ -282,29 +309,36 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
 
     {
         vk::ShaderSpecializationMap shader_specialization;
+        shader_specialization.emplace(0, m_kernel_calc_single_layer_ideal_workgroup_size);
 
         // Note: there should be currently at most 2 simultaneous descriptor sets, but I used 8 here just in case the compute tasks api gets used in some unintended way.
-        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), "kernel_calc_single_layer", 4, uint32_t(sizeof(PushConstantData)), 8,
+        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), "kernel_calc_single_layer", 4, uint32_t(sizeof(CalcSingleLayerPushConstantData)), 8,
                                                                        base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
     }
 
     {
         vk::ShaderSpecializationMap shader_specialization;
-        m_kernel_train_forward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_forward_pass", 4, uint32_t(sizeof(PushConstantData)), 8,
+        shader_specialization.emplace(0, m_kernel_training_ideal_workgroup_size_x);
+        shader_specialization.emplace(1, m_kernel_training_ideal_workgroup_size_y);
+
+        m_kernel_train_forward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_forward_pass", 4, uint32_t(sizeof(TrainingForwardPassPushConstantData)), 8,
                                                                         base64_decode_spirv(vulkan_kernel_source_kernel_training_forward_pass_glsl_b64), shader_specialization);
     }
 
     {
         vk::ShaderSpecializationMap shader_specialization;
+        shader_specialization.emplace(0, m_kernel_training_ideal_workgroup_size_x);
+        shader_specialization.emplace(1, m_kernel_training_ideal_workgroup_size_y);
 
-        m_kernel_train_backward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_backward_pass", 7, uint32_t(sizeof(PushConstantData)), 8,
+        m_kernel_train_backward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_backward_pass", 7, uint32_t(sizeof(TrainingBackwardPassPushConstantData)), 8,
                                                                          base64_decode_spirv(vulkan_kernel_source_kernel_training_backward_pass_glsl_b64), shader_specialization);
     }
 
     {
         vk::ShaderSpecializationMap shader_specialization;
+        shader_specialization.emplace(0, m_kernel_training_apply_gradient_ideal_workgroup_size);
 
-        m_kernel_train_apply_gradient = std::make_unique<KernelResources>(m_device.get(), "kernel_train_apply_gradient", 3, uint32_t(sizeof(PushConstantData)), 8,
+        m_kernel_train_apply_gradient = std::make_unique<KernelResources>(m_device.get(), "kernel_train_apply_gradient", 3, uint32_t(sizeof(ApplyGradientPushConstantData)), 8,
                                                                           base64_decode_spirv(vulkan_kernel_source_kernel_apply_gradient_glsl_b64), shader_specialization);
     }
 }
@@ -343,8 +377,8 @@ void VulkanComputeDevice::QueueReadFromBuffer(IBuffer* src_buffer, std::span<uin
     auto& staging_buffer = m_staging_buffers.emplace_back(m_device->GetLoaderStagingBuffer(dst.size()));
     auto command_buffer = GetCommandBuffer();
 
-    std::array<const vk::VulkanBuffer*, 1> alma{{vk_buffer}};
-    SynchronizeBuffers(command_buffer, SynchronizationAction::TransferRead, std::span<const vk::VulkanBuffer*>(alma.begin(), alma.end()));
+    std::array<const vk::VulkanBuffer*, 1> buffers{{vk_buffer}};
+    SynchronizeBuffers(command_buffer, SynchronizationAction::TransferRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
     VkBufferCopy copy_region{.srcOffset = 0, .dstOffset = buffer_offset, .size = dst.size_bytes()};
     vkCmdCopyBuffer(command_buffer, vk_buffer->GetHandle(), staging_buffer->m_staging_buffer->GetHandle(), 1, &copy_region);
@@ -496,19 +530,15 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
     buffers[3] = layer_output_buffer_vk;
 
     auto command_buffer = GetCommandBuffer();
-    auto descriptor_set = m_kernel_calc_single_layer->GetDescriptorSet(buffers);
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetHandle());
-    
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
+    CalcSingleLayerPushConstantData push_constant_data;
+    push_constant_data.current_layer_id = current_layer_id;
+    push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
 
-    m_push_constant_data.current_layer_id = current_layer_id;
-    m_push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
-    vkCmdPushConstants(command_buffer, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
-
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), GetLocalWorkgroupCount(batch_count, 1), 1);
+    m_kernel_calc_single_layer->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
+    m_kernel_calc_single_layer->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), GetLocalWorkgroupCount(batch_count, 1), 1);
 
     m_dirty_buffers.emplace(layer_output_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
@@ -530,21 +560,17 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
     buffers[3] = input_buffer_vk;
 
     auto command_buffer = GetCommandBuffer();
-    auto descriptor_set = m_kernel_train_forward_pass->GetDescriptorSet(buffers);
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_forward_pass->GetPipeline()->GetHandle());
+    TrainingForwardPassPushConstantData push_constant_data;
+    push_constant_data.current_layer_id = current_layer_id;
+    push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
+    push_constant_data.numTrainingSamples = num_training_samples;
+    push_constant_data.totalActivationCount = total_neuron_count;
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
-
-    m_push_constant_data.current_layer_id = current_layer_id;
-    m_push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
-    m_push_constant_data.numTrainingSamples = num_training_samples;
-    m_push_constant_data.totalActivationCount = total_neuron_count;
-    vkCmdPushConstants(command_buffer, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
-
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size_y), 1);
+    m_kernel_train_forward_pass->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
+    m_kernel_train_forward_pass->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(activations_zvalues_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
@@ -574,24 +600,20 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
     buffers[6] = desiredOutputs_vk;
 
     auto command_buffer = GetCommandBuffer();
-    auto descriptor_set = m_kernel_train_backward_pass->GetDescriptorSet(buffers);
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetHandle());
-    
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
+    TrainingBackwardPassPushConstantData push_constant_data{};
+    push_constant_data.current_layer_id = current_layer_id;
+    push_constant_data.layer_count = layer_count;
+    push_constant_data.numTrainingSamples = numTrainingSamples;
+    push_constant_data.totalActivationCount = total_neuron_count;
+    push_constant_data.costFunctionId = uint32_t(costFunction);
+    push_constant_data.largest_layer_neuron_count = largest_layer_neuron_count;
+    push_constant_data.current_layer_weights_offset = layer_weights_offset;
 
-    m_push_constant_data.current_layer_id = current_layer_id;
-    m_push_constant_data.layer_count = layer_count;
-    m_push_constant_data.numTrainingSamples = numTrainingSamples;
-    m_push_constant_data.totalActivationCount = total_neuron_count;
-    m_push_constant_data.costFunctionId = uint32_t(costFunction);
-    m_push_constant_data.largest_layer_neuron_count = largest_layer_neuron_count;
-    m_push_constant_data.current_layer_weights_offset = layer_weights_offset;
-    vkCmdPushConstants(command_buffer, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
-
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size_y), 1);
+    m_kernel_train_backward_pass->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
+    m_kernel_train_backward_pass->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(delta_k_vector_vk, BufferSynchronizationEvent::ComputeShaderWrite);
     m_dirty_buffers.emplace(gradient_vk, BufferSynchronizationEvent::ComputeShaderWrite);
@@ -612,22 +634,18 @@ void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBu
     buffers[2] = BufferCast<const vk::VulkanBuffer>(layer_config_buffer_vk);
 
     auto command_buffer = GetCommandBuffer();
-    auto descriptor_set = m_kernel_train_apply_gradient->GetDescriptorSet(buffers);
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
-    vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetHandle());
+    ApplyGradientPushConstantData push_constant_data{};
+    push_constant_data.current_layer_id = current_layer_id;
+    push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
+    push_constant_data.regularization_term_1 = regularization_term_1;
+    push_constant_data.regularization_term_2 = regularization_term_2;
+    push_constant_data.normalized_learning_rate = normalized_learning_rate;
 
-    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
-
-    m_push_constant_data.current_layer_id = current_layer_id;
-    m_push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
-    m_push_constant_data.regularization_term_1 = regularization_term_1;
-    m_push_constant_data.regularization_term_2 = regularization_term_2;
-    m_push_constant_data.normalized_learning_rate = normalized_learning_rate;
-    vkCmdPushConstants(command_buffer, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
-
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), 1, 1);
+    m_kernel_train_apply_gradient->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
+    m_kernel_train_apply_gradient->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), 1, 1);
 
     m_dirty_buffers.emplace(weights_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }

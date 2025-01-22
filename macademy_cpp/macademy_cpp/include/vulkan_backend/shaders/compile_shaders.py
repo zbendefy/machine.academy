@@ -8,7 +8,7 @@ print("Compiling shaders")
 
 shader_folder = "."
 output_folder = "."
-config = "debug"
+config = "release"
 macros = []
 shader_sources = [
     "kernel_calc_single_layer.glsl",
@@ -46,7 +46,7 @@ def CompileVulkanShader(shader_folder, shader_filename, glslc_args):
     #Compile Vulkan shaders    
     print(" * Compiling {} --> {}.spv".format(shader_filename, shader_filename))
 
-    result = os.system("{} -fshader-stage=comp {} -o {}.spv {}".format(glslc_path, shader_full_path, shader_filename, glslc_args))
+    result = os.system("{} --target-env=vulkan1.1 -fshader-stage=comp {} -o {}.spv {}".format(glslc_path, shader_full_path, shader_filename, glslc_args))
     if result == 0:
         base64_content = ""
         with open(shader_filename + ".spv", "rb") as binary_file:
@@ -67,7 +67,7 @@ def CompileVulkanShader(shader_folder, shader_filename, glslc_args):
 
 success = True
 
-print("Compiling vulkan shaders")
+print("Compiling vulkan shaders. Config: {}".format(config))
 glslc_args = "-O0" if config.lower() == "debug" else "-O"
 for m in macros:
     glslc_args = glslc_args + " {}".format(m)

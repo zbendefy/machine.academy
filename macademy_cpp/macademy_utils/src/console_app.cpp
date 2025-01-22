@@ -101,6 +101,9 @@ ConsoleApp::ConsoleApp()
         }
 
         if (device_id >= 0 && device_id < m_devices.size()) {
+            m_network_resources.reset();
+            m_compute_device.reset();
+
             m_selected_device_info = m_devices[device_id];
             m_compute_device = ComputeDeviceFactory::CreateComputeDevice(m_selected_device_info);
             std::cout << "Selected device: " << m_selected_device_info.m_device_name << std::endl;

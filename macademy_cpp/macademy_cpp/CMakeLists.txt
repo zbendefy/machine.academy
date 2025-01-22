@@ -29,6 +29,14 @@ endif()
 if (MACADEMY_BACKEND_VULKAN)
     message("VULKAN_SDK env var is set to: '$ENV{VULKAN_SDK}'")
     message("RENDERDOC_PATH env var is set to: '$ENV{RENDERDOC_PATH}'")
+    
+    if(DEFINED ENV{RENDERDOC_PATH})
+        add_compile_definitions(RDOC_ENABLED=1)
+        message(" (RenderDoc debugging: enabled)")
+    else()
+        add_compile_definitions(RDOC_ENABLED=0)
+        message(" (RenderDoc debugging: disabled)")
+    endif()
 
     file(GLOB_RECURSE VULKAN_SOURCE_FILES 
         include/vulkan_backend/*.h
@@ -42,7 +50,7 @@ if (MACADEMY_BACKEND_VULKAN)
             $ENV{RENDERDOC_PATH}
     )
     set(VULKAN_LINK_DIRECTORY $ENV{VULKAN_SDK}/lib)
-    set(VULKAN_LINK_LIBS ::vulkan_sdk ::spirv_reflect VulkanMemoryAllocator)
+    set(VULKAN_LINK_LIBS ::vulkan_sdk VulkanMemoryAllocator)
 else()
     set(VULKAN_SOURCE_FILES )
     set(VULKAN_LINK_DIRECTORY )

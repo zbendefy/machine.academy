@@ -1,7 +1,3 @@
-
-#define VK_CONSTANTS_GLSL
-#include "constants.h"
-
 #define Activation_Sigmoid 0
 #define Activation_ReLU 1
 #define Activation_Tanh 2

@@ -1,8 +1,11 @@
 #version 460
-
 ///
 /// Vulkan kernels implementing network calculations, and backpropagation
 ///
+
+#define VK_CONSTANTS_GLSL
+#include "kernel_training_forward_pass_constants.h"
+
 layout(std430, binding = 0) readonly buffer weights_biases_buf {
    float weights_biases[];
 };
@@ -21,7 +24,7 @@ layout(std430, binding = 3) readonly buffer input_buf {
 
 #include "common.glsl"
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z = 1) in;
 
 void main()
 {

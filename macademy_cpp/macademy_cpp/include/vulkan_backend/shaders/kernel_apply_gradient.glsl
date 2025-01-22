@@ -2,6 +2,10 @@
 ///
 /// Vulkan kernels implementing network calculations, and backpropagation
 ///
+
+#define VK_CONSTANTS_GLSL
+#include "kernel_training_apply_gradient_constants.h"
+
 layout(std430, binding = 0) buffer weights_biases_buf {
    float weights_biases[];
 };
@@ -16,7 +20,7 @@ layout(std430, binding = 2) readonly buffer layer_config_buf {
 
 #include "common.glsl"
 
-layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x_id = 0, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {

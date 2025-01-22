@@ -20,11 +20,13 @@ class KernelResources
 
     ~KernelResources();
 
-    VkDescriptorSet GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers);
     void FreeDescriptorSets();
-    vk::ComputePipeline* GetPipeline() { return m_pipeline.get(); }
+    void Bind(VkCommandBuffer command_buffer, const std::vector<const vk::VulkanBuffer*>& buffers, std::span<const uint8_t> push_constant_data);
+    void Dispatch(VkCommandBuffer command_buffer, uint32_t threadgroup_count_x, uint32_t threadgroup_count_y, uint32_t threadgroup_count_z);
 
   private:
+    VkDescriptorSet GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers);
+
     vk::Device* m_device;
     VkDescriptorSetLayout m_descriptor_set_layout = VK_NULL_HANDLE;
     VkDescriptorPool m_descriptor_pool = VK_NULL_HANDLE;
@@ -36,9 +38,6 @@ class KernelResources
 
 class VulkanComputeDevice : public IComputeDevice
 {
-public:
-#define VK_CONSTANTS_HOST
-#include "vulkan_backend/shaders/constants.h"
 private:
     struct MemoryReadback
     {
@@ -66,7 +65,6 @@ private:
     std::unique_ptr<KernelResources> m_kernel_train_backward_pass;
     std::unique_ptr<KernelResources> m_kernel_train_apply_gradient;
 
-    PushConstantData m_push_constant_data{};
     std::vector<MemoryReadback> m_memory_reads;
 
     std::map<const vk::VulkanBuffer*, BufferSynchronizationEvent> m_dirty_buffers;
@@ -105,8 +103,6 @@ private:
                                 uint32_t totalActivationCount, CostFunction costFunction, uint32_t largest_layer_neuron_count, uint64_t layer_weights_offset) override;
     void QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset,
                              float regularization_term_1, float regularization_term_2, float normalized_learning_rate) override;
-
-    static std::vector<VkPhysicalDevice> GetDeviceList();
 
     std::string GetDeviceName() const override;
 

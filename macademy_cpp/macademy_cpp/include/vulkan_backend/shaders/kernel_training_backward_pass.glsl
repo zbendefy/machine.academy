@@ -1,6 +1,9 @@
 #version 460
 #extension GL_EXT_shader_atomic_float : enable
 
+#define VK_CONSTANTS_GLSL
+#include "kernel_training_backward_pass_constants.h"
+
 ///
 /// Vulkan kernels implementing network calculations, and backpropagation
 ///
@@ -34,7 +37,7 @@ layout(std430, binding = 6) readonly buffer desiredOutputs_buf {
 
 #include "common.glsl"
 
-layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+layout(local_size_x_id = 0, local_size_y_id = 1, local_size_z = 1) in;
 
 void main()
 {

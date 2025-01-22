@@ -30,6 +30,12 @@ inline uint64_t GetOffsetToLayerWeights(const Network& network, uint32_t current
     return offset;
 }
 
+template <typename T>
+inline std::span<const uint8_t> AsUint8TSpan(const T& v)
+{
+    return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(&v), sizeof(v));
+}
+
 inline uint64_t GetOffsetToLayerNeuronCount(std::span<const LayerConfig> layer_config, uint32_t current_layer_id)
 {
     return std::accumulate(layer_config.begin(), layer_config.begin() + current_layer_id, uint64_t(0), [](uint64_t sum, const LayerConfig& layer_config) { return sum + layer_config.m_num_neurons; });
@@ -46,7 +52,5 @@ void ExportNetworkAsBson(const Network& network, std::ostream& stream);
 void ExportNetworkAsBinary(const Network& network, std::ostream& stream);
 
 std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file);
-
-std::string base64_decode(const std::string& in);
 
 } // namespace macademy

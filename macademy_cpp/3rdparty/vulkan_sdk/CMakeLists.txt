@@ -22,20 +22,3 @@ else()
 endif()
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ${VULKAN_LIBS} ${THREAD_LIB})
-
-
-# Spirv reflect
-
-project("spirv_reflect" NONE)
-
-add_library(${PROJECT_NAME} STATIC
-"${VulkanSDK_PATH}/source/SPIRV-Reflect/spirv_reflect.h"
-"${VulkanSDK_PATH}/source/SPIRV-Reflect/spirv_reflect.c"
-)
-
-add_library(::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-
-target_include_directories(${PROJECT_NAME} INTERFACE ${VulkanSDK_PATH}/source)
-
-target_link_libraries(${PROJECT_NAME} INTERFACE vulkan_sdk) 
-

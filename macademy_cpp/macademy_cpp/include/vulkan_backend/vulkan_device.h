@@ -61,6 +61,7 @@ class Device
     void RecycleLoaderBuffer(LoaderStagingBuffer& loader_buffer);
 
     Instance* m_instance;
+    VmaAllocator m_vma;
 
     VkPhysicalDevice m_physical_device;
     VkDevice m_device;
@@ -74,8 +75,6 @@ class Device
     std::unique_ptr<CommandPool> m_command_pool;
 
     std::vector<std::pair<std::unique_ptr<VulkanBuffer>, bool>> m_loader_staging_buffers;
-
-    VmaAllocator m_vma;
 };
 
 } // namespace macademy::vk

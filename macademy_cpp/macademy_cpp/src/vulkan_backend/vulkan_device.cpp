@@ -178,6 +178,7 @@ Device::~Device()
 {
     vkDeviceWaitIdle(m_device);
     m_command_pool.reset();
+    m_loader_staging_buffers.clear();
     vmaDestroyAllocator(m_vma);
     vkDestroyDevice(m_device, nullptr);
 }
