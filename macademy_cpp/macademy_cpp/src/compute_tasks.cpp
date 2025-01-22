@@ -155,7 +155,6 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
     const auto largest_layer_neuron_count = CalculateLargestLayerNeuronCount(layer_config);
 
     compute_device.QueueFillBuffer(network_handle.m_gradient_buffer.get(), 0, 0, network_handle.m_gradient_buffer->GetSize());
-    // m_command_queue.enqueueFillBuffer<float>(opencl_network->m_gradient_buffer->GetBuffer(), 0.0f, 0, opencl_network->m_gradient_buffer->GetSize());
 
     std::vector<float> training_input_buffer_data;
     {
@@ -167,7 +166,6 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         }
 
         compute_device.QueueWriteToBuffer(network_handle.m_input_buffer.get(), ToReadOnlyUi8Span(training_input_buffer_data), 0);
-        // m_command_queue.enqueueWriteBuffer(opencl_network->m_input_buffer->GetBuffer(), false, 0, training_input_buffer_data.size() * sizeof(float), training_input_buffer_data.data());
     }
 
     std::vector<float> training_desired_output_buffer_data;
@@ -180,8 +178,6 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         }
 
         compute_device.QueueWriteToBuffer(network_handle.m_desired_output_buffer.get(), ToReadOnlyUi8Span(training_desired_output_buffer_data), 0);
-        /*m_command_queue.enqueueWriteBuffer(opencl_network->m_desired_output_buffer->GetBuffer(), false, 0, training_desired_output_buffer_data.size() * sizeof(float),
-                                           training_desired_output_buffer_data.data());*/
     }
 
     uint64_t weights_layer_offset = 0;
@@ -193,12 +189,6 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
 
         compute_device.QueueTrainForwardPass(network_handle.m_weights.get(), network_handle.m_layer_config_buffer.get(), network_handle.m_activations_zvalues_buffer.get(),
                                              network_handle.m_input_buffer.get(), output_num, i, weights_layer_offset, num_training_samples, total_neuron_count);
-        /*(*m_kernel_train_forward_pass)(cl::EnqueueArgs(m_command_queue,
-                                                       cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
-                                                                   ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
-                                                        cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
-                                       opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), opencl_network->m_activations_zvalues_buffer->GetBuffer(),
-                                       opencl_network->m_input_buffer->GetBuffer(), i, weights_layer_offset, num_training_samples, total_neuron_count);*/
 
         const uint64_t layer_weight_count = uint64_t(input_num) * output_num + output_num;
         ASSERTM(weights_layer_offset + layer_weight_count > weights_layer_offset, "Layer weights offset overflow!");
@@ -217,15 +207,6 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
                                               network_handle.m_input_buffer.get(), network_handle.m_delta_k_buffer.get(), network_handle.m_gradient_buffer.get(),
                                               network_handle.m_desired_output_buffer.get(), output_num, i, layer_config.size(), num_training_samples, total_neuron_count,
                                               training_suite.m_cost_function, largest_layer_neuron_count, weights_layer_offset);
-
-        /*(*m_kernel_train_backward_pass)(cl::EnqueueArgs(m_command_queue,
-                                                        cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_calc_single_layer_ideal_workgroup_size),
-                                                                    ExtendGlobalWorkSize(num_training_samples, m_kernel_calc_single_layer_ideal_workgroup_size)),
-                                                        cl::NDRange(m_kernel_training_ideal_workgroup_size, m_kernel_training_ideal_workgroup_size)),
-                                        opencl_network->m_weights->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), opencl_network->m_activations_zvalues_buffer->GetBuffer(),
-                                        opencl_network->m_input_buffer->GetBuffer(), i, layer_config.size(), num_training_samples, total_neuron_count, cl_uint(training_suite.m_cost_function),
-                                        largest_layer_neuron_count, weights_layer_offset, opencl_network->m_delta_k_buffer->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(),
-                                        opencl_network->m_desired_output_buffer->GetBuffer());*/
     }
 
     ASSERT(weights_layer_offset == 0);
@@ -249,10 +230,6 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
 
         compute_device.QueueApplyGradients(network_handle.m_weights.get(), network_handle.m_gradient_buffer.get(), network_handle.m_layer_config_buffer.get(), output_num, i, weights_layer_offset,
                                            regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);
-        /*(*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
-                                                         cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
-                                         opencl_network->m_weights->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), i,
-                                         weights_layer_offset, regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);*/
 
         const uint64_t layer_weight_size_bytes = uint64_t(input_num) * output_num + output_num;
         ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
@@ -263,34 +240,12 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
     compute_device.WaitQueueIdle();
 }
 
-#if 0
-std::vector<cl::Device> ComputeTasks::GetDeviceList()
-{
-    std::vector<cl::Device> all_devices;
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
-
-    for (const auto& platform : platforms) {
-        std::vector<cl::Device> platform_devices;
-        platform.getDevices(CL_DEVICE_TYPE_ALL, &platform_devices);
-
-        std::copy(platform_devices.begin(), platform_devices.end(), std::back_inserter(all_devices));
-    }
-
-    return all_devices;
-}
-
 void ComputeTasks::ApplyRandomMutation(NetworkResourceHandle& network_handle, MutationDistribution weight_mutation_distribution, MutationDistribution bias_mutation_distribution)
 {
-    auto opencl_network = dynamic_cast<OpenCLNetworkResourceHandle*>(&network_handle);
-
-    if (!opencl_network) {
-        throw std::runtime_error("Network was not created by an OpenCL compute device!");
-    }
-
     Network& network = *network_handle.m_network;
+    IComputeDevice& compute_device = *network_handle.m_compute_device;
 
-    opencl_network->AllocateMutationBuffer();
+    network_handle.AllocateMutationBuffer();
 
     std::vector<float> mutation_buffer_data;
     mutation_buffer_data.resize(network.GetTotalWeightAndBiasCount());
@@ -331,26 +286,24 @@ void ComputeTasks::ApplyRandomMutation(NetworkResourceHandle& network_handle, Mu
         weights_per_neuron = layer_neuron_count;
     }
 
-    m_command_queue.enqueueWriteBuffer(opencl_network->m_mutation_buffer->GetBuffer(), false, 0, mutation_buffer_data.size() * sizeof(float), mutation_buffer_data.data());
+    compute_device.QueueWriteToBuffer(network_handle.m_mutation_buffer.get(), ToReadOnlyUi8Span(mutation_buffer_data), 0);
 
-    cl_ulong weights_layer_offset = 0;
+    uint64_t weights_layer_offset = 0;
 
     for (uint32_t i = 0; i < layer_config.size(); ++i) {
         const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
         const uint32_t output_num = layer_config[i].m_num_neurons;
 
-        (*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(output_num, m_kernel_training_apply_gradient_ideal_workgroup_size)),
-                                                         cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
-                                         opencl_network->m_weights->GetBuffer(), opencl_network->m_gradient_buffer->GetBuffer(), opencl_network->m_layer_config_buffer->GetBuffer(), i,
-                                         weights_layer_offset, 1.0f, 0.0f, -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
+        compute_device.QueueApplyGradients(network_handle.m_weights.get(), network_handle.m_mutation_buffer.get(), network_handle.m_layer_config_buffer.get(), output_num, i, weights_layer_offset,
+            1.0f, 0.0f, -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
 
-        const cl_ulong layer_weight_size_bytes = cl_ulong(input_num) * output_num + output_num;
-        ASSERTM(weights_layer_offset + layer_weight_size_bytes > weights_layer_offset, "Layer weights offset overflow!");
-        weights_layer_offset += layer_weight_size_bytes; // advance the offset in the weights buffer for the next layer
+        const uint64_t layer_weight_size = uint64_t(input_num) * output_num + output_num;
+        ASSERTM(weights_layer_offset + layer_weight_size > weights_layer_offset, "Layer weights offset overflow!");
+        weights_layer_offset += layer_weight_size; // advance the offset in the weights buffer for the next layer
     }
 
-    m_command_queue.finish();
+    compute_device.SubmitQueue();
+    compute_device.WaitQueueIdle();
 }
-#endif
 
 } // namespace macademy

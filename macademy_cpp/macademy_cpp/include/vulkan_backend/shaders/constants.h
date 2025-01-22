@@ -9,9 +9,9 @@ layout(push_constant) uniform constants_
 {
 #endif
 
-    uint layer_id;
+    uint current_layer_id;
     uint layer_count;
-    uint weights_layer_offset; // ulong?
+    uint current_layer_weights_offset; // ulong?
     uint numTrainingSamples;
     uint totalActivationCount;
     uint costFunctionId;

@@ -20,8 +20,8 @@ layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
-    const uint layer_neuron_count = layer_config[2 + pc.layer_id * 2]; //number of neurons
-    const uint weights_per_neuron = layer_config[pc.layer_id*2]; //neurons in the prev layer
+    const uint layer_neuron_count = layer_config[2 + pc.current_layer_id * 2]; //number of neurons
+    const uint weights_per_neuron = layer_config[pc.current_layer_id*2]; //neurons in the prev layer
 
     const uint layer_neuron_id = gl_GlobalInvocationID.x;
  
@@ -30,7 +30,7 @@ void main()
 
     const bool applyRegularizationTerm2 = pc.regularization_term_2 != 0.0;
 
-   const uint neuron_offset_idx = pc.weights_layer_offset + layer_neuron_id * (weights_per_neuron + 1);
+   const uint neuron_offset_idx = pc.current_layer_weights_offset + layer_neuron_id * (weights_per_neuron + 1);
 
     for (uint j = 0; j < weights_per_neuron; ++j) {
         float weight = weights_biases[neuron_offset_idx + j];

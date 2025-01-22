@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <future>
 #include <atomic>
+#include <nlohmann/json.hpp>
 
 namespace macademy {
 template <typename float_t, typename Generator> float_t GenerateGaussianRandom(Generator& g, float_t mean, float_t sigma)
@@ -58,6 +59,23 @@ struct TrainingResultTracker
 
     mutable std::atomic<bool> m_stop_at_next_epoch = false;
 };
+
+inline bool GetBoolFlagFromJson(const nlohmann::json& json_struct, const std::string& param_name, bool default_value)
+{
+    if (json_struct.contains(param_name) && json_struct[param_name].is_boolean()) {
+        return json_struct[param_name].get<bool>();
+    }
+    return default_value;
+}
+
+inline int GetIntFromJson(const nlohmann::json& json_struct, const std::string& param_name, int default_value)
+{
+    if (json_struct.contains(param_name) && json_struct[param_name].is_number_integer()) {
+        return json_struct[param_name].get<int>();
+    }
+    return default_value;
+}
+
 } // namespace macademy
 
 #define ASSERTM(x, msg)                                                                                                                                                                                \

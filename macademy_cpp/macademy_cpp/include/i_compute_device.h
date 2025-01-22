@@ -50,16 +50,16 @@ class IComputeDevice
     virtual void SubmitQueue() = 0;
     virtual void WaitQueueIdle() = 0;
 
-    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t layer_id,
-                                           uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count) = 0;
+    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t current_layer_id,
+                                           uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count) = 0;
     virtual void QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                       uint32_t layer_neuron_count, uint32_t layer_id, uint64_t weights_layer_offset, uint32_t num_training_samples, uint32_t total_neuron_count) = 0;
+                                       uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples, uint32_t total_neuron_count) = 0;
     virtual void QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                        IBuffer* delta_k_vector_buffer, IBuffer* gradient_buffer, const IBuffer* desiredOutputs_buffer, uint32_t layer_neuron_count, uint32_t layer_id,
+                                        IBuffer* delta_k_vector_buffer, IBuffer* gradient_buffer, const IBuffer* desiredOutputs_buffer, uint32_t layer_neuron_count, uint32_t current_layer_id,
                                         uint32_t layer_count, uint32_t numTrainingSamples, uint32_t totalActivationCount, CostFunction costFunction, uint32_t largest_layer_neuron_count,
                                         uint64_t layer_weights_offset) = 0;
-    virtual void QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t layer_id,
-                                     uint64_t weights_layer_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate) = 0;
+    virtual void QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t current_layer_id,
+                                     uint64_t current_layer_weights_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate) = 0;
 
     virtual std::string GetDeviceName() const = 0;
     virtual size_t GetTotalMemory() const = 0;

@@ -25,9 +25,9 @@ layout (local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
 
 void main()
 {
-    const uint layer_neuron_count = layer_config[2 + pc.layer_id * 2]; //number of neurons
-    const uint weights_per_neuron = layer_config[pc.layer_id*2]; //neurons in the prev layer
-    const uint activationFunctionId = layer_config[3 + pc.layer_id * 2]; 
+    const uint layer_neuron_count = layer_config[2 + pc.current_layer_id * 2]; //number of neurons
+    const uint weights_per_neuron = layer_config[pc.current_layer_id*2]; //neurons in the prev layer
+    const uint activationFunctionId = layer_config[3 + pc.current_layer_id * 2]; 
 
     const uint layer_neuron_id = gl_GlobalInvocationID.x;
     const uint trainingSampleId = gl_GlobalInvocationID.y;
@@ -37,18 +37,18 @@ void main()
         return;
     }
 
-    const bool is_first_layer = pc.layer_id == 0;
+    const bool is_first_layer = pc.current_layer_id == 0;
 
     const uint neuron_data_size = weights_per_neuron + 1; //weights in prev layer + 1 bias
 
-    const uint neuron_weights_biases_idx = pc.weights_layer_offset + layer_neuron_id * neuron_data_size;
+    const uint neuron_weights_biases_idx = pc.current_layer_weights_offset + layer_neuron_id * neuron_data_size;
 
     const uint training_sample_activation_offset = pc.totalActivationCount * trainingSampleId;
 
     const uint input_layer_neuron_count = layer_config[0];
 
     const uint prev_layer_input_values_idx = input_layer_neuron_count * trainingSampleId;
-    const uint prev_layer_activations_idx = is_first_layer ? 0 : (training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id - 1));
+    const uint prev_layer_activations_idx = is_first_layer ? 0 : (training_sample_activation_offset + GetLayerNeuronCountOffset(pc.current_layer_id - 1));
 
     //Calculate ZValues for layer
     float acc = 0;
@@ -60,7 +60,7 @@ void main()
     acc += weights_biases[weights_per_neuron + neuron_weights_biases_idx]; //bias
 
     //Store ZValues and the result of the activation function
-    const uint layer_activation_offset = training_sample_activation_offset + GetLayerNeuronCountOffset(pc.layer_id);
+    const uint layer_activation_offset = training_sample_activation_offset + GetLayerNeuronCountOffset(pc.current_layer_id);
     const uint layer_zvalue_offset = layer_activation_offset + (pc.numTrainingSamples * pc.totalActivationCount); //zvalues are stored after activations, so shift by the number of total activations
     activationsAndZValues[layer_zvalue_offset+layer_neuron_id] = acc;
     activationsAndZValues[layer_activation_offset+layer_neuron_id] = ActivationFunction(activationFunctionId, acc);

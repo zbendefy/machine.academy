@@ -261,15 +261,14 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
     }
 #endif
 
-    bool validation_layer_enabled = true;
-    bool debug_labels_enabled = true;
+    bool validation_layer_enabled = GetBoolFlagFromJson(device_config, "validation_layer_enabled", false);
+    bool debug_labels_enabled = GetBoolFlagFromJson(device_config, "debug_labels_enabled", false);
 
-    if (device_config.contains("validation_layer_enabled") && device_config["validation_layer_enabled"].is_boolean()) {
-        validation_layer_enabled = device_config["validation_layer_enabled"].get<bool>();
-    }
-    if (device_config.contains("debug_labels_enabled") && device_config["debug_labels_enabled"].is_boolean()) {
-        debug_labels_enabled = device_config["debug_labels_enabled"].get<bool>();
-    }
+    m_kernel_calc_single_layer_ideal_workgroup_size = GetIntFromJson(device_config, "eval_threadgroup_size", m_kernel_calc_single_layer_ideal_workgroup_size);
+    m_kernel_training_ideal_workgroup_size_x = GetIntFromJson(device_config, "training_threadgroup_size_x", m_kernel_training_ideal_workgroup_size_x);
+    m_kernel_training_ideal_workgroup_size_y = GetIntFromJson(device_config, "training_threadgroup_size_x", m_kernel_training_ideal_workgroup_size_y);
+    m_kernel_training_apply_gradient_ideal_workgroup_size = GetIntFromJson(device_config, "gradient_apply_threadgroup_size", m_kernel_training_apply_gradient_ideal_workgroup_size);
+
 
     m_instance = std::make_unique<vk::Instance>(validation_layer_enabled, debug_labels_enabled);
 
@@ -481,7 +480,7 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
 }
 
 void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer,
-                                                    uint32_t layer_id, uint64_t weights_layer_offset, uint32_t batch_count, uint32_t layer_neuron_count)
+                                                    uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count)
 {
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
@@ -505,8 +504,8 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
     
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
-    m_push_constant_data.layer_id = layer_id;
-    m_push_constant_data.weights_layer_offset = weights_layer_offset;
+    m_push_constant_data.current_layer_id = current_layer_id;
+    m_push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
     vkCmdPushConstants(command_buffer, m_kernel_calc_single_layer->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
     vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), GetLocalWorkgroupCount(batch_count, 1), 1);
@@ -515,7 +514,7 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
 }
 
 void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                                uint32_t layer_neuron_count, uint32_t layer_id, uint64_t weights_layer_offset, uint32_t num_training_samples, uint32_t total_neuron_count)
+                                                uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples, uint32_t total_neuron_count)
 {
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
@@ -539,19 +538,19 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
 
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
-    m_push_constant_data.layer_id = layer_id;
-    m_push_constant_data.weights_layer_offset = weights_layer_offset;
+    m_push_constant_data.current_layer_id = current_layer_id;
+    m_push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
     m_push_constant_data.numTrainingSamples = num_training_samples;
     m_push_constant_data.totalActivationCount = total_neuron_count;
     vkCmdPushConstants(command_buffer, m_kernel_train_forward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size), 1);
+    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(activations_zvalues_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
 
 void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                                 IBuffer* delta_k_vector, IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t layer_id, uint32_t layer_count,
+                                                 IBuffer* delta_k_vector, IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t current_layer_id, uint32_t layer_count,
                                                  uint32_t numTrainingSamples, uint32_t total_neuron_count, CostFunction costFunction, uint32_t largest_layer_neuron_count,
                                                  uint64_t layer_weights_offset)
 {
@@ -583,23 +582,23 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
     
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
-    m_push_constant_data.layer_id = layer_id;
+    m_push_constant_data.current_layer_id = current_layer_id;
     m_push_constant_data.layer_count = layer_count;
     m_push_constant_data.numTrainingSamples = numTrainingSamples;
     m_push_constant_data.totalActivationCount = total_neuron_count;
     m_push_constant_data.costFunctionId = uint32_t(costFunction);
     m_push_constant_data.largest_layer_neuron_count = largest_layer_neuron_count;
-    m_push_constant_data.weights_layer_offset = layer_weights_offset;
+    m_push_constant_data.current_layer_weights_offset = layer_weights_offset;
     vkCmdPushConstants(command_buffer, m_kernel_train_backward_pass->GetPipeline()->GetPipelineLayoutHandle(), VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(m_push_constant_data), &m_push_constant_data);
 
-    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size), GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size), 1);
+    vkCmdDispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(delta_k_vector_vk, BufferSynchronizationEvent::ComputeShaderWrite);
     m_dirty_buffers.emplace(gradient_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
 
-void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t layer_id,
-                                              uint64_t weights_layer_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
+void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t current_layer_id,
+                                              uint64_t current_layer_weights_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
 {
     auto weights_buffer_vk = BufferCast<vk::VulkanBuffer>(weights_buffer);
     const auto gradient_vk = BufferCast<const vk::VulkanBuffer>(gradient_buffer);
@@ -621,8 +620,8 @@ void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBu
 
     vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, m_kernel_train_apply_gradient->GetPipeline()->GetPipelineLayoutHandle(), 0, 1, &descriptor_set, 0, 0);
 
-    m_push_constant_data.layer_id = layer_id;
-    m_push_constant_data.weights_layer_offset = weights_layer_offset;
+    m_push_constant_data.current_layer_id = current_layer_id;
+    m_push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
     m_push_constant_data.regularization_term_1 = regularization_term_1;
     m_push_constant_data.regularization_term_2 = regularization_term_2;
     m_push_constant_data.normalized_learning_rate = normalized_learning_rate;
@@ -632,8 +631,6 @@ void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBu
 
     m_dirty_buffers.emplace(weights_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
-
-std::vector<VkPhysicalDevice> VulkanComputeDevice::GetDeviceList() { return std::vector<VkPhysicalDevice>(); }
 
 std::string VulkanComputeDevice::GetDeviceName() const { return "Vulkan Device: " + m_device->GetName(); }
 

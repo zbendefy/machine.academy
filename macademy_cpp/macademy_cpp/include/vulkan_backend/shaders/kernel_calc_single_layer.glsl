@@ -24,9 +24,9 @@ layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
-    const uint layer_neuron_count = layer_config[2 + pc.layer_id * 2]; //number of neurons
-    const uint weights_per_neuron = layer_config[pc.layer_id*2]; //neurons in the prev layer
-    const uint activationFunctionId = layer_config[3 + pc.layer_id * 2]; 
+    const uint layer_neuron_count = layer_config[2 + pc.current_layer_id * 2]; //number of neurons
+    const uint weights_per_neuron = layer_config[pc.current_layer_id*2]; //neurons in the prev layer
+    const uint activationFunctionId = layer_config[3 + pc.current_layer_id * 2]; 
 
     const uint layer_neuron_id = gl_GlobalInvocationID.x;
     const uint batch_id = gl_GlobalInvocationID.y;
@@ -39,7 +39,7 @@ void main()
 
     const uint neuron_data_size = weights_per_neuron + 1; //weights in prev layer + 1 bias
 
-    uint neuron_weights_biases_begin_idx = pc.weights_layer_offset + layer_neuron_id * neuron_data_size;
+    uint neuron_weights_biases_begin_idx = pc.current_layer_weights_offset + layer_neuron_id * neuron_data_size;
 
     float acc = 0;
     for(uint i = 0; i < weights_per_neuron; ++i)
