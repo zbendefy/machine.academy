@@ -16,7 +16,7 @@ struct ShaderInfo
         m_spec_constant_data.reserve(specialization_parameters.size());
 
         for (const auto& spec_const : specialization_parameters) {
-            m_specialization_entries.emplace_back(VkSpecializationMapEntry{ .constantID = spec_const.first, .offset = uint32_t(m_spec_constant_data.size()) * data_size, .size = data_size });
+            m_specialization_entries.emplace_back(VkSpecializationMapEntry{.constantID = spec_const.first, .offset = uint32_t(m_spec_constant_data.size()) * data_size, .size = data_size});
             m_spec_constant_data.emplace_back(spec_const.second);
         }
 
@@ -40,8 +40,7 @@ struct ShaderInfo
     VkPipelineShaderStageCreateInfo m_shader_stage_create_info{};
 };
 
-ComputePipeline::ComputePipeline(Device* device, const std::string& name, const ComputePipelineDescriptor& pipeline_desc)
-    : m_name(name), m_device(device)
+ComputePipeline::ComputePipeline(Device* device, const std::string& name, const ComputePipelineDescriptor& pipeline_desc) : m_name(name), m_device(device)
 {
     ShaderInfo cs_info{device, name, pipeline_desc.m_compute_shader, VK_SHADER_STAGE_COMPUTE_BIT, pipeline_desc.m_compute_shader_entry_function, pipeline_desc.m_shader_specialization};
 

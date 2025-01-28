@@ -50,8 +50,8 @@ class IComputeDevice
     virtual void SubmitQueue() = 0;
     virtual void WaitQueueIdle() = 0;
 
-    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t current_layer_id,
-                                           uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count) = 0;
+    virtual void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer,
+                                           uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count) = 0;
     virtual void QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
                                        uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples, uint32_t total_neuron_count) = 0;
     virtual void QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,

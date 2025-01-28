@@ -16,6 +16,9 @@ if (MACADEMY_BACKEND_OPENCL)
         include/opencl_backend/*.h
         src/opencl_backend/*.cpp
     )
+    set(OPENCL_KERNELS 
+        src/opencl_backend/opencl_kernels.cl
+    )
     set(OPENCL_INCLUDE_DIRS $ENV{OPENCL_SDK}/include)
     set(OPENCL_LINK_DIRECTORY $ENV{OPENCL_SDK}/lib)
     set(OPENCL_LINK_LIBS OpenCL)
@@ -43,6 +46,13 @@ if (MACADEMY_BACKEND_VULKAN)
         include/vulkan_backend/shaders/*.h
 
         src/vulkan_backend/*.cpp
+    )
+    set(VULKAN_SHADERS 
+        include/vulkan_backend/shaders/kernel_calc_single_layer.glsl
+        include/vulkan_backend/shaders/kernel_training_forward_pass.glsl
+        include/vulkan_backend/shaders/kernel_training_backward_pass.glsl
+        include/vulkan_backend/shaders/kernel_training_backward_pass_swadd.glsl
+        include/vulkan_backend/shaders/kernel_apply_gradient.glsl
     )
     set(VULKAN_INCLUDE_DIRS 
             $ENV{VULKAN_SDK}/include
@@ -107,3 +117,26 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 )
 
 add_library(::${PROJECT_NAME} ALIAS ${PROJECT_NAME}) 
+
+if(MACADEMY_BACKEND_OPENCL)
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    add_custom_target(
+    compile_cl_kernels ALL
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/src/opencl_backend/compile_kernel.py ${CMAKE_CURRENT_SOURCE_DIR} ${OPENCL_KERNELS}
+    BYPRODUCTS ${OPENCL_KERNELS}
+    COMMENT "Compiling opencl kernels"
+    )
+
+    add_dependencies(${PROJECT_NAME} compile_cl_kernels )
+endif()
+if(MACADEMY_BACKEND_VULKAN)
+    find_package(Python COMPONENTS Interpreter REQUIRED)
+    add_custom_target(
+    compile_vk_shaders ALL
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkan_backend/shaders/compile_shaders.py ${CMAKE_CURRENT_SOURCE_DIR} ${VULKAN_SHADERS}
+    BYPRODUCTS ${VULKAN_SHADERS}
+    COMMENT "Compiling vulkan shaders"
+    )
+
+    add_dependencies(${PROJECT_NAME} compile_vk_shaders)
+endif()

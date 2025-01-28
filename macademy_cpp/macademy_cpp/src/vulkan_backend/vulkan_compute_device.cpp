@@ -32,6 +32,7 @@ namespace macademy {
 
 #include "vulkan_backend/shaders/kernel_training_backward_pass_constants.h"
 #include "vulkan_backend/shaders/kernel_training_backward_pass.glsl.h"
+#include "vulkan_backend/shaders/kernel_training_backward_pass_swadd.glsl.h"
 
 #include "vulkan_backend/shaders/kernel_training_apply_gradient_constants.h"
 #include "vulkan_backend/shaders/kernel_apply_gradient.glsl.h"
@@ -129,7 +130,7 @@ KernelResources::~KernelResources()
 
 VkDescriptorSet KernelResources::GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers)
 {
-    //descriptor sets bound to specific buffers are cached (as there are many cases where a ping-pong calculation is done that would require the same 2 descriptor sets many times)
+    // descriptor sets bound to specific buffers are cached (as there are many cases where a ping-pong calculation is done that would require the same 2 descriptor sets many times)
     auto it = m_descriptor_sets.find(storage_buffers);
 
     if (it == m_descriptor_sets.end()) {
@@ -186,7 +187,7 @@ void KernelResources::FreeDescriptorSets()
     m_descriptor_sets.clear();
 }
 
-void KernelResources::Bind(VkCommandBuffer command_buffer, const std::vector<const vk::VulkanBuffer*>& buffers, std::span<const uint8_t> push_constant_data) 
+void KernelResources::Bind(VkCommandBuffer command_buffer, const std::vector<const vk::VulkanBuffer*>& buffers, std::span<const uint8_t> push_constant_data)
 {
     auto descriptor_set = GetDescriptorSet(buffers);
 
@@ -307,6 +308,12 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
 
     m_device = std::make_unique<vk::Device>(m_instance.get(), physical_devices[device_info.m_device_index], true);
 
+    m_hw_atomic_add_support = m_device->GetDeviceAtomicFloatFeatures().shaderBufferFloat32AtomicAdd;
+
+    if (GetBoolFlagFromJson(device_config, "disable_hw_atomic_add", false)) {
+        m_hw_atomic_add_support = false;
+    }
+
     {
         vk::ShaderSpecializationMap shader_specialization;
         shader_specialization.emplace(0, m_kernel_calc_single_layer_ideal_workgroup_size);
@@ -330,8 +337,10 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
         shader_specialization.emplace(0, m_kernel_training_ideal_workgroup_size_x);
         shader_specialization.emplace(1, m_kernel_training_ideal_workgroup_size_y);
 
-        m_kernel_train_backward_pass = std::make_unique<KernelResources>(m_device.get(), "kernel_train_backward_pass", 7, uint32_t(sizeof(TrainingBackwardPassPushConstantData)), 8,
-                                                                         base64_decode_spirv(vulkan_kernel_source_kernel_training_backward_pass_glsl_b64), shader_specialization);
+        const auto spirv_binary =
+            base64_decode_spirv(m_hw_atomic_add_support ? vulkan_kernel_source_kernel_training_backward_pass_glsl_b64 : vulkan_kernel_source_kernel_training_backward_pass_swadd_glsl_b64);
+        m_kernel_train_backward_pass =
+            std::make_unique<KernelResources>(m_device.get(), "kernel_train_backward_pass", 7, uint32_t(sizeof(TrainingBackwardPassPushConstantData)), 8, spirv_binary, shader_specialization);
     }
 
     {
@@ -450,7 +459,8 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
     thread_local std::vector<VkBufferMemoryBarrier> buffer_memory_barriers;
 
     const auto CollectBarriers = [this, &buffers](BufferSynchronizationEvent buffer_event, VkAccessFlags src_access_mask, VkAccessFlags dst_access_mask) {
-        ASSERT(buffer_event == BufferSynchronizationEvent::TransferWrite && src_access_mask == VK_ACCESS_TRANSFER_WRITE_BIT || buffer_event == BufferSynchronizationEvent::ComputeShaderWrite && src_access_mask == VK_ACCESS_SHADER_WRITE_BIT);
+        ASSERT(buffer_event == BufferSynchronizationEvent::TransferWrite && src_access_mask == VK_ACCESS_TRANSFER_WRITE_BIT ||
+               buffer_event == BufferSynchronizationEvent::ComputeShaderWrite && src_access_mask == VK_ACCESS_SHADER_WRITE_BIT);
 
         for (int i = 0; i < int(buffers.size()); ++i) {
 
@@ -473,12 +483,12 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
     const auto InsertBarrier = [command_buffer](VkDependencyFlags srcStageMask, VkDependencyFlags dstStageMask) {
         if (!buffer_memory_barriers.empty()) {
             vkCmdPipelineBarrier(command_buffer,
-                srcStageMask,                                                 // Source stage: Transfer (copy) is the source stage
-                dstStageMask,                                                 // Destination stage: Compute shader is the destination stage
-                0,                                                            // No additional flags
-                0, nullptr,                                                   // No memory barriers
-                buffer_memory_barriers.size(), buffer_memory_barriers.data(), // Buffer memory barrier to ensure the copy is done before compute shader reads the buffer
-                0, nullptr                                                    // No image barriers
+                                 srcStageMask,                                                 // Source stage: Transfer (copy) is the source stage
+                                 dstStageMask,                                                 // Destination stage: Compute shader is the destination stage
+                                 0,                                                            // No additional flags
+                                 0, nullptr,                                                   // No memory barriers
+                                 buffer_memory_barriers.size(), buffer_memory_barriers.data(), // Buffer memory barrier to ensure the copy is done before compute shader reads the buffer
+                                 0, nullptr                                                    // No image barriers
             );
         }
 
@@ -486,24 +496,24 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
     };
 
     if (action == SynchronizationAction::ComputeShaderRead) {
-        //A compute shader wants to read a buffer...
-        
-        //Add barriers for buffers that are currently being transferred to...
+        // A compute shader wants to read a buffer...
+
+        // Add barriers for buffers that are currently being transferred to...
         CollectBarriers(BufferSynchronizationEvent::TransferWrite, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
         InsertBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
-        //Add barriers for buffers that are currently being written by an earlier compute shader...
+        // Add barriers for buffers that are currently being written by an earlier compute shader...
         CollectBarriers(BufferSynchronizationEvent::ComputeShaderWrite, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_SHADER_READ_BIT);
         InsertBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 
     } else if (action == SynchronizationAction::TransferRead) {
-        //Host side wants to read back a buffer
+        // Host side wants to read back a buffer
 
-        //Add barriers for buffers that are currently being transferred to...
+        // Add barriers for buffers that are currently being transferred to...
         CollectBarriers(BufferSynchronizationEvent::TransferWrite, VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
         InsertBarrier(VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-        //Add barriers for buffers that are currently being written by an earlier compute shader...
+        // Add barriers for buffers that are currently being written by an earlier compute shader...
         CollectBarriers(BufferSynchronizationEvent::ComputeShaderWrite, VK_ACCESS_SHADER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT);
         InsertBarrier(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
     }
@@ -544,7 +554,8 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
 }
 
 void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                                uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples, uint32_t total_neuron_count)
+                                                uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples,
+                                                uint32_t total_neuron_count)
 {
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
@@ -570,14 +581,15 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
     push_constant_data.totalActivationCount = total_neuron_count;
 
     m_kernel_train_forward_pass->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
-    m_kernel_train_forward_pass->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size_y), 1);
+    m_kernel_train_forward_pass->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x),
+                                          GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(activations_zvalues_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
 }
 
 void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                                 IBuffer* delta_k_vector, IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t current_layer_id, uint32_t layer_count,
-                                                 uint32_t numTrainingSamples, uint32_t total_neuron_count, CostFunction costFunction, uint32_t largest_layer_neuron_count,
+                                                 IBuffer* delta_k_vector, IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t current_layer_id,
+                                                 uint32_t layer_count, uint32_t numTrainingSamples, uint32_t total_neuron_count, CostFunction costFunction, uint32_t largest_layer_neuron_count,
                                                  uint64_t layer_weights_offset)
 {
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
@@ -613,7 +625,8 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
     push_constant_data.current_layer_weights_offset = layer_weights_offset;
 
     m_kernel_train_backward_pass->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
-    m_kernel_train_backward_pass->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x), GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size_y), 1);
+    m_kernel_train_backward_pass->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x),
+                                           GetLocalWorkgroupCount(numTrainingSamples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(delta_k_vector_vk, BufferSynchronizationEvent::ComputeShaderWrite);
     m_dirty_buffers.emplace(gradient_vk, BufferSynchronizationEvent::ComputeShaderWrite);

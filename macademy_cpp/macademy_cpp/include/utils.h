@@ -30,18 +30,17 @@ inline uint64_t GetOffsetToLayerWeights(const Network& network, uint32_t current
     return offset;
 }
 
-template <typename T>
-inline std::span<const uint8_t> AsUint8TSpan(const T& v)
-{
-    return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(&v), sizeof(v));
-}
+template <typename T> inline std::span<const uint8_t> AsUint8TSpan(const T& v) { return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(&v), sizeof(v)); }
 
 inline uint64_t GetOffsetToLayerNeuronCount(std::span<const LayerConfig> layer_config, uint32_t current_layer_id)
 {
     return std::accumulate(layer_config.begin(), layer_config.begin() + current_layer_id, uint64_t(0), [](uint64_t sum, const LayerConfig& layer_config) { return sum + layer_config.m_num_neurons; });
 }
 
-inline uint64_t GetLayerWeightsPerNeuronCount(const Network& network, uint32_t current_layer_id) { return current_layer_id == 0 ? network.GetInputCount() : network.GetLayerConfig()[current_layer_id - 1].m_num_neurons; }
+inline uint64_t GetLayerWeightsPerNeuronCount(const Network& network, uint32_t current_layer_id)
+{
+    return current_layer_id == 0 ? network.GetInputCount() : network.GetLayerConfig()[current_layer_id - 1].m_num_neurons;
+}
 
 template <typename T> int sign(T val) { return (T(0) < val) - (val < T(0)); }
 

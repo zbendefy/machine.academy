@@ -41,11 +41,13 @@ class Device
 
     VmaAllocator& GetVMAAllocator() { return m_vma; }
 
-    const VkPhysicalDeviceMemoryProperties& GetMemoryProps() const { return m_memory_props; }
+    const VkPhysicalDeviceMemoryProperties2& GetMemoryProps() const { return m_memory_props; }
 
-    const VkPhysicalDeviceProperties& GetDeviceProps() const { return m_device_props; }
+    const VkPhysicalDeviceProperties2& GetDeviceProps() const { return m_device_props; }
 
-    const VkPhysicalDeviceFeatures& GetDeviceFeatures() const { return m_device_features; }
+    const VkPhysicalDeviceFeatures2& GetDeviceFeatures() const { return m_device_features; }
+
+    const VkPhysicalDeviceShaderAtomicFloatFeaturesEXT& GetDeviceAtomicFloatFeatures() const { return m_device_atomic_float_features; }
 
     void RunOneTimeComandBuffer(std::function<void(VkCommandBuffer&)>&& commands);
 
@@ -55,7 +57,7 @@ class Device
 
     ~Device();
 
-    std::string GetName() { return m_device_props.deviceName; }
+    std::string GetName() { return m_device_props.properties.deviceName; }
 
   private:
     void RecycleLoaderBuffer(LoaderStagingBuffer& loader_buffer);
@@ -66,9 +68,10 @@ class Device
     VkPhysicalDevice m_physical_device;
     VkDevice m_device;
 
-    VkPhysicalDeviceMemoryProperties m_memory_props;
-    VkPhysicalDeviceProperties m_device_props;
-    VkPhysicalDeviceFeatures m_device_features;
+    VkPhysicalDeviceMemoryProperties2 m_memory_props{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2};
+    VkPhysicalDeviceProperties2 m_device_props{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
+    VkPhysicalDeviceFeatures2 m_device_features{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2};
+    VkPhysicalDeviceShaderAtomicFloatFeaturesEXT m_device_atomic_float_features{.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT};
 
     VkQueue m_compute_queue;
 

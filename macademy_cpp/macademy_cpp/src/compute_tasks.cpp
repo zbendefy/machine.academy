@@ -249,7 +249,7 @@ void ComputeTasks::ApplyRandomMutation(NetworkResourceHandle& network_handle, Mu
 
     std::vector<float> mutation_buffer_data;
     mutation_buffer_data.resize(network.GetTotalWeightAndBiasCount());
-    
+
     uint32_t weights_per_neuron = network.GetInputCount();
     uint32_t layer_neuron_count = 0;
 
@@ -295,7 +295,7 @@ void ComputeTasks::ApplyRandomMutation(NetworkResourceHandle& network_handle, Mu
         const uint32_t output_num = layer_config[i].m_num_neurons;
 
         compute_device.QueueApplyGradients(network_handle.m_weights.get(), network_handle.m_mutation_buffer.get(), network_handle.m_layer_config_buffer.get(), output_num, i, weights_layer_offset,
-            1.0f, 0.0f, -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
+                                           1.0f, 0.0f, -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
 
         const uint64_t layer_weight_size = uint64_t(input_num) * output_num + output_num;
         ASSERTM(weights_layer_offset + layer_weight_size > weights_layer_offset, "Layer weights offset overflow!");

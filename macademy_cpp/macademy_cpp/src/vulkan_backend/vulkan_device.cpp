@@ -35,8 +35,6 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
         throw std::runtime_error("Could not find a compute capable queue!");
     }
 
-    std::vector<const char*> device_extensions{ VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME };
-
     float queuePriority = 1.0f;
     VkDeviceQueueCreateInfo computeQueueCreateInfo{};
     computeQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -47,9 +45,24 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     queueCreateInfos.push_back(computeQueueCreateInfo);
 
-    vkGetPhysicalDeviceProperties(physical_device, &m_device_props);
-    vkGetPhysicalDeviceFeatures(physical_device, &m_device_features);
-    vkGetPhysicalDeviceMemoryProperties(physical_device, &m_memory_props);
+    uint32_t extension_count = 0;
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, nullptr);
+    std::vector<VkExtensionProperties> extension_info{size_t(extension_count), VkExtensionProperties{}};
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &extension_count, extension_info.data());
+
+    std::vector<const char*> device_extensions{};
+
+    for (const auto& extension : extension_info) {
+        if (strcmp(extension.extensionName, VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME) == 0) {
+            device_extensions.emplace_back(VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME);
+            m_device_features.pNext = &m_device_atomic_float_features;
+            break;
+        }
+    }
+
+    vkGetPhysicalDeviceProperties2(physical_device, &m_device_props);
+    vkGetPhysicalDeviceFeatures2(physical_device, &m_device_features);
+    vkGetPhysicalDeviceMemoryProperties2(physical_device, &m_memory_props);
 
     VkPhysicalDeviceShaderAtomicFloatFeaturesEXT atomic_float_extension_features{};
     atomic_float_extension_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT;
@@ -57,22 +70,16 @@ Device::Device(Instance* instance, VkPhysicalDevice physical_device, bool enable
 
     VkPhysicalDeviceFeatures2 device_features{};
     device_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-    device_features.pNext = &atomic_float_extension_features;
+    device_features.pNext = m_device_atomic_float_features.shaderBufferFloat32AtomicAdd ? &atomic_float_extension_features : nullptr;
 
     VkDeviceCreateInfo createInfo{};
     createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.queueCreateInfoCount = queueCreateInfos.size();
     createInfo.pQueueCreateInfos = queueCreateInfos.data();
     createInfo.pEnabledFeatures = nullptr; // Comes from VkPhysicalDeviceFeatures2
-    createInfo.pNext = &device_features; // Comes from VkPhysicalDeviceFeatures2
+    createInfo.pNext = &device_features;   // Comes from VkPhysicalDeviceFeatures2
     createInfo.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
     createInfo.ppEnabledExtensionNames = device_extensions.data();
-    if (enable_validation_layer) {
-        createInfo.enabledLayerCount = 1;
-        createInfo.ppEnabledLayerNames = &ValidationLayerExtensionStr;
-    } else {
-        createInfo.enabledLayerCount = 0;
-    }
 
     if (vkCreateDevice(m_physical_device, &createInfo, nullptr, &m_device) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create vulkan device!");

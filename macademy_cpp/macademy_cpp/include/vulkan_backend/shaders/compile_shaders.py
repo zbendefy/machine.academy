@@ -4,18 +4,13 @@ import os
 import sys
 import base64
 
-print("Compiling shaders")
+print("Compiling Vulkan shaders...")
+print("  Arguments: {}".format(sys.argv))
+os.chdir(sys.argv[1])
 
-shader_folder = "."
-output_folder = "."
-config = "release"
+config = "Release"
 macros = []
-shader_sources = [
-    "kernel_calc_single_layer.glsl",
-    "kernel_training_forward_pass.glsl",
-    "kernel_training_backward_pass.glsl",
-    "kernel_apply_gradient.glsl"
-                  ]
+shader_sources = sys.argv[2:]
 
 VulkanSDKFolder = os.environ['VULKAN_SDK']
 print("Vulkan SDK folder: '{}'".format(VulkanSDKFolder))
@@ -36,17 +31,16 @@ def FindVulkanSDKToolPath(binary_name):
     if ret == "":
         print("Did not find {}!".format(binary_name))
         exit()
-    return ret;
+    return ret
 
     
 glslc_path = FindVulkanSDKToolPath("glslc")
 
-def CompileVulkanShader(shader_folder, shader_filename, glslc_args):
-    shader_full_path = shader_folder + "/" + shader_filename
+def CompileVulkanShader(shader_filename, glslc_args):
     #Compile Vulkan shaders    
     print(" * Compiling {} --> {}.spv".format(shader_filename, shader_filename))
 
-    result = os.system("{} --target-env=vulkan1.1 -fshader-stage=comp {} -o {}.spv {}".format(glslc_path, shader_full_path, shader_filename, glslc_args))
+    result = os.system("{} --target-env=vulkan1.1 -fshader-stage=comp {} -o {}.spv {}".format(glslc_path, shader_filename, shader_filename, glslc_args))
     if result == 0:
         base64_content = ""
         with open(shader_filename + ".spv", "rb") as binary_file:
@@ -54,7 +48,7 @@ def CompileVulkanShader(shader_folder, shader_filename, glslc_args):
             encoded_data = base64.b64encode(binary_data)
             base64_content = encoded_data.decode("utf-8")
         with open(shader_filename + ".h", "w") as text_file:
-            name = shader_filename.replace(".", "_")
+            name = os.path.basename(shader_filename).replace(".", "_")
             text_file.write('constexpr const char* vulkan_kernel_source_{}_b64 = '.format(name))
             while len(base64_content) > 0:
                 fragment_size = min(len(base64_content), 80)
@@ -65,19 +59,17 @@ def CompileVulkanShader(shader_folder, shader_filename, glslc_args):
 
     return result == 0
 
-success = True
 
-print("Compiling vulkan shaders. Config: {}".format(config))
+success = True
+print("  Config: {}".format(config))
 glslc_args = "-O0" if config.lower() == "debug" else "-O"
 for m in macros:
     glslc_args = glslc_args + " {}".format(m)
 for shader in shader_sources:
-    vk_result = CompileVulkanShader(shader_folder, shader, glslc_args)
+    vk_result = CompileVulkanShader(shader, glslc_args)
     if vk_result == False:
         success = False
         
-print()
-
 print()
 print("##################")
 

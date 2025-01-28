@@ -204,9 +204,17 @@ class MnistTrainerApp : public ConsoleApp
     size_t TestNetwork(const NetworkResourceHandle& network)
     {
         size_t good_answers = 0;
+        std::vector<float> batched_input;
+        batched_input.reserve(m_test_data.size() * network.m_network->GetInputCount());
         for (size_t i = 0; i < m_test_data.size(); ++i) {
-            auto result = m_compute_tasks.Evaluate(network, m_test_data[i].m_input);
-            auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
+            std::copy(m_test_data[i].m_input.begin(), m_test_data[i].m_input.end(), std::back_inserter(batched_input));
+        }
+
+        auto result = m_compute_tasks.EvaluateBatch(uint32_t(m_test_data.size()), network, batched_input);
+
+        const auto output_size = network.m_network->GetOutputCount();
+        for (size_t i = 0; i < m_test_data.size(); ++i) {
+            auto guessed_number = std::max_element(result.begin() + output_size * i, result.begin() + output_size * (i + 1)) - (result.begin() + output_size * i);
             auto reference_solution = std::max_element(m_test_data[i].m_desired_output.begin(), m_test_data[i].m_desired_output.end()) - m_test_data[i].m_desired_output.begin();
             if (guessed_number == reference_solution) {
                 ++good_answers;

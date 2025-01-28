@@ -68,7 +68,10 @@ class NetworkFactory
         return std::make_unique<Network>(name, input_count, layer_config, weights);
     }
 
-    static std::unique_ptr<Network> Build(const std::string& name, uint32_t input_count, std::span<const LayerConfig> layer_config) { return std::make_unique<Network>(name, input_count, layer_config); }
+    static std::unique_ptr<Network> Build(const std::string& name, uint32_t input_count, std::span<const LayerConfig> layer_config)
+    {
+        return std::make_unique<Network>(name, input_count, layer_config);
+    }
 };
 
 } // namespace macademy

@@ -143,8 +143,8 @@ void CPUComputeDevice::WaitQueueIdle()
 { /*CPU doesn't queue operations*/
 }
 
-void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t current_layer_id,
-                                                 uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count)
+void CPUComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer,
+                                                 uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count)
 {
     const auto weights_f32 = BufferCast<const CPUBuffer>(weights_buffer)->As<const float>();
     const auto layer_input = BufferCast<const CPUBuffer>(layer_input_buffer)->As<const float>();
@@ -226,7 +226,7 @@ void CPUComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, cons
 
         const uint32_t input_layer_neuron_count = layer_config[0];
         const float* prevActivations = current_layer_id == 0 ? (input_data + input_layer_neuron_count * trainingSampleId)
-                                                     : (activations_zvalues + (training_sample_activation_offset + GetLayerNeuronCountOffset(current_layer_id - 1, layer_config)));
+                                                             : (activations_zvalues + (training_sample_activation_offset + GetLayerNeuronCountOffset(current_layer_id - 1, layer_config)));
 
         // Calculate ZValues for layer
         float acc = 0;
@@ -276,7 +276,7 @@ void CPUComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, con
 
         const uint32_t input_layer_neuron_count = layer_config[0];
         const float* prevActivations = current_layer_id == 0 ? (input_data + input_layer_neuron_count * trainingSampleId)
-                                                     : (activations_zvalues + (training_sample_activation_offset + GetLayerNeuronCountOffset(current_layer_id - 1, layer_config)));
+                                                             : (activations_zvalues + (training_sample_activation_offset + GetLayerNeuronCountOffset(current_layer_id - 1, layer_config)));
 
         const float zValue = activations_zvalues[current_layer_z_values_offset + layer_neuron_id];
 
@@ -293,7 +293,7 @@ void CPUComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, con
             const uint32_t next_layer_weights_offset = layer_weights_offset + (layer_neuron_count * (weights_per_neuron + 1));
             const uint32_t next_layer_weight_offset_for_processed_neuron = next_layer_weights_offset + layer_neuron_id;
             const uint32_t next_layer_neuron_count = layer_config[2 + (current_layer_id + 1) * 2]; // number of neurons
-            const uint32_t next_layer_neuron_data_size = layer_neuron_count + 1;           // weights + bias
+            const uint32_t next_layer_neuron_data_size = layer_neuron_count + 1;                   // weights + bias
             for (uint32_t i = 0; i < next_layer_neuron_count; ++i) {
                 delta_k += delta_k_vector[delta_k_read_offset + i] * weights_f32[next_layer_weight_offset_for_processed_neuron + (i * next_layer_neuron_data_size)];
             }

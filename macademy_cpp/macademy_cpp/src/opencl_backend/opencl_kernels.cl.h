@@ -1,4 +1,4 @@
-///
+constexpr const char* opencl_kernel_source = R"OPENCLSRC(///
 /// OpenCL kernels implementing network calculations, and backpropagation
 ///
 
@@ -298,4 +298,4 @@ __kernel void trainingApplyGradient(__global float* weights_biases,
     }
     neuron_weight_data[weights_per_neuron] -= neuron_gradient_data[weights_per_neuron] * normalized_learning_rate; //bias
 
-}
+})OPENCLSRC";
