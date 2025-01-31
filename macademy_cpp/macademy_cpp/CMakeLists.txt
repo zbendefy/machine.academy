@@ -11,6 +11,8 @@ set(MACADEMY_BACKEND_VULKAN 1)
 
 if (MACADEMY_BACKEND_OPENCL)
     message("OPENCL_SDK env var is set to: '$ENV{OPENCL_SDK}'")
+    find_package(OpenCL)
+    message("OpenCL Found: " ${OpenCL_FOUND})
     
     file(GLOB_RECURSE OPENCL_SOURCE_FILES 
         include/opencl_backend/*.h
@@ -19,9 +21,17 @@ if (MACADEMY_BACKEND_OPENCL)
     set(OPENCL_KERNELS 
         src/opencl_backend/opencl_kernels.cl
     )
-    set(OPENCL_INCLUDE_DIRS $ENV{OPENCL_SDK}/include)
-    set(OPENCL_LINK_DIRECTORY $ENV{OPENCL_SDK}/lib)
-    set(OPENCL_LINK_LIBS OpenCL)
+    if (OpenCL_FOUND)
+        message("  Using found OpenCL install dir: " ${OpenCL_INCLUDE_DIRS})
+        set(OPENCL_INCLUDE_DIRS ${OpenCL_INCLUDE_DIRS})
+        set(OPENCL_LINK_LIBS ${OpenCL_LIBRARIES})
+        set(OPENCL_LINK_DIRECTORY)
+    else()
+        message("  Using OpenCL SDK dir: " $ENV{OPENCL_SDK})
+        set(OPENCL_INCLUDE_DIRS $ENV{OPENCL_SDK}/include)
+        set(OPENCL_LINK_DIRECTORY $ENV{OPENCL_SDK}/lib)
+        set(OPENCL_LINK_LIBS OpenCL)
+    endif()
 else()
     set(OPENCL_SOURCE_FILES )
     set(OPENCL_LINK_DIRECTORY )
@@ -31,6 +41,8 @@ endif()
 
 if (MACADEMY_BACKEND_VULKAN)
     message("VULKAN_SDK env var is set to: '$ENV{VULKAN_SDK}'")
+    find_package(Vulkan REQUIRED)
+    message("  Vulkan found: " ${Vulkan_FOUND} " GLSLC found: " ${Vulkan_glslc_FOUND} "  Include dirs: " ${Vulkan_INCLUDE_DIRS})
     message("RENDERDOC_PATH env var is set to: '$ENV{RENDERDOC_PATH}'")
     
     if(DEFINED ENV{RENDERDOC_PATH})
@@ -55,12 +67,11 @@ if (MACADEMY_BACKEND_VULKAN)
         include/vulkan_backend/shaders/kernel_apply_gradient.glsl
     )
     set(VULKAN_INCLUDE_DIRS 
-            $ENV{VULKAN_SDK}/include
+            ${Vulkan_INCLUDE_DIRS}
             ${CMAKE_CURRENT_LIST_DIR}/../3rdparty/VulkanMemoryAllocator/src
             $ENV{RENDERDOC_PATH}
     )
-    set(VULKAN_LINK_DIRECTORY $ENV{VULKAN_SDK}/lib)
-    set(VULKAN_LINK_LIBS ::vulkan_sdk VulkanMemoryAllocator)
+    set(VULKAN_LINK_LIBS ${Vulkan_LIBRARIES} VulkanMemoryAllocator)
 else()
     set(VULKAN_SOURCE_FILES )
     set(VULKAN_LINK_DIRECTORY )
@@ -129,11 +140,12 @@ if(MACADEMY_BACKEND_OPENCL)
 
     add_dependencies(${PROJECT_NAME} compile_cl_kernels )
 endif()
+
 if(MACADEMY_BACKEND_VULKAN)
     find_package(Python COMPONENTS Interpreter REQUIRED)
     add_custom_target(
     compile_vk_shaders ALL
-    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkan_backend/shaders/compile_shaders.py ${CMAKE_CURRENT_SOURCE_DIR} ${VULKAN_SHADERS}
+    COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/include/vulkan_backend/shaders/compile_shaders.py ${CMAKE_CURRENT_SOURCE_DIR} ${Vulkan_GLSLC_EXECUTABLE} ${VULKAN_SHADERS}
     BYPRODUCTS ${VULKAN_SHADERS}
     COMMENT "Compiling vulkan shaders"
     )

@@ -157,7 +157,7 @@ class PolyFitterApp : public ConsoleApp
             auto time_end = std::chrono::high_resolution_clock::now();
             auto duration = duration_cast<std::chrono::milliseconds>(time_end - time_begin);
 
-            std::cout << "Training time: " << duration << std::endl;
+            std::cout << "Training time: " << duration.count() << "ms" << std::endl;
 
             return false;
         };

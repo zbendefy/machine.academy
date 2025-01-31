@@ -6,35 +6,16 @@ import base64
 
 print("Compiling Vulkan shaders...")
 print("  Arguments: {}".format(sys.argv))
+
 os.chdir(sys.argv[1])
+glslc_path = sys.argv[2]
+shader_sources = sys.argv[3:]
 
 config = "Release"
 macros = []
-shader_sources = sys.argv[2:]
 
 VulkanSDKFolder = os.environ['VULKAN_SDK']
 print("Vulkan SDK folder: '{}'".format(VulkanSDKFolder))
-
-def FindVulkanSDKToolPath(binary_name):
-    possible_paths = [
-        "/Bin/{}.exe".format(binary_name), # windows vulkansdk path
-        "/bin/{}".format(binary_name),
-        "/x86_64/bin/{}".format(binary_name), # shouldn't be needed
-        "/Bin/{}".format(binary_name) # shouldn't be needed
-    ]
-    ret = ""
-    for test_path in possible_paths:
-        full_test_path = "{}{}".format(VulkanSDKFolder, test_path)
-        if os.path.isfile(full_test_path):
-            ret = full_test_path
-            print("Found {}: {}".format(binary_name, ret))
-    if ret == "":
-        print("Did not find {}!".format(binary_name))
-        exit()
-    return ret
-
-    
-glslc_path = FindVulkanSDKToolPath("glslc")
 
 def CompileVulkanShader(shader_filename, glslc_args):
     #Compile Vulkan shaders    
@@ -65,6 +46,7 @@ print("  Config: {}".format(config))
 glslc_args = "-O0" if config.lower() == "debug" else "-O"
 for m in macros:
     glslc_args = glslc_args + " {}".format(m)
+    
 for shader in shader_sources:
     vk_result = CompileVulkanShader(shader, glslc_args)
     if vk_result == False:

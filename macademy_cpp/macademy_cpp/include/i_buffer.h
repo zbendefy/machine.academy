@@ -1,6 +1,7 @@
 #pragma once
 #include <span>
 #include <memory>
+#include <stdexcept>
 
 namespace macademy {
 
@@ -16,7 +17,7 @@ template <typename T> T* BufferCast(IBuffer* i_buf)
 {
     T* ret = dynamic_cast<T*>(i_buf);
     if (!ret) {
-        throw std::exception("Invalid buffer cast!");
+        throw std::runtime_error("Invalid buffer cast!");
     }
 
     return ret;
@@ -26,7 +27,7 @@ template <typename T> const T* BufferCast(const IBuffer* i_buf)
 {
     T* ret = dynamic_cast<const T*>(i_buf);
     if (!ret) {
-        throw std::exception("Invalid buffer cast!");
+        throw std::runtime_error("Invalid buffer cast!");
     }
 
     return ret;
