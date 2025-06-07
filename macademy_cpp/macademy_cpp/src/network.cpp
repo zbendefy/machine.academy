@@ -1,5 +1,6 @@
 
 #include <network.h>
+#include <utils.h>
 #include <i_weight_initializer.h>
 #include <numeric>
 
@@ -7,60 +8,64 @@ namespace macademy {
 
 const uint32_t Network::BINARY_VERSION = 0x00010000;
 
-Network::Network(const std::string& name, uint32_t input_count, std::span<const LayerConfig> layer_config, std::span<float> weights)
-    : m_name(name), m_input_arg_count(input_count), m_layers(layer_config.begin(), layer_config.end())
+std::unique_ptr<Tensor> GenerateWeights(DType dtype, const IWeightInitializer& initializer, uint32_t num_neurons, uint32_t weights_per_neuron)
 {
-    if (layer_config.empty()) {
+    std::vector<float> data;
+
+    data.reserve(num_neurons * (weights_per_neuron + 1/*bias*/));
+
+    for (size_t i = 0; i < num_neurons; i++)
+    {
+        for (size_t j = 0; j < weights_per_neuron; j++)
+        {
+            data.push_back(initializer.GetRandomWeight(weights_per_neuron));
+        }
+        data.push_back(initializer.GetRandomBias());
+    }
+
+    std::array<uint32_t, 1> shape{ uint32_t(data.size()) };
+
+    return std::make_unique<Tensor>(dtype, ToReadOnlyUi8Span(data), shape);
+}
+
+std::unique_ptr<Network> BuildSequentialNetwork(const std::string& name, uint32_t input_count, std::span<const LayerConfig> layer_config, const IWeightInitializer& weight_initializer)
+{
+    if (layer_config.size() < 1 || input_count == 0)
+    {
+        throw std::runtime_error("BuildSequentialNetwork: invalid layer config sizes");
+    }
+
+    std::vector<macademy::Layer> layers;
+    uint32_t prev_layer_neuron_count = input_count;
+    for (const auto& cfg : layer_config)
+    {
+        const auto activation_fnc = cfg.m_activation_function;
+        layers.emplace_back(macademy::Layer{ .m_tensor = GenerateWeights(DType::Float32, weight_initializer, cfg.m_num_neurons, prev_layer_neuron_count), .m_activation = cfg.m_activation_function, .m_num_neurons = cfg.m_num_neurons});
+        prev_layer_neuron_count = cfg.m_num_neurons;
+    }
+
+    return std::make_unique<macademy::Network>(name, input_count, layers);
+}
+
+Network::Network(const std::string& name, uint32_t input_count, std::span<const Layer> layer_list)
+    : m_name(name), m_input_arg_count(input_count)
+{
+    if (layer_list.empty()) {
         throw std::runtime_error("Error! Cannot create empty network!");
     }
 
-    size_t data_size = 0;
-
-    uint32_t layer_input_count = m_input_arg_count;
-    for (size_t i = 0; i < m_layers.size(); ++i) {
-        const uint32_t current_layer_size = m_layers[i].m_num_neurons;
-
-        const uint32_t num_weights = current_layer_size * layer_input_count;
-        const uint32_t num_biases = current_layer_size;
-
-        data_size += num_weights + num_biases;
-
-        layer_input_count = current_layer_size;
-    }
-
-    m_data.resize(data_size, 0);
-
-    if (!weights.empty()) {
-        if (weights.size() != data_size) {
-            throw std::runtime_error("Invalid input weight data size!");
-        }
-
-        memcpy(m_data.data(), weights.data(), weights.size_bytes());
-    }
-}
-
-void Network::GenerateRandomWeights(const IWeightInitializer& weight_initializer)
-{
-    size_t weight_bias_id = 0;
-    for (size_t i = 0; i < m_layers.size(); ++i) // for each layer
+    for (const auto& layer : layer_list)
     {
-        const uint32_t prev_layer_size = i == 0 ? m_input_arg_count : m_layers[i - 1].m_num_neurons;
-        const uint32_t current_layer_size = m_layers[i].m_num_neurons;
-
-        for (uint32_t j = 0; j < current_layer_size; ++j) // for each neuron in this layer
-        {
-            for (uint32_t k = 0; k < prev_layer_size; ++k) // for each neuron in the previous layer
-            {
-                m_data[weight_bias_id++] = weight_initializer.GetRandomWeight(prev_layer_size);
-            }
-            m_data[weight_bias_id++] = weight_initializer.GetRandomBias();
-        }
+        auto& back = m_layers.emplace_back();
+        back.m_activation = layer.m_activation;
+        back.m_num_neurons = layer.m_num_neurons;
+        back.m_tensor = std::make_unique<Tensor>(*layer.m_tensor);
     }
 }
 
 uint32_t Network::GetNeuronCount() const
 {
-    return std::accumulate(m_layers.begin(), m_layers.end(), uint32_t(0), [](uint32_t sum, const LayerConfig& layer_conf) { return sum + layer_conf.m_num_neurons; });
+    return std::accumulate(m_layers.begin(), m_layers.end(), uint32_t(0), [](uint32_t sum, const Layer& layer) { return sum + layer.m_num_neurons; });
 }
 
 } // namespace macademy

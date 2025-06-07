@@ -95,21 +95,19 @@ class VulkanComputeDevice : public IComputeDevice
     void SubmitQueue() override;
     void WaitQueueIdle() override;
 
-    void QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, uint32_t current_layer_id,
-                                   uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count) override;
-    void QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer, uint32_t layer_neuron_count,
-                               uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples, uint32_t total_neuron_count) override;
-    void QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer, IBuffer* delta_k_vector,
-                                IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t current_layer_id, uint32_t layer_count, uint32_t numTrainingSamples,
-                                uint32_t totalActivationCount, CostFunction costFunction, uint32_t largest_layer_neuron_count, uint64_t layer_weights_offset) override;
-    void QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t current_layer_id,
-                             uint64_t current_layer_weights_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate) override;
+    void QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation,
+        uint32_t layer_input_count, uint32_t layer_neuron_count) override;
+    void QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations, bool share_prev_activations_among_samples, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,
+        uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples) override;
+    void QueueTrainBackwardPass(const IBuffer* next_layer_tensor_buffer, const IBuffer* prev_activations_buffer, bool share_prev_activations_among_samples, const IBuffer* layer_activations_buffer, const IBuffer* layer_zvalues_buffer,
+        IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read, IBuffer* current_layer_gradient_buffer, const IBuffer* desiredOutputsBuffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function, uint32_t numTrainingSamples, CostFunction costFunction, uint32_t next_layer_neuron_count) override;
+    void QueueApplyGradients(IBuffer* tensor_buffer, const IBuffer* gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, float regularization_term_1, float regularization_term_2, float normalized_learning_rate) override;
 
     std::string GetDeviceName() const override;
 
     size_t GetTotalMemory() const override;
 
-    bool SupportsWeightFormat(NetworkWeightFormat format) const override;
+    bool SupportsWeightFormat(DType format) const override;
 
     static std::vector<ComputeDeviceInfo> GetVulkanComputeDeviceInfo();
 };

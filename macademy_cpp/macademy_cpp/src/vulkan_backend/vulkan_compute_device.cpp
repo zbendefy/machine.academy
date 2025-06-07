@@ -523,9 +523,11 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
     }
 }
 
-void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer,
-                                                    uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t batch_count, uint32_t layer_neuron_count)
+void VulkanComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation,
+    uint32_t layer_input_count, uint32_t layer_neuron_count)
 {
+
+#if 0
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
     const auto layer_input_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_input_buffer);
@@ -551,12 +553,14 @@ void VulkanComputeDevice::QueueEvaluateLayerBatched(const IBuffer* weights_buffe
     m_kernel_calc_single_layer->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), GetLocalWorkgroupCount(batch_count, 1), 1);
 
     m_dirty_buffers.emplace(layer_output_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
+#endif
 }
 
-void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                                uint32_t layer_neuron_count, uint32_t current_layer_id, uint64_t current_layer_weights_offset, uint32_t num_training_samples,
-                                                uint32_t total_neuron_count)
+void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations, bool share_prev_activations_among_samples, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,
+    uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples)
 {
+
+#if 0
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
     auto activations_zvalues_buffer_vk = BufferCast<vk::VulkanBuffer>(m_activations_zvalues_buffer);
@@ -585,13 +589,13 @@ void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* weights_buffer, c
                                           GetLocalWorkgroupCount(num_training_samples, m_kernel_training_ideal_workgroup_size_y), 1);
 
     m_dirty_buffers.emplace(activations_zvalues_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
+#endif
 }
 
-void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, const IBuffer* layer_config_buffer, const IBuffer* m_activations_zvalues_buffer, const IBuffer* input_buffer,
-                                                 IBuffer* delta_k_vector, IBuffer* gradient, const IBuffer* desiredOutputs, uint32_t layer_neuron_count, uint32_t current_layer_id,
-                                                 uint32_t layer_count, uint32_t numTrainingSamples, uint32_t total_neuron_count, CostFunction costFunction, uint32_t largest_layer_neuron_count,
-                                                 uint64_t layer_weights_offset)
+void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* next_layer_tensor_buffer, const IBuffer* prev_activations_buffer, bool share_prev_activations_among_samples, const IBuffer* layer_activations_buffer, const IBuffer* layer_zvalues_buffer,
+    IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read, IBuffer* current_layer_gradient_buffer, const IBuffer* desiredOutputsBuffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function, uint32_t numTrainingSamples, CostFunction costFunction, uint32_t next_layer_neuron_count)
 {
+#if 0
     const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
     const auto activations_zvalues_buffer_vk = BufferCast<const vk::VulkanBuffer>(m_activations_zvalues_buffer);
@@ -630,11 +634,12 @@ void VulkanComputeDevice::QueueTrainBackwardPass(const IBuffer* weights_buffer, 
 
     m_dirty_buffers.emplace(delta_k_vector_vk, BufferSynchronizationEvent::ComputeShaderWrite);
     m_dirty_buffers.emplace(gradient_vk, BufferSynchronizationEvent::ComputeShaderWrite);
+#endif
 }
 
-void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBuffer* gradient_buffer, const IBuffer* layer_config_buffer, uint32_t layer_neuron_count, uint32_t current_layer_id,
-                                              uint64_t current_layer_weights_offset, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
+void VulkanComputeDevice::QueueApplyGradients(IBuffer* tensor_buffer, const IBuffer* gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
 {
+#if 0
     auto weights_buffer_vk = BufferCast<vk::VulkanBuffer>(weights_buffer);
     const auto gradient_vk = BufferCast<const vk::VulkanBuffer>(gradient_buffer);
     const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
@@ -661,22 +666,23 @@ void VulkanComputeDevice::QueueApplyGradients(IBuffer* weights_buffer, const IBu
     m_kernel_train_apply_gradient->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), 1, 1);
 
     m_dirty_buffers.emplace(weights_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
+#endif
 }
 
 std::string VulkanComputeDevice::GetDeviceName() const { return "Vulkan Device: " + m_device->GetName(); }
 
 size_t VulkanComputeDevice::GetTotalMemory() const { return 0; }
 
-bool VulkanComputeDevice::SupportsWeightFormat(NetworkWeightFormat format) const
+bool VulkanComputeDevice::SupportsWeightFormat(DType format) const
 {
     switch (format) {
-    case macademy::NetworkWeightFormat::Float16:
+    case macademy::DType::Float16:
         return m_is_float16_supported;
-    case macademy::NetworkWeightFormat::Float32:
+    case macademy::DType::Float32:
         return true;
     }
 
-    throw std::runtime_error("VulkanComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
+    throw std::runtime_error("VulkanComputeDevice::SupportsWeightFormat: Invalid DType  !");
 }
 
 } // namespace macademy

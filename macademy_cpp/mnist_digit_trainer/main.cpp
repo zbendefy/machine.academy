@@ -67,11 +67,9 @@ class MnistTrainerApp : public ConsoleApp
     MnistTrainerApp(const std::string& data_folder)
     {
         std::vector<macademy::LayerConfig> layers;
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 24});
-        layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
-        m_network = macademy::NetworkFactory::Build("MNIST digit recognizer", img_dimension * img_dimension, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
-
-        m_network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
+        layers.emplace_back(macademy::LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 24});
+        layers.emplace_back(macademy::LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 10});
+        m_network = BuildSequentialNetwork("MNIST digit recognizer", img_dimension * img_dimension, layers, XavierWeightInitializer{});
 
         m_training_suite = std::make_shared<TrainingSuite>();
         m_training_suite->m_mini_batch_size = 100;
@@ -203,19 +201,13 @@ class MnistTrainerApp : public ConsoleApp
 
     size_t TestNetwork(const NetworkResourceHandle& network)
     {
-        size_t good_answers = 0;
-        std::vector<float> batched_input;
-        batched_input.reserve(m_test_data.size() * network.m_network->GetInputCount());
-        for (size_t i = 0; i < m_test_data.size(); ++i) {
-            std::copy(m_test_data[i].m_input.begin(), m_test_data[i].m_input.end(), std::back_inserter(batched_input));
-        }
-
-        auto result = m_compute_tasks.EvaluateBatch(uint32_t(m_test_data.size()), network, batched_input);
-
         const auto output_size = network.m_network->GetOutputCount();
-        for (size_t i = 0; i < m_test_data.size(); ++i) {
-            auto guessed_number = std::max_element(result.begin() + output_size * i, result.begin() + output_size * (i + 1)) - (result.begin() + output_size * i);
-            auto reference_solution = std::max_element(m_test_data[i].m_desired_output.begin(), m_test_data[i].m_desired_output.end()) - m_test_data[i].m_desired_output.begin();
+        size_t good_answers = 0;
+
+        for (const auto& test_data : m_test_data) {
+            const auto result = m_compute_tasks.Evaluate(network, test_data.m_input);
+            const auto guessed_number = std::max_element(result.begin(), result.end()) - result.begin();
+            const auto reference_solution = std::max_element(test_data.m_desired_output.begin(), test_data.m_desired_output.end()) - test_data.m_desired_output.begin();
             if (guessed_number == reference_solution) {
                 ++good_answers;
             }

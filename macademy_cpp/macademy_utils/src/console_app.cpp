@@ -131,14 +131,15 @@ ConsoleApp::ConsoleApp()
     m_commands["benchmark_device"].m_handler = [this](const std::vector<std::string>&) {
         if (m_compute_device) {
             std::cout << "Generating network..." << std::endl;
+            macademy::XavierWeightInitializer weight_initializer{};
             std::vector<macademy::LayerConfig> layers;
-            layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
-            layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
-            layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
-            layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
-            layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 128});
-            layers.emplace_back(macademy::LayerConfig{.m_activation = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 8});
-            auto network = macademy::NetworkFactory::Build("benchmark", 16, std::span<macademy::LayerConfig>(layers.data(), layers.size()));
+            layers.emplace_back(LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
+            layers.emplace_back(LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
+            layers.emplace_back(LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
+            layers.emplace_back(LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 12000});
+            layers.emplace_back(LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 128});
+            layers.emplace_back(LayerConfig{.m_activation_function = macademy::ActivationFunction::Sigmoid, .m_num_neurons = 8});
+            auto network = BuildSequentialNetwork("benchmark", 16, layers, weight_initializer);
 
             // network->GenerateRandomWeights(macademy::DefaultWeightInitializer{});
 
@@ -216,8 +217,8 @@ ConsoleApp::ConsoleApp()
 
             std::cout << " Input layer: " << m_network->GetInputCount() << std::endl;
 
-            for (int i = 0; i < m_network->GetLayerConfig().size(); ++i) {
-                const auto& layer_conf = m_network->GetLayerConfig()[i];
+            for (int i = 0; i < m_network->GetLayers().size(); ++i) {
+                const auto& layer_conf = m_network->GetLayers()[i];
                 std::cout << " Layer " << i << ": " << layer_conf.m_num_neurons << "  Activation: " << uint32_t(layer_conf.m_activation) << std::endl;
             }
         } else {

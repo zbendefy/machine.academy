@@ -45,7 +45,7 @@ enum class Regularization
     L2
 };
 
-enum class NetworkWeightFormat
+enum class DType
 {
     Float16,
     Float32

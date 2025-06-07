@@ -12,35 +12,28 @@ namespace macademy {
 class LayerConfig;
 class Network;
 
-inline uint32_t CalculateLargestLayerNeuronCount(std::span<const LayerConfig> layer_config)
+inline uint32_t CalculateLargestLayerNeuronCount(std::span<const Layer> layer_config)
 {
-    return std::max_element(layer_config.begin(), layer_config.end(), [](const LayerConfig& a, const LayerConfig& b) { return a.m_num_neurons < b.m_num_neurons; })->m_num_neurons;
-}
-
-inline uint64_t GetOffsetToLayerWeights(const Network& network, uint32_t current_layer_id)
-{
-    uint64_t offset = 0;
-    for (size_t i = 0; i < current_layer_id; ++i) {
-        const auto layer_neurons = network.GetLayerConfig()[i].m_num_neurons;
-        const auto layer_weights = i == 0 ? network.GetInputCount() : network.GetLayerConfig()[i - 1].m_num_neurons;
-
-        offset += layer_neurons * (layer_weights + 1);
-    }
-
-    return offset;
+    return std::max_element(layer_config.begin(), layer_config.end(), [](const Layer& a, const Layer& b) { return a.m_num_neurons < b.m_num_neurons; })->m_num_neurons;
 }
 
 template <typename T> inline std::span<const uint8_t> AsUint8TSpan(const T& v) { return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(&v), sizeof(v)); }
 
-inline uint64_t GetOffsetToLayerNeuronCount(std::span<const LayerConfig> layer_config, uint32_t current_layer_id)
+template <typename T> std::span<const uint8_t> ToReadOnlyUi8Span(const T& container)
 {
-    return std::accumulate(layer_config.begin(), layer_config.begin() + current_layer_id, uint64_t(0), [](uint64_t sum, const LayerConfig& layer_config) { return sum + layer_config.m_num_neurons; });
+    return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(container.data()), container.size() * sizeof(typename T::value_type));
+}
+template <typename T> std::span<const uint8_t> ToReadOnlyUi8Span(std::span<const T> container)
+{
+    return std::span<const uint8_t>(reinterpret_cast<const uint8_t*>(container.data()), container.size_bytes());
 }
 
-inline uint64_t GetLayerWeightsPerNeuronCount(const Network& network, uint32_t current_layer_id)
+template <typename T> std::span<uint8_t> ToWriteableUi8Span(T& container)
 {
-    return current_layer_id == 0 ? network.GetInputCount() : network.GetLayerConfig()[current_layer_id - 1].m_num_neurons;
+    return std::span<uint8_t>(reinterpret_cast<uint8_t*>(container.data()), container.size() * sizeof(typename T::value_type));
 }
+template <typename T> std::span<uint8_t> ToWriteableUi8Span(std::span<T> container) { return std::span<uint8_t>(reinterpret_cast<uint8_t*>(container.data()), container.size_bytes()); }
+
 
 template <typename T> int sign(T val) { return (T(0) < val) - (val < T(0)); }
 

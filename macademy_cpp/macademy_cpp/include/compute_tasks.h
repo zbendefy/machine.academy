@@ -26,7 +26,7 @@ struct NetworkResourceHandle
     void SynchronizeNetworkData();
 
     void AllocateTrainingResources(uint32_t training_sample_count);
-    void AllocateBatchEvalResources(uint32_t batch_count) const;
+    void AllocateBatchEvalResources() const;
     void AllocateMutationBuffer();
 
     void FreeCachedResources();
@@ -36,17 +36,18 @@ struct NetworkResourceHandle
     IComputeDevice* const m_compute_device = nullptr;
     Network* const m_network = nullptr;
 
-    std::unique_ptr<IBuffer> m_weights;
-    std::unique_ptr<IBuffer> m_layer_config_buffer;
+    std::vector<std::unique_ptr<IBuffer>> m_tensor_buffers;
     mutable std::unique_ptr<IBuffer> m_layer_result_buffer_a;
     mutable std::unique_ptr<IBuffer> m_layer_result_buffer_b;
 
     std::unique_ptr<IBuffer> m_mutation_buffer;
     std::unique_ptr<IBuffer> m_input_buffer;
     std::unique_ptr<IBuffer> m_desired_output_buffer;
-    std::unique_ptr<IBuffer> m_activations_zvalues_buffer;
-    std::unique_ptr<IBuffer> m_delta_k_buffer;
-    std::unique_ptr<IBuffer> m_gradient_buffer;
+    std::unique_ptr<IBuffer> m_delta_k_buffer_a;
+    std::unique_ptr<IBuffer> m_delta_k_buffer_b;
+    std::vector<std::unique_ptr<IBuffer>> m_gradient_buffers;
+    std::vector<std::unique_ptr<IBuffer>> m_activation_buffers;
+    std::vector<std::unique_ptr<IBuffer>> m_zvalue_buffers;
 };
 
 using MutationDistribution = std::variant<UniformDistribution>;
@@ -55,8 +56,6 @@ class ComputeTasks
 {
   public:
     std::vector<float> Evaluate(const NetworkResourceHandle& network, std::span<const float> input) const;
-
-    std::vector<float> EvaluateBatch(uint32_t batch_size, const NetworkResourceHandle& network, std::span<const float> input) const;
 
     void TrainMinibatch(NetworkResourceHandle& network, const TrainingSuite& training_suite, uint64_t trainingDataBegin, uint64_t trainingDataEnd) const;
 
