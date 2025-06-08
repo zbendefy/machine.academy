@@ -193,7 +193,7 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         const uint32_t output_num = layers[i].m_num_neurons;
         const bool is_first_layer = i == 0;
 
-        compute_device.QueueTrainForwardPass(network_handle.m_tensor_buffers[i].get(), is_first_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(), is_first_layer, network_handle.m_activation_buffers[i].get(), network_handle.m_zvalue_buffers[i].get(),
+        compute_device.QueueTrainForwardPass(network_handle.m_tensor_buffers[i].get(), is_first_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(), network_handle.m_activation_buffers[i].get(), network_handle.m_zvalue_buffers[i].get(),
             layers[i].m_activation, output_num, input_num, num_training_samples);
     }
 
@@ -208,7 +208,7 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         const uint32_t next_layer_neuron_count = is_output_layer ? 0 : layers[i + 1].m_num_neurons;
         const bool is_input_layer = i == 0;
 
-        compute_device.QueueTrainBackwardPass(is_output_layer ? nullptr : network_handle.m_tensor_buffers[i+1].get(), is_input_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(), is_input_layer,
+        compute_device.QueueTrainBackwardPass(is_output_layer ? nullptr : network_handle.m_tensor_buffers[i+1].get(), is_input_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(),
                                               network_handle.m_activation_buffers[i].get(), network_handle.m_zvalue_buffers[i].get(), delta_k_buffer_write, delta_k_buffer_read, network_handle.m_gradient_buffers[i].get(),
                                               network_handle.m_desired_output_buffer.get(), output_num, input_num, layers[i].m_activation, num_training_samples,
                                               training_suite.m_cost_function, next_layer_neuron_count);

@@ -143,11 +143,8 @@ void CPUComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IB
 
     const uint32_t weights_per_neuron = layer_input_count; // neurons in the prev layer
 
-    std::for_each_n(std::execution::par_unseq, weights_f32, layer_neuron_count, [&](const float& f) {
+    std::for_each_n(std::execution::seq, weights_f32, layer_neuron_count, [&](const float& f) {
         const uint32_t neuron_id = &f - weights_f32;
-
-        const float* input = layer_input + weights_per_neuron;
-        float* output = layer_output + layer_neuron_count;
 
         const uint32_t neuron_data_size = weights_per_neuron + 1; // weights in prev layer + 1 bias
 
@@ -155,11 +152,11 @@ void CPUComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IB
 
         float acc = 0;
         for (int i = 0; i < weights_per_neuron; ++i) {
-            acc += neuron_weights_biases[i] * input[i];
+            acc += neuron_weights_biases[i] * layer_input[i];
         }
         acc += neuron_weights_biases[weights_per_neuron]; // bias
 
-        output[neuron_id] = CalculateActivationFunction(activation, acc);
+        layer_output[neuron_id] = CalculateActivationFunction(activation, acc);
     });
 }
 
@@ -187,7 +184,7 @@ bool CPUComputeDevice::SupportsWeightFormat(DType format) const
     throw std::runtime_error("CPUComputeDevice::SupportsWeightFormat: Invalid NetworkWeightFormat!");
 }
 
-void CPUComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations_buffer, bool share_prev_activations_among_samples, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,
+void CPUComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations_buffer, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,
     uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples)
 {
     const auto weights_f32 = BufferCast<const CPUBuffer>(tensor_buffer)->As<const float>();
@@ -197,7 +194,6 @@ void CPUComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const
     const uint32_t& prev_layer_neuron_count = weights_per_neuron;
 
     const uint32_t neuron_data_size = weights_per_neuron + 1; // weights in prev layer + 1 bias
-    const uint64_t training_data_stride = layer_neuron_count;
     auto prev_activations = prev_activations_base;
 
     // TODOZ parallel for
@@ -205,13 +201,11 @@ void CPUComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const
         const uint32_t layer_neuron_id = g_id % layer_neuron_count;
         const uint32_t trainingSampleId = g_id / layer_neuron_count;
 
+        const int prev_layer_offset = prev_layer_neuron_count * trainingSampleId;
+        const int layer_offset = layer_neuron_count * trainingSampleId;
         const float* neuron_weights_biases = weights_f32 + layer_neuron_id * neuron_data_size;
-        const int training_sample_activation_offset = training_data_stride * trainingSampleId;
 
-        if (!share_prev_activations_among_samples)
-        {
-            prev_activations = prev_activations_base + prev_layer_neuron_count * trainingSampleId;
-        }
+        prev_activations = prev_activations_base + prev_layer_offset;
 
         // Calculate ZValues for layer
         float acc = 0;
@@ -221,14 +215,12 @@ void CPUComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const
         acc += neuron_weights_biases[weights_per_neuron]; // bias
 
         // Store ZValues and the result of the activation function
-        const int layer_activation_offset = training_sample_activation_offset;
-        const int layer_zvalue_offset = training_sample_activation_offset;
-        zvalues_f32[layer_zvalue_offset + layer_neuron_id] = acc;
-        activations_f32[layer_activation_offset + layer_neuron_id] = CalculateActivationFunction(activation_function, acc);
+        zvalues_f32[layer_offset + layer_neuron_id] = acc;
+        activations_f32[layer_offset + layer_neuron_id] = CalculateActivationFunction(activation_function, acc);
     }
 }
 
-void CPUComputeDevice::QueueTrainBackwardPass(const IBuffer* next_layer_tensor_buffer, const IBuffer* prev_activations_buffer, bool share_prev_activations_among_samples, const IBuffer* layer_activations_buffer, const IBuffer* layer_zvalues_buffer,
+void CPUComputeDevice::QueueTrainBackwardPass(const IBuffer* next_layer_tensor_buffer, const IBuffer* prev_activations_buffer, const IBuffer* layer_activations_buffer, const IBuffer* layer_zvalues_buffer,
                                               IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read, IBuffer* current_layer_gradient_buffer, const IBuffer* desiredOutputsBuffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function, uint32_t numTrainingSamples, CostFunction costFunction, uint32_t next_layer_neuron_count)
 {
     //Next layer: the subsequent layer of the network towards the output of the whole network
@@ -253,36 +245,36 @@ void CPUComputeDevice::QueueTrainBackwardPass(const IBuffer* next_layer_tensor_b
         const uint32_t layer_neuron_id = g_id % layer_neuron_count;
         const uint32_t trainingSampleId = g_id / layer_neuron_count;
 
-        const int delta_k_read_offset = next_layer_neuron_count * trainingSampleId;
-        const int delta_k_write_offset = layer_neuron_count * trainingSampleId;
+        const int prev_layer_offset = prev_layer_neuron_count * trainingSampleId;
+        const int layer_offset = layer_neuron_count * trainingSampleId;
+        const int next_layer_offset = next_layer_neuron_count * trainingSampleId;
+        const int delta_k_read_offset = next_layer_offset;
+        const int delta_k_write_offset = layer_offset;
 
-        if (!share_prev_activations_among_samples)
-        {
-            prev_activations = prev_activations_base + prev_layer_neuron_count * trainingSampleId;
-        }
+        prev_activations = prev_activations_base + prev_layer_offset;
 
-        const float zValue = layer_zvalues[layer_neuron_id];
+        const float zValue = layer_zvalues[layer_neuron_id + layer_offset];
 
         float delta_k;
 
         if (is_output_layer) {
             // Output layer
-            const float activation = layer_activations[layer_neuron_id];
-            const float desiredOutput = desiredOutputs[trainingSampleId * layer_neuron_count + layer_neuron_id];
+            const float activation = layer_activations[layer_neuron_id + layer_offset];
+            const float desiredOutput = desiredOutputs[layer_neuron_id + layer_offset];
             delta_k = CalculateCostFunctionDelta(costFunction, activation_function, zValue, activation, desiredOutput);
         } else {
             // Hidden layer
             delta_k = 0;
             const uint32_t next_layer_neuron_data_size = layer_neuron_count + 1;                   // weights + bias
             for (uint32_t i = 0; i < next_layer_neuron_count; ++i) {
-                delta_k += delta_k_vector_read[delta_k_read_offset + i] * next_layer_weights_f32[i * next_layer_neuron_data_size];
+                delta_k += delta_k_vector_read[delta_k_read_offset + i] * next_layer_weights_f32[layer_neuron_id + i * next_layer_neuron_data_size];
             }
             delta_k *= CalculateActivationFunctionPrime(activation_function, zValue);
         }
 
         const uint32_t gradientBaseOffset = layer_neuron_id * (weights_per_neuron + 1);
 
-        for (int i = 0; i < weights_per_neuron; ++i) {
+        for (uint32_t i = 0; i < weights_per_neuron; ++i) {
             float& v = *(current_layer_gradient + gradientBaseOffset + i);
             v += delta_k * prev_activations[i];
         }
