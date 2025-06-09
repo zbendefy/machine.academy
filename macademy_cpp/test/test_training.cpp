@@ -24,33 +24,6 @@ class TrainingTest : public ::testing::Test
 
     TrainingTest() {}
 
-    void RunApplyGradientTest(const ComputeDeviceInfo& device_info)
-    {
-        std::vector<LayerConfig> layers;
-        layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = 24});
-        layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = 13});
-        layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = 24});
-        layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = 32});
-
-        const auto network = NetworkFactory::Build("test", 5, std::span<const LayerConfig>(layers.data(), layers.size()));
-        network->GenerateRandomWeights(macademy::XavierWeightInitializer{});
-
-        auto compute_device = ComputeDeviceFactory::CreateComputeDevice(device_info);
-        auto network_resources = std::make_unique<NetworkResourceHandle>(*network, *compute_device);
-
-        std::vector<float> orig_weights;
-        orig_weights.resize(network->GetRawWeightData().size());
-        std::copy(network->GetRawWeightData().begin(), network->GetRawWeightData().end(), orig_weights.begin());
-
-        std::vector<float> gradient;
-        gradient.resize(network->GetRawWeightData().size());
-        for (auto& g : gradient) {
-            g = 2.53f;
-        }
-
-        // TODO run apply gradients
-    }
-
     void RunTrainingTest(const ComputeDeviceInfo& device_info)
     {
         constexpr int input_output_size = 4;
@@ -58,10 +31,10 @@ class TrainingTest : public ::testing::Test
         constexpr uint32_t minibatch_size = 3;
 
         std::vector<LayerConfig> layers;
-        layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = input_output_size});
-        layers.emplace_back(LayerConfig{.m_activation = ActivationFunction::Sigmoid, .m_num_neurons = input_output_size});
+        layers.emplace_back(LayerConfig{.m_activation_function = ActivationFunction::Sigmoid, .m_num_neurons = input_output_size});
+        layers.emplace_back(LayerConfig{.m_activation_function = ActivationFunction::Sigmoid, .m_num_neurons = input_output_size});
 
-        const auto network = NetworkFactory::Build("test", input_output_size, std::span<const LayerConfig>(layers.data(), layers.size()));
+        const auto network = BuildSequentialNetwork("test", input_output_size, std::span<const LayerConfig>(layers.data(), layers.size()), XavierWeightInitializer{});
 
         auto compute_device = ComputeDeviceFactory::CreateComputeDevice(device_info);
         auto network_resources = std::make_unique<NetworkResourceHandle>(*network, *compute_device);

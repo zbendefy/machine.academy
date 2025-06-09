@@ -245,11 +245,11 @@ void CPUComputeDevice::QueueTrainBackwardPass(const IBuffer* next_layer_tensor_b
         const uint32_t layer_neuron_id = g_id % layer_neuron_count;
         const uint32_t trainingSampleId = g_id / layer_neuron_count;
 
-        const int prev_layer_offset = prev_layer_neuron_count * trainingSampleId;
-        const int layer_offset = layer_neuron_count * trainingSampleId;
-        const int next_layer_offset = next_layer_neuron_count * trainingSampleId;
-        const int delta_k_read_offset = next_layer_offset;
-        const int delta_k_write_offset = layer_offset;
+        const uint32_t prev_layer_offset = prev_layer_neuron_count * trainingSampleId;
+        const uint32_t layer_offset = layer_neuron_count * trainingSampleId;
+        const uint32_t next_layer_offset = next_layer_neuron_count * trainingSampleId;
+        const uint32_t delta_k_read_offset = next_layer_offset;
+        const uint32_t delta_k_write_offset = layer_offset;
 
         prev_activations = prev_activations_base + prev_layer_offset;
 

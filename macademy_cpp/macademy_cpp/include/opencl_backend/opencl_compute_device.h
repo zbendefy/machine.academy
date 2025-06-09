@@ -16,10 +16,10 @@ class OpenCLComputeDevice : public IComputeDevice
     cl::Program m_program;
 
     using KernelEval = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint>;
-    using KernelTrainingForwardPass = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>;
+    using KernelTrainingForwardPass = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint, cl_uint>;
     using KernelTrainingBackwardPass =
-        cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_ulong, cl::Buffer, cl::Buffer, cl::Buffer>;
-    using KernelTrainingApplyGradient = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_float, cl_float, cl_float>;
+        cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint>;
+    using KernelTrainingApplyGradient = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_float, cl_float, cl_float>;
 
     mutable std::unique_ptr<KernelEval> m_kernel_calc_single_layer;
     mutable std::unique_ptr<KernelTrainingForwardPass> m_kernel_train_forward_pass;
