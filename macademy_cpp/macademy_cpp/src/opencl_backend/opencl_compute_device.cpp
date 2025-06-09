@@ -86,7 +86,7 @@ OpenCLComputeDevice::OpenCLComputeDevice(const ComputeDeviceInfo& device_info, c
 
     m_program.build(args.c_str());
 
-    m_kernel_calc_single_layer = std::make_unique<KernelEval>(KernelEval(m_program, "evaluateLayerBatched"));
+    m_kernel_calc_single_layer = std::make_unique<KernelEval>(KernelEval(m_program, "evaluateLayer"));
     m_kernel_calc_single_layer_ideal_workgroup_size = m_kernel_calc_single_layer->getKernel().getWorkGroupInfo<CL_KERNEL_PREFERRED_WORK_GROUP_SIZE_MULTIPLE>(m_device, nullptr);
 
     m_kernel_calc_single_layer_ideal_workgroup_size = GetIntFromJson(device_config, "eval_threadgroup_size", m_kernel_calc_single_layer_ideal_workgroup_size);
@@ -134,17 +134,13 @@ void OpenCLComputeDevice::WaitQueueIdle() { m_command_queue.finish(); }
 void OpenCLComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation,
     uint32_t layer_input_count, uint32_t layer_neuron_count)
 {
-#if 0
-    const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(weights_buffer);
-    const auto layer_config_buffer_cl = BufferCast<const OpenCLBuffer>(layer_config_buffer);
+    const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(tensor_buffer);
     const auto layer_input_buffer_cl = BufferCast<const OpenCLBuffer>(layer_input_buffer);
     auto layer_output_buffer_cl = BufferCast<OpenCLBuffer>(layer_output_buffer);
 
-    (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), batch_count),
+    (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size)),
                                                   cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size, 1)),
-                                  weights_buffer_cl->GetBuffer(), layer_config_buffer_cl->GetBuffer(), layer_input_buffer_cl->GetBuffer(), layer_output_buffer_cl->GetBuffer(), current_layer_id,
-                                  current_layer_weights_offset);
-#endif
+                                  weights_buffer_cl->GetBuffer(), layer_input_buffer_cl->GetBuffer(), layer_output_buffer_cl->GetBuffer(), cl_uint(activation), layer_input_count, layer_neuron_count);
 }
 
 void OpenCLComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,

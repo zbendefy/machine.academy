@@ -77,33 +77,27 @@ float CostFunctionDelta(uint costFunctionId, uint activationFunctionId, float z,
     }
 }
 
-__kernel void evaluateLayerBatched(__global const float* weights_biases, __constant const uint* layer_config, __global const float* input_buffer, __global float* output_buffer,
-                                   const uint current_layer_id, const ulong current_layer_weights_offset)
+__kernel void evaluateLayer(__global const float* weights_biases, __global const float* input_buffer, __global float* output_buffer,
+                                   const uint activation, const uint layer_input_count, const uint layer_neuron_count)
 {
-    const uint layer_neuron_count = layer_config[2 + current_layer_id * 2]; // number of neurons
-    const uint weights_per_neuron = layer_config[current_layer_id * 2];     // neurons in the prev layer
-    const uint activationFunctionId = layer_config[3 + current_layer_id * 2];
+    const uint weights_per_neuron = layer_input_count;     // neurons in the prev layer
 
     const uint layer_neuron_id = get_global_id(0);
-    const uint batch_id = get_global_id(1);
 
     if (layer_neuron_id >= layer_neuron_count)
         return;
 
-    __global const float* input = input_buffer + batch_id * weights_per_neuron;
-    __global float* output = output_buffer + batch_id * layer_neuron_count;
-
     const uint neuron_data_size = weights_per_neuron + 1; // weights in prev layer + 1 bias
 
-    __global const float* neuron_weights_biases = weights_biases + current_layer_weights_offset + layer_neuron_id * neuron_data_size;
+    __global const float* neuron_weights_biases = weights_biases + layer_neuron_id * neuron_data_size;
 
     float acc = 0.0f;
     for (uint i = 0; i < weights_per_neuron; ++i) {
-        acc += neuron_weights_biases[i] * input[i];
+        acc += neuron_weights_biases[i] * input_buffer[i];
     }
     acc += neuron_weights_biases[weights_per_neuron]; // bias
 
-    output[layer_neuron_id] = ActivationFunction(activationFunctionId, acc);
+    output_buffer[layer_neuron_id] = ActivationFunction(activation, acc);
 }
 
 // Atomic addition function from: https://streamhpc.com/blog/2016-02-09/atomic-operations-for-floats-in-opencl-improved/

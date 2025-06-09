@@ -71,13 +71,10 @@ float CostFunctionDelta(uint costFunctionId, uint activationFunctionId, float z,
 	}
 }
 
-uint GetLayerNeuronCountOffset(uint layerId)
+//TODOZ remove!
+uint GetLayerNeuronCountOffset(uint)
 {
-    uint offset = 0;
-    for(uint i = 0; i < layerId; ++i){
-        offset += layer_config[2 + i * 2]; //neuron count of i-th layer 
-    }
-    return offset;
+    return 0;
 }
 
 //Atomic addition function from: https://streamhpc.com/blog/2016-02-09/atomic-operations-for-floats-in-opencl-improved/

@@ -319,7 +319,7 @@ VulkanComputeDevice::VulkanComputeDevice(const ComputeDeviceInfo& device_info, c
         shader_specialization.emplace(0, m_kernel_calc_single_layer_ideal_workgroup_size);
 
         // Note: there should be currently at most 2 simultaneous descriptor sets, but I used 8 here just in case the compute tasks api gets used in some unintended way.
-        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), "kernel_calc_single_layer", 4, uint32_t(sizeof(CalcSingleLayerPushConstantData)), 8,
+        m_kernel_calc_single_layer = std::make_unique<KernelResources>(m_device.get(), "kernel_calc_single_layer", 3, uint32_t(sizeof(CalcSingleLayerPushConstantData)), 8,
                                                                        base64_decode_spirv(vulkan_kernel_source_kernel_calc_single_layer_glsl_b64), shader_specialization);
     }
 
@@ -526,34 +526,30 @@ void VulkanComputeDevice::SynchronizeBuffers(VkCommandBuffer command_buffer, Syn
 void VulkanComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation,
     uint32_t layer_input_count, uint32_t layer_neuron_count)
 {
-
-#if 0
-    const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(weights_buffer);
-    const auto layer_config_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_config_buffer);
+    const auto weights_buffer_vk = BufferCast<const vk::VulkanBuffer>(tensor_buffer);
     const auto layer_input_buffer_vk = BufferCast<const vk::VulkanBuffer>(layer_input_buffer);
     auto layer_output_buffer_vk = BufferCast<vk::VulkanBuffer>(layer_output_buffer);
 
     thread_local std::vector<const vk::VulkanBuffer*> buffers;
 
-    buffers.resize(4);
+    buffers.resize(3);
     buffers[0] = weights_buffer_vk;
-    buffers[1] = layer_config_buffer_vk;
-    buffers[2] = layer_input_buffer_vk;
-    buffers[3] = layer_output_buffer_vk;
+    buffers[1] = layer_input_buffer_vk;
+    buffers[2] = layer_output_buffer_vk;
 
     auto command_buffer = GetCommandBuffer();
 
     SynchronizeBuffers(command_buffer, SynchronizationAction::ComputeShaderRead, std::span<const vk::VulkanBuffer*>(buffers.begin(), buffers.end()));
 
     CalcSingleLayerPushConstantData push_constant_data;
-    push_constant_data.current_layer_id = current_layer_id;
-    push_constant_data.current_layer_weights_offset = current_layer_weights_offset;
+    push_constant_data.activation = uint32_t(activation);
+    push_constant_data.layer_input_count = layer_input_count;
+    push_constant_data.layer_neuron_count = layer_neuron_count;
 
     m_kernel_calc_single_layer->Bind(command_buffer, buffers, AsUint8TSpan(push_constant_data));
-    m_kernel_calc_single_layer->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), GetLocalWorkgroupCount(batch_count, 1), 1);
+    m_kernel_calc_single_layer->Dispatch(command_buffer, GetLocalWorkgroupCount(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size), 1, 1);
 
     m_dirty_buffers.emplace(layer_output_buffer_vk, BufferSynchronizationEvent::ComputeShaderWrite);
-#endif
 }
 
 void VulkanComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,

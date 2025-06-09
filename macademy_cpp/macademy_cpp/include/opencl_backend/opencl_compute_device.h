@@ -15,7 +15,7 @@ class OpenCLComputeDevice : public IComputeDevice
     mutable cl::CommandQueue m_command_queue;
     cl::Program m_program;
 
-    using KernelEval = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong>;
+    using KernelEval = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint>;
     using KernelTrainingForwardPass = cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_ulong, cl_uint, cl_uint>;
     using KernelTrainingBackwardPass =
         cl::KernelFunctor<cl::Buffer, cl::Buffer, cl::Buffer, cl::Buffer, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_uint, cl_ulong, cl::Buffer, cl::Buffer, cl::Buffer>;
