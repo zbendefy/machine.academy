@@ -9,9 +9,9 @@ layout(push_constant) uniform constants_
 {
 #endif
 
-    uint activation;
-    uint layer_input_count;
+    uint weights_per_neuron;
     uint layer_neuron_count;
+    uint activation_function;
 
 #ifdef VK_CONSTANTS_HOST
 };

@@ -1,8 +1,6 @@
-from cgi import test
-from genericpath import isfile
 import os
 import sys
-import base64
+import struct
 
 print("Compiling Vulkan shaders...")
 print("  Arguments: {}".format(sys.argv))
@@ -23,23 +21,24 @@ def CompileVulkanShader(shader_filename, glslc_args):
 
     result = os.system("{} --target-env=vulkan1.1 -fshader-stage=comp {} -o {}.spv {}".format(glslc_path, shader_filename, shader_filename, glslc_args))
     if result == 0:
-        base64_content = ""
+        uint32_list = []
         with open(shader_filename + ".spv", "rb") as binary_file:
-            binary_data = binary_file.read()
-            encoded_data = base64.b64encode(binary_data)
-            base64_content = encoded_data.decode("utf-8")
+            while True:
+                chunk = binary_file.read(4)
+                if len(chunk) != 4:
+                    break
+                uint32_value = struct.unpack('<I', chunk)[0]
+                uint32_list.append(uint32_value)
         with open(shader_filename + ".h", "w") as text_file:
             name = os.path.basename(shader_filename).replace(".", "_")
-            text_file.write('constexpr const char* vulkan_kernel_source_{}_b64 = '.format(name))
-            while len(base64_content) > 0:
-                fragment_size = min(len(base64_content), 80)
-                fragment = base64_content[:fragment_size]
-                base64_content = base64_content[fragment_size:]
-                text_file.write('"{}"\n'.format(fragment))
-            text_file.write(";")
-
+            text_file.write('std::array<uint32_t, {}> vulkan_kernel_source_{} = {{'.format(len(uint32_list), name))
+            while len(uint32_list) > 0:
+                fragment_size = min(len(uint32_list), 40)
+                fragment = ', '.join(map(hex, uint32_list[:fragment_size]))
+                uint32_list = uint32_list[fragment_size:]
+                text_file.write('{},\n'.format(fragment))
+            text_file.write("};")
     return result == 0
-
 
 success = True
 print("  Config: {}".format(config))

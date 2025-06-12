@@ -4,7 +4,6 @@
 #include "vulkan_common.h"
 #include "vulkan_backend/vulkan_device.h"
 #include "vulkan_backend/vulkan_instance.h"
-#include "vulkan_backend/vulkan_compute_pipeline.h"
 
 #include <optional>
 #include <map>
@@ -12,29 +11,9 @@
 
 namespace macademy {
 
-class KernelResources
-{
-  public:
-    KernelResources(vk::Device* device, const std::string& name, uint32_t storage_buffer_count, uint32_t push_constant_size, uint32_t max_descriptor_sets, const vk::SpirvBinary& spirv_binary,
-                    const vk::ShaderSpecializationMap& shader_specialization);
-
-    ~KernelResources();
-
-    void FreeDescriptorSets();
-    void Bind(VkCommandBuffer command_buffer, const std::vector<const vk::VulkanBuffer*>& buffers, std::span<const uint8_t> push_constant_data);
-    void Dispatch(VkCommandBuffer command_buffer, uint32_t threadgroup_count_x, uint32_t threadgroup_count_y, uint32_t threadgroup_count_z);
-
-  private:
-    VkDescriptorSet GetDescriptorSet(const std::vector<const vk::VulkanBuffer*>& storage_buffers);
-
-    vk::Device* m_device;
-    VkDescriptorSetLayout m_descriptor_set_layout = VK_NULL_HANDLE;
-    VkDescriptorPool m_descriptor_pool = VK_NULL_HANDLE;
-    mutable std::unique_ptr<vk::ComputePipeline> m_pipeline;
-
-  private:
-    std::map<std::vector<const vk::VulkanBuffer*>, VkDescriptorSet> m_descriptor_sets;
-};
+namespace vk {
+class ComputeKernel;
+}
 
 class VulkanComputeDevice : public IComputeDevice
 {
@@ -60,10 +39,10 @@ class VulkanComputeDevice : public IComputeDevice
     std::unique_ptr<vk::Instance> m_instance = nullptr;
     std::unique_ptr<vk::Device> m_device = nullptr;
 
-    std::unique_ptr<KernelResources> m_kernel_calc_single_layer;
-    std::unique_ptr<KernelResources> m_kernel_train_forward_pass;
-    std::unique_ptr<KernelResources> m_kernel_train_backward_pass;
-    std::unique_ptr<KernelResources> m_kernel_train_apply_gradient;
+    std::unique_ptr<vk::ComputeKernel> m_kernel_calc_single_layer;
+    std::unique_ptr<vk::ComputeKernel> m_kernel_train_forward_pass;
+    std::unique_ptr<vk::ComputeKernel> m_kernel_train_backward_pass;
+    std::unique_ptr<vk::ComputeKernel> m_kernel_train_apply_gradient;
 
     std::vector<MemoryReadback> m_memory_reads;
 
@@ -95,13 +74,16 @@ class VulkanComputeDevice : public IComputeDevice
     void SubmitQueue() override;
     void WaitQueueIdle() override;
 
-    void QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation,
-        uint32_t layer_input_count, uint32_t layer_neuron_count) override;
+    void QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation_function, uint32_t layer_input_count,
+                            uint32_t layer_neuron_count) override;
     void QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,
-        uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples) override;
-    void QueueTrainBackwardPass(const IBuffer* next_layer_tensor_buffer, const IBuffer* prev_activations_buffer, const IBuffer* layer_activations_buffer, const IBuffer* layer_zvalues_buffer,
-        IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read, IBuffer* current_layer_gradient_buffer, const IBuffer* desiredOutputsBuffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function, uint32_t numTrainingSamples, CostFunction costFunction, uint32_t next_layer_neuron_count) override;
-    void QueueApplyGradients(IBuffer* tensor_buffer, const IBuffer* gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, float regularization_term_1, float regularization_term_2, float normalized_learning_rate) override;
+                               uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples) override;
+    void QueueTrainBackwardPass(bool is_output_layer, const IBuffer* next_layer_data_buffer, const IBuffer* prev_activations_buffer, const IBuffer* layer_activations_buffer,
+                                const IBuffer* layer_zvalues_buffer, IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read, IBuffer* current_layer_gradient_buffer,
+                                uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function, uint32_t num_training_samples, CostFunction costFunction,
+                                uint32_t next_layer_neuron_count) override;
+    void QueueApplyGradients(IBuffer* tensor_buffer, const IBuffer* gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, float regularization_term_1, float regularization_term_2,
+                             float normalized_learning_rate) override;
 
     std::string GetDeviceName() const override;
 

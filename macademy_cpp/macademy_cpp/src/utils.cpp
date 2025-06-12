@@ -60,8 +60,6 @@ void ExportNetworkAsBson(const Network& network, std::ostream& stream)
 
 void ExportNetworkAsBinary(const Network& network, std::ostream& file)
 {
-
-#if 0 //TODOZ
     file.write(reinterpret_cast<const char*>(&Network::BINARY_VERSION), sizeof(Network::BINARY_VERSION));
 
     uint32_t network_name_length = uint32_t(network.GetName().size());
@@ -72,23 +70,24 @@ void ExportNetworkAsBinary(const Network& network, std::ostream& file)
     uint32_t input_count = network.GetInputCount();
     file.write(reinterpret_cast<const char*>(&input_count), sizeof(input_count));
 
-    uint32_t layer_count = uint32_t(network.GetLayerConfig().size());
+    uint32_t layer_count = uint32_t(network.GetLayerCount());
     file.write(reinterpret_cast<const char*>(&layer_count), sizeof(layer_count));
-    for (const auto& layer : network.GetLayerConfig()) {
+    for (const auto& layer : network.GetLayers()) {
 
         uint32_t activation = uint32_t(layer.m_activation);
         file.write(reinterpret_cast<const char*>(&activation), sizeof(activation));
 
         uint32_t neuron_count = uint32_t(layer.m_num_neurons);
         file.write(reinterpret_cast<const char*>(&neuron_count), sizeof(neuron_count));
+
+        uint32_t tensor_dtype = uint32_t(layer.m_tensor->GetDType());
+        file.write(reinterpret_cast<const char*>(&tensor_dtype), sizeof(tensor_dtype));
+
+        uint64_t tensor_size = uint64_t(layer.m_tensor->GetByteSize());
+        file.write(reinterpret_cast<const char*>(&tensor_size), sizeof(tensor_size));
+
+        file.write(reinterpret_cast<const char*>(layer.m_tensor->GetRawData().data()), layer.m_tensor->GetRawData().size_bytes());
     }
-
-    // write weights and biases
-    uint64_t total_weight_count = uint64_t(network.GetRawWeightData().size());
-    file.write(reinterpret_cast<const char*>(&total_weight_count), sizeof(total_weight_count));
-
-    file.write(reinterpret_cast<const char*>(network.GetRawWeightData().data()), network.GetRawWeightData().size() * sizeof(float));
-#endif
 }
 std::unique_ptr<Network> ImportNetworkFromBinary(std::istream& file)
 {

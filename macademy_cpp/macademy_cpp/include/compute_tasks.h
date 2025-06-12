@@ -40,7 +40,6 @@ struct NetworkResourceHandle
     mutable std::unique_ptr<IBuffer> m_layer_result_buffer_a;
     mutable std::unique_ptr<IBuffer> m_layer_result_buffer_b;
 
-    std::unique_ptr<IBuffer> m_mutation_buffer;
     std::unique_ptr<IBuffer> m_input_buffer;
     std::unique_ptr<IBuffer> m_desired_output_buffer;
     std::unique_ptr<IBuffer> m_delta_k_buffer_a;
@@ -48,6 +47,8 @@ struct NetworkResourceHandle
     std::vector<std::unique_ptr<IBuffer>> m_gradient_buffers;
     std::vector<std::unique_ptr<IBuffer>> m_activation_buffers;
     std::vector<std::unique_ptr<IBuffer>> m_zvalue_buffers;
+
+    std::vector<std::unique_ptr<IBuffer>> m_mutation_buffers;
 };
 
 using MutationDistribution = std::variant<UniformDistribution>;

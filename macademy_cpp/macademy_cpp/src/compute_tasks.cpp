@@ -20,8 +20,7 @@ namespace macademy {
 NetworkResourceHandle::NetworkResourceHandle(Network& network, IComputeDevice& compute_device) : m_network(&network), m_compute_device(&compute_device)
 {
     int tensor_id = 0;
-    for (const auto& layer : network.GetLayers())
-    {
+    for (const auto& layer : network.GetLayers()) {
         m_tensor_buffers.emplace_back(m_compute_device->CreateBuffer(layer.m_tensor->GetByteSize(), BufferUsage::ReadWrite, "tensor_" + std::to_string(tensor_id)));
         m_compute_device->QueueWriteToBuffer(m_tensor_buffers.back().get(), ToReadOnlyUi8Span(layer.m_tensor->GetRawData()), 0);
         ++tensor_id;
@@ -38,8 +37,7 @@ NetworkResourceHandle::NetworkResourceHandle(Network& network, IComputeDevice& c
 
 void NetworkResourceHandle::SynchronizeNetworkData()
 {
-    for (uint32_t i = 0; i < m_network->GetLayerCount(); ++i)
-    {
+    for (uint32_t i = 0; i < m_network->GetLayerCount(); ++i) {
         m_compute_device->QueueReadFromBuffer(m_tensor_buffers[i].get(), m_network->GetLayers()[i].m_tensor->GetRawData(), 0);
     }
     m_compute_device->SubmitQueue();
@@ -66,9 +64,10 @@ void NetworkResourceHandle::AllocateBatchEvalResources() const
 
 void NetworkResourceHandle::AllocateMutationBuffer()
 {
-    throw "TODOZ";
-    if (!m_mutation_buffer) {
-        //m_mutation_buffer = m_compute_device->CreateBuffer(m_network->GetRawWeightData().size_bytes(), BufferUsage::ReadOnly, "mutation_buffer");
+    if (!m_mutation_buffers.empty()) {
+        for (uint32_t i = 0; i < m_network->GetLayerCount(); ++i) {
+            m_mutation_buffers.emplace_back(m_compute_device->CreateBuffer(m_network->GetLayers()[i].m_tensor->GetByteSize(), BufferUsage::ReadOnly, "mutation_buffer_" + std::to_string(i)));
+        }
     }
 }
 
@@ -80,11 +79,12 @@ void NetworkResourceHandle::AllocateTrainingResources(uint32_t training_sample_c
     m_desired_output_buffer = m_compute_device->CreateBuffer(training_sample_count * m_network->GetOutputCount() * sizeof(float), BufferUsage::ReadOnly, "desired_output_buffer");
     m_delta_k_buffer_a = m_compute_device->CreateBuffer(training_sample_count * largest_layer_neuron_count * sizeof(float), BufferUsage::ReadWrite, "delta_k_buffer_a");
     m_delta_k_buffer_b = m_compute_device->CreateBuffer(training_sample_count * largest_layer_neuron_count * sizeof(float), BufferUsage::ReadWrite, "delta_k_buffer_b");
-    for (uint32_t i = 0; i < m_network->GetLayerCount(); ++i)
-    {
-        m_gradient_buffers.emplace_back(m_compute_device->CreateBuffer(m_network->GetLayers()[i].m_tensor->GetByteSize(), BufferUsage::ReadWrite, "gradient_buffer"));
-        m_activation_buffers.emplace_back(m_compute_device->CreateBuffer(training_sample_count * m_network->GetLayers()[i].m_tensor->GetElementSize() * sizeof(float), BufferUsage::ReadWrite, "activations_buffer"));
-        m_zvalue_buffers.emplace_back(m_compute_device->CreateBuffer(training_sample_count * m_network->GetLayers()[i].m_tensor->GetElementSize() * sizeof(float), BufferUsage::ReadWrite, "zvalues_buffer"));
+    for (uint32_t i = 0; i < m_network->GetLayerCount(); ++i) {
+        m_gradient_buffers.emplace_back(m_compute_device->CreateBuffer(m_network->GetLayers()[i].m_tensor->GetByteSize(), BufferUsage::ReadWrite, "gradient_buffer_" + std::to_string(i)));
+        m_activation_buffers.emplace_back(m_compute_device->CreateBuffer(training_sample_count * m_network->GetLayers()[i].m_tensor->GetElementSize() * sizeof(float), BufferUsage::ReadWrite,
+                                                                         "activations_buffer_" + std::to_string(i)));
+        m_zvalue_buffers.emplace_back(m_compute_device->CreateBuffer(training_sample_count * m_network->GetLayers()[i].m_tensor->GetElementSize() * sizeof(float), BufferUsage::ReadWrite,
+                                                                     "zvalues_buffer_" + std::to_string(i)));
     }
 }
 
@@ -99,7 +99,7 @@ void NetworkResourceHandle::FreeCachedResources()
     m_gradient_buffers.clear();
     m_layer_result_buffer_a.reset();
     m_layer_result_buffer_b.reset();
-    m_mutation_buffer.reset();
+    m_mutation_buffers.clear();
 }
 
 std::vector<float> ComputeTasks::Evaluate(const NetworkResourceHandle& network_resources, std::span<const float> input) const
@@ -158,8 +158,7 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
     const uint32_t total_neuron_count = network.GetNeuronCount();
     const auto largest_layer_neuron_count = CalculateLargestLayerNeuronCount(layers);
 
-    for(auto& gradient_buffer : network_handle.m_gradient_buffers)
-    {
+    for (auto& gradient_buffer : network_handle.m_gradient_buffers) {
         compute_device.QueueFillBuffer(gradient_buffer.get(), 0, 0, gradient_buffer->GetSize());
     }
 
@@ -193,8 +192,9 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         const uint32_t output_num = layers[i].m_num_neurons;
         const bool is_first_layer = i == 0;
 
-        compute_device.QueueTrainForwardPass(network_handle.m_tensor_buffers[i].get(), is_first_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(), network_handle.m_activation_buffers[i].get(), network_handle.m_zvalue_buffers[i].get(),
-            layers[i].m_activation, output_num, input_num, num_training_samples);
+        compute_device.QueueTrainForwardPass(network_handle.m_tensor_buffers[i].get(), is_first_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(),
+                                             network_handle.m_activation_buffers[i].get(), network_handle.m_zvalue_buffers[i].get(), layers[i].m_activation, output_num, input_num,
+                                             num_training_samples);
     }
 
     auto delta_k_buffer_read = network_handle.m_delta_k_buffer_a.get();
@@ -208,10 +208,10 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         const uint32_t next_layer_neuron_count = is_output_layer ? 0 : layers[i + 1].m_num_neurons;
         const bool is_input_layer = i == 0;
 
-        compute_device.QueueTrainBackwardPass(is_output_layer ? nullptr : network_handle.m_tensor_buffers[i+1].get(), is_input_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(),
-                                              network_handle.m_activation_buffers[i].get(), network_handle.m_zvalue_buffers[i].get(), delta_k_buffer_write, delta_k_buffer_read, network_handle.m_gradient_buffers[i].get(),
-                                              network_handle.m_desired_output_buffer.get(), output_num, input_num, layers[i].m_activation, num_training_samples,
-                                              training_suite.m_cost_function, next_layer_neuron_count);
+        compute_device.QueueTrainBackwardPass(is_output_layer, is_output_layer ? network_handle.m_desired_output_buffer.get() : network_handle.m_tensor_buffers[i + 1].get(),
+                                              is_input_layer ? network_handle.m_input_buffer.get() : network_handle.m_activation_buffers[i - 1].get(), network_handle.m_activation_buffers[i].get(),
+                                              network_handle.m_zvalue_buffers[i].get(), delta_k_buffer_write, delta_k_buffer_read, network_handle.m_gradient_buffers[i].get(), output_num, input_num,
+                                              layers[i].m_activation, num_training_samples, training_suite.m_cost_function, next_layer_neuron_count);
 
         std::swap(delta_k_buffer_write, delta_k_buffer_read);
     }
@@ -233,8 +233,8 @@ void ComputeTasks::TrainMinibatch(NetworkResourceHandle& network_handle, const T
         const uint32_t input_num = i == 0 ? network.GetInputCount() : layers[i - 1].m_num_neurons;
         const uint32_t output_num = layers[i].m_num_neurons;
 
-        compute_device.QueueApplyGradients(network_handle.m_tensor_buffers[i].get(), network_handle.m_gradient_buffers[i].get(), output_num, input_num,
-            regularizationTerm1, regularizationTerm2Base, normalized_learning_rate);
+        compute_device.QueueApplyGradients(network_handle.m_tensor_buffers[i].get(), network_handle.m_gradient_buffers[i].get(), output_num, input_num, regularizationTerm1, regularizationTerm2Base,
+                                           normalized_learning_rate);
     }
 
     compute_device.SubmitQueue();
@@ -246,14 +246,10 @@ void ComputeTasks::ApplyRandomMutation(NetworkResourceHandle& network_handle, Mu
     Network& network = *network_handle.m_network;
     IComputeDevice& compute_device = *network_handle.m_compute_device;
 
-#if 0
     network_handle.AllocateMutationBuffer();
 
-    std::vector<float> mutation_buffer_data;
-    mutation_buffer_data.resize(network.GetTotalWeightAndBiasCount());
-
-    uint32_t weights_per_neuron = network.GetInputCount();
-    uint32_t layer_neuron_count = 0;
+    std::vector<std::vector<float>> mutation_buffers;
+    mutation_buffers.resize(network.GetLayerCount());
 
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -271,42 +267,35 @@ void ComputeTasks::ApplyRandomMutation(NetworkResourceHandle& network_handle, Mu
     std::function<float(float)> weight_mutator = generate_mutator(weight_mutation_distribution);
     std::function<float(float)> bias_mutator = generate_mutator(bias_mutation_distribution);
 
-    float* data_ptr = network.GetRawWeightData().data();
+    const auto& layers = network.GetLayers();
+    uint32_t weights_per_neuron = network.GetInputCount();
 
-    const auto& layer_config = network.GetLayerConfig();
-
-    for (size_t i = 0; i < layer_config.size(); ++i) {
-        layer_neuron_count = layer_config[0].m_num_neurons;
+    for (size_t i = 0; i < layers.size(); ++i) {
+        auto& mutation_buffer = mutation_buffers.emplace_back();
+        const auto layer_neuron_count = layers[i].m_num_neurons;
 
         for (uint32_t n = 0; n < layer_neuron_count; ++n) {
             for (uint32_t w = 0; w < weights_per_neuron; ++w) {
-                mutation_buffer_data.emplace_back(weight_mutator(0));
+                mutation_buffer.emplace_back(weight_mutator(0));
             }
-            mutation_buffer_data.emplace_back(bias_mutator(0));
+            mutation_buffer.emplace_back(bias_mutator(0));
         }
 
         weights_per_neuron = layer_neuron_count;
+
+        compute_device.QueueWriteToBuffer(network_handle.m_mutation_buffers[i].get(), ToReadOnlyUi8Span(mutation_buffer), 0);
     }
 
-    compute_device.QueueWriteToBuffer(network_handle.m_mutation_buffer.get(), ToReadOnlyUi8Span(mutation_buffer_data), 0);
+    for (uint32_t i = 0; i < layers.size(); ++i) {
+        const uint32_t input_num = i == 0 ? network.GetInputCount() : layers[i - 1].m_num_neurons;
+        const uint32_t output_num = layers[i].m_num_neurons;
 
-    uint64_t weights_layer_offset = 0;
-
-    for (uint32_t i = 0; i < layer_config.size(); ++i) {
-        const uint32_t input_num = i == 0 ? network.GetInputCount() : layer_config[i - 1].m_num_neurons;
-        const uint32_t output_num = layer_config[i].m_num_neurons;
-
-        compute_device.QueueApplyGradients(network_handle.m_weights.get(), network_handle.m_mutation_buffer.get(), network_handle.m_layer_config_buffer.get(), output_num, i, weights_layer_offset,
-                                           1.0f, 0.0f, -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
-
-        const uint64_t layer_weight_size = uint64_t(input_num) * output_num + output_num;
-        ASSERTM(weights_layer_offset + layer_weight_size > weights_layer_offset, "Layer weights offset overflow!");
-        weights_layer_offset += layer_weight_size; // advance the offset in the weights buffer for the next layer
+        compute_device.QueueApplyGradients(network_handle.m_tensor_buffers[i].get(), network_handle.m_mutation_buffers[i].get(), output_num, input_num, 1.0f, 0.0f,
+                                           -1.0f /*note: regularization_term_1 and 2 and learning rate are set to passtrough the modification*/);
     }
 
     compute_device.SubmitQueue();
     compute_device.WaitQueueIdle();
-#endif
 }
 
 } // namespace macademy

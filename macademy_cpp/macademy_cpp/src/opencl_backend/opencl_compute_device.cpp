@@ -131,8 +131,8 @@ void OpenCLComputeDevice::SubmitQueue() { m_command_queue.flush(); }
 
 void OpenCLComputeDevice::WaitQueueIdle() { m_command_queue.finish(); }
 
-void OpenCLComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation,
-    uint32_t layer_input_count, uint32_t layer_neuron_count)
+void OpenCLComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const IBuffer* layer_input_buffer, IBuffer* layer_output_buffer, ActivationFunction activation_function,
+                                             uint32_t layer_input_count, uint32_t layer_neuron_count)
 {
     const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(tensor_buffer);
     const auto layer_input_buffer_cl = BufferCast<const OpenCLBuffer>(layer_input_buffer);
@@ -140,11 +140,12 @@ void OpenCLComputeDevice::QueueEvaluateLayer(const IBuffer* tensor_buffer, const
 
     (*m_kernel_calc_single_layer)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_calc_single_layer_ideal_workgroup_size)),
                                                   cl::NDRange(m_kernel_calc_single_layer_ideal_workgroup_size, 1)),
-                                  weights_buffer_cl->GetBuffer(), layer_input_buffer_cl->GetBuffer(), layer_output_buffer_cl->GetBuffer(), cl_uint(activation), layer_input_count, layer_neuron_count);
+                                  weights_buffer_cl->GetBuffer(), layer_input_buffer_cl->GetBuffer(), layer_output_buffer_cl->GetBuffer(), layer_input_count, layer_neuron_count,
+                                  cl_uint(activation_function));
 }
 
 void OpenCLComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, const IBuffer* prev_activations, IBuffer* activations, IBuffer* zvalues, ActivationFunction activation_function,
-    uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples)
+                                                uint32_t layer_neuron_count, uint32_t weights_per_neuron, uint32_t num_training_samples)
 {
     const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(tensor_buffer);
     const auto prev_activations_cl = BufferCast<const OpenCLBuffer>(prev_activations);
@@ -152,45 +153,46 @@ void OpenCLComputeDevice::QueueTrainForwardPass(const IBuffer* tensor_buffer, co
     auto zvalues_cl = BufferCast<OpenCLBuffer>(zvalues);
 
     (*m_kernel_train_forward_pass)(cl::EnqueueArgs(m_command_queue,
-        cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x),
-            ExtendGlobalWorkSize(num_training_samples, m_kernel_training_ideal_workgroup_size_y)),
-        cl::NDRange(m_kernel_training_ideal_workgroup_size_x, m_kernel_training_ideal_workgroup_size_y)),
-        weights_buffer_cl->GetBuffer(), prev_activations_cl->GetBuffer(), activations_cl->GetBuffer(), zvalues_cl->GetBuffer(), cl_uint(activation_function),
-        cl_uint(layer_neuron_count), cl_uint(weights_per_neuron), cl_uint(num_training_samples));
+                                                   cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x),
+                                                               ExtendGlobalWorkSize(num_training_samples, m_kernel_training_ideal_workgroup_size_y)),
+                                                   cl::NDRange(m_kernel_training_ideal_workgroup_size_x, m_kernel_training_ideal_workgroup_size_y)),
+                                   weights_buffer_cl->GetBuffer(), prev_activations_cl->GetBuffer(), activations_cl->GetBuffer(), zvalues_cl->GetBuffer(), cl_uint(activation_function),
+                                   cl_uint(layer_neuron_count), cl_uint(weights_per_neuron), cl_uint(num_training_samples));
 }
 
-void OpenCLComputeDevice::QueueTrainBackwardPass(const IBuffer* next_layer_tensor_buffer, const IBuffer* prev_activations_buffer, const IBuffer* layer_activations_buffer, const IBuffer* layer_zvalues_buffer,
-    IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read, IBuffer* current_layer_gradient_buffer, const IBuffer* desiredOutputsBuffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function, uint32_t numTrainingSamples, CostFunction costFunction, uint32_t next_layer_neuron_count)
+void OpenCLComputeDevice::QueueTrainBackwardPass(bool is_output_layer, const IBuffer* next_layer_data_buffer, const IBuffer* prev_activations_buffer, const IBuffer* layer_activations_buffer,
+                                                 const IBuffer* layer_zvalues_buffer, IBuffer* delta_k_vector_buffer_write, const IBuffer* delta_k_vector_buffer_read,
+                                                 IBuffer* current_layer_gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, ActivationFunction activation_function,
+                                                 uint32_t num_training_samples, CostFunction costFunction, uint32_t next_layer_neuron_count)
 {
+    const auto next_layer_data_buffer_cl = BufferCast<const OpenCLBuffer>(next_layer_data_buffer);
     const auto prev_activations_buffer_cl = BufferCast<const OpenCLBuffer>(prev_activations_buffer);
-    const auto next_layer_weights_buffer_cl = next_layer_tensor_buffer ? BufferCast<const OpenCLBuffer>(next_layer_tensor_buffer) : prev_activations_buffer_cl; // Bind prev_activatinos just to have someting bound...TODO separate this into two functions to avoid this :(
     const auto layer_activations_buffer_cl = BufferCast<const OpenCLBuffer>(layer_activations_buffer);
     const auto layer_zvalues_buffer_cl = BufferCast<const OpenCLBuffer>(layer_zvalues_buffer);
     auto delta_k_vector_buffer_write_cl = BufferCast<OpenCLBuffer>(delta_k_vector_buffer_write);
     const auto delta_k_vector_buffer_read_cl = BufferCast<const OpenCLBuffer>(delta_k_vector_buffer_read);
     auto current_layer_gradient_buffer_cl = BufferCast<OpenCLBuffer>(current_layer_gradient_buffer);
-    const auto desiredOutputsBuffer_cl = BufferCast<const OpenCLBuffer>(desiredOutputsBuffer);
 
     (*m_kernel_train_backward_pass)(cl::EnqueueArgs(m_command_queue,
-        cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x),
-            ExtendGlobalWorkSize(numTrainingSamples, m_kernel_training_ideal_workgroup_size_y)),
-        cl::NDRange(m_kernel_training_ideal_workgroup_size_x, m_kernel_training_ideal_workgroup_size_y)),
-        next_layer_weights_buffer_cl->GetBuffer(), prev_activations_buffer_cl->GetBuffer(), layer_activations_buffer_cl->GetBuffer(), layer_zvalues_buffer_cl->GetBuffer(),
-        delta_k_vector_buffer_write_cl->GetBuffer(), delta_k_vector_buffer_read_cl->GetBuffer(), current_layer_gradient_buffer_cl->GetBuffer(), desiredOutputsBuffer_cl->GetBuffer(),
-        cl_uint(layer_neuron_count), cl_uint(weights_per_neuron), cl_uint(activation_function), cl_uint(numTrainingSamples), cl_uint(costFunction), cl_uint(next_layer_neuron_count),
-        cl_uint(next_layer_tensor_buffer ? 1 : 0)
-        );
+                                                    cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_ideal_workgroup_size_x),
+                                                                ExtendGlobalWorkSize(num_training_samples, m_kernel_training_ideal_workgroup_size_y)),
+                                                    cl::NDRange(m_kernel_training_ideal_workgroup_size_x, m_kernel_training_ideal_workgroup_size_y)),
+                                    next_layer_data_buffer_cl->GetBuffer(), prev_activations_buffer_cl->GetBuffer(), layer_activations_buffer_cl->GetBuffer(), layer_zvalues_buffer_cl->GetBuffer(),
+                                    delta_k_vector_buffer_write_cl->GetBuffer(), delta_k_vector_buffer_read_cl->GetBuffer(), current_layer_gradient_buffer_cl->GetBuffer(), cl_uint(layer_neuron_count),
+                                    cl_uint(weights_per_neuron), cl_uint(activation_function), cl_uint(num_training_samples), cl_uint(costFunction), cl_uint(next_layer_neuron_count),
+                                    cl_uint(is_output_layer ? 1 : 0));
 }
 
-void OpenCLComputeDevice::QueueApplyGradients(IBuffer* tensor_buffer, const IBuffer* gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
+void OpenCLComputeDevice::QueueApplyGradients(IBuffer* tensor_buffer, const IBuffer* gradient_buffer, uint32_t layer_neuron_count, uint32_t weights_per_neuron, float regularization_term_1,
+                                              float regularization_term_2, float normalized_learning_rate)
 {
     const auto weights_buffer_cl = BufferCast<const OpenCLBuffer>(tensor_buffer);
     const auto gradient_cl = BufferCast<const OpenCLBuffer>(gradient_buffer);
 
     (*m_kernel_train_apply_gradient)(cl::EnqueueArgs(m_command_queue, cl::NDRange(ExtendGlobalWorkSize(layer_neuron_count, m_kernel_training_apply_gradient_ideal_workgroup_size)),
                                                      cl::NDRange(m_kernel_training_apply_gradient_ideal_workgroup_size)),
-                                     weights_buffer_cl->GetBuffer(), gradient_cl->GetBuffer(), layer_neuron_count, weights_per_neuron,
-                                     regularization_term_1, regularization_term_2, normalized_learning_rate);
+                                     weights_buffer_cl->GetBuffer(), gradient_cl->GetBuffer(), layer_neuron_count, weights_per_neuron, regularization_term_1, regularization_term_2,
+                                     normalized_learning_rate);
 }
 
 std::vector<cl::Device> OpenCLComputeDevice::GetDeviceList()

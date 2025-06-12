@@ -34,7 +34,6 @@ template <typename T> std::span<uint8_t> ToWriteableUi8Span(T& container)
 }
 template <typename T> std::span<uint8_t> ToWriteableUi8Span(std::span<T> container) { return std::span<uint8_t>(reinterpret_cast<uint8_t*>(container.data()), container.size_bytes()); }
 
-
 template <typename T> int sign(T val) { return (T(0) < val) - (val < T(0)); }
 
 void ExportNetworkAsJson(const Network& network, std::ostream& stream);

@@ -59,9 +59,7 @@ class ComputeDevicesTest : public ::testing::Test
     {
         // Checks if multiple runs produce the same exact results
 
-        std::vector<float> input{
-            1,      -2,    3,    -10,  10
-        };
+        std::vector<float> input{1, -2, 3, -10, 10};
 
         constexpr uint32_t num_runs = 5;
 
@@ -84,12 +82,12 @@ class ComputeDevicesTest : public ::testing::Test
         }
     }
 
-    void TestForwardPass(const ComputeDeviceInfo& device_info)
+    void TestForwardPass(const ComputeDeviceInfo& device_info, ActivationFunction activation_fnc)
     {
         auto reference_device = ComputeDeviceFactory::CreateComputeDevice(CPUComputeDevice::GetCpuComputeDeviceInfo());
         auto compute_device = ComputeDeviceFactory::CreateComputeDevice(device_info);
 
-        auto test_device = [](IComputeDevice& compute_device) {
+        auto test_device = [activation_fnc](IComputeDevice& compute_device) {
             const uint32_t prev_layer_num_neurons = 5;
             const uint32_t num_neurons = 10;
             const uint32_t num_weights = (prev_layer_num_neurons + 1) * num_neurons;
@@ -101,13 +99,11 @@ class ComputeDevicesTest : public ::testing::Test
             auto zvalues_buffer = compute_device.CreateBuffer(num_training_samples * num_neurons * sizeof(float), BufferUsage::ReadWrite, "zvalues");
 
             std::vector<float> weights{};
-            for (int i = 0; i < num_weights; ++i)
-            {
-                weights.emplace_back(fmod(weights.size() * 13412.3231341f, 2.5213f) - 0.0356f * weights.size()-1.2421f);
+            for (int i = 0; i < num_weights; ++i) {
+                weights.emplace_back(fmod(weights.size() * 13412.3231341f, 2.5213f) - 0.0356f * weights.size() - 1.2421f);
             }
             std::vector<float> prev_activations{};
-            for (int i = 0; i < num_training_samples * prev_layer_num_neurons; ++i)
-            {
+            for (int i = 0; i < num_training_samples * prev_layer_num_neurons; ++i) {
                 prev_activations.emplace_back(fmod(prev_activations.size() * 1342.3231341f, 1.0f));
             }
 
@@ -118,26 +114,67 @@ class ComputeDevicesTest : public ::testing::Test
             compute_device.QueueWriteToBuffer(tensor_buffer.get(), ToReadOnlyUi8Span(weights), 0);
             compute_device.QueueWriteToBuffer(prev_activations_buffer.get(), ToReadOnlyUi8Span(prev_activations), 0);
 
-            compute_device.QueueTrainForwardPass(tensor_buffer.get(), prev_activations_buffer.get(), activations_buffer.get(), zvalues_buffer.get(), ActivationFunction::Sigmoid, num_neurons, prev_layer_num_neurons, num_training_samples);
-            
+            compute_device.QueueTrainForwardPass(tensor_buffer.get(), prev_activations_buffer.get(), activations_buffer.get(), zvalues_buffer.get(), activation_fnc, num_neurons,
+                                                 prev_layer_num_neurons, num_training_samples);
+
             compute_device.QueueReadFromBuffer(activations_buffer.get(), ToWriteableUi8Span(results_activations), 0);
             compute_device.QueueReadFromBuffer(zvalues_buffer.get(), ToWriteableUi8Span(results_zvalues), 0);
 
             compute_device.SubmitQueue();
             compute_device.WaitQueueIdle();
             return std::make_pair(results_activations, results_zvalues);
-            };
-
+        };
 
         auto [reference_activations, reference_zvalues] = test_device(*reference_device);
         auto [test_activations, test_zvalues] = test_device(*compute_device);
 
         ASSERT_EQ(reference_activations.size(), test_activations.size());
         ASSERT_EQ(reference_activations.size(), test_zvalues.size());
-        for (size_t i = 0; i < reference_activations.size(); i++)
-        {
+        for (size_t i = 0; i < reference_activations.size(); i++) {
             EXPECT_NEAR(reference_activations[i], test_activations[i], 0.0001f);
             EXPECT_NEAR(reference_zvalues[i], test_zvalues[i], 0.0001f);
+        }
+    }
+
+    void TestApplyGradient(const ComputeDeviceInfo& device_info, float regularization_term_1, float regularization_term_2, float normalized_learning_rate)
+    {
+        auto reference_device = ComputeDeviceFactory::CreateComputeDevice(CPUComputeDevice::GetCpuComputeDeviceInfo());
+        auto compute_device = ComputeDeviceFactory::CreateComputeDevice(device_info);
+
+        auto test_device = [regularization_term_1, regularization_term_2, normalized_learning_rate](IComputeDevice& compute_device) {
+            const uint32_t prev_layer_num_neurons = 5;
+            const uint32_t num_neurons = 10;
+            const uint32_t num_weights = (prev_layer_num_neurons + 1) * num_neurons;
+            const uint32_t num_training_samples = 5;
+
+            auto tensor_buffer = compute_device.CreateBuffer(num_weights * sizeof(float), BufferUsage::ReadWrite, "tensor");
+            auto gradient_buffer = compute_device.CreateBuffer(num_weights * sizeof(float), BufferUsage::ReadWrite, "prev_activations");
+
+            std::vector<float> weights{};
+            std::vector<float> gradients{};
+            for (int i = 0; i < num_weights; ++i) {
+                weights.emplace_back(fmod(weights.size() * 13412.3231341f, 2.5213f) - 0.0356f * weights.size() - 1.2421f);
+                gradients.emplace_back(fmod(gradients.size() * 1342.3231341f, 2.0f) - 1.0f);
+            }
+
+            compute_device.QueueWriteToBuffer(tensor_buffer.get(), ToReadOnlyUi8Span(weights), 0);
+            compute_device.QueueWriteToBuffer(gradient_buffer.get(), ToReadOnlyUi8Span(gradients), 0);
+
+            compute_device.QueueApplyGradients(tensor_buffer.get(), gradient_buffer.get(), num_neurons, prev_layer_num_neurons, regularization_term_1, regularization_term_2, normalized_learning_rate);
+
+            compute_device.QueueReadFromBuffer(tensor_buffer.get(), ToWriteableUi8Span(weights), 0);
+
+            compute_device.SubmitQueue();
+            compute_device.WaitQueueIdle();
+            return weights;
+        };
+
+        auto reference_weights = test_device(*reference_device);
+        auto test_weights = test_device(*compute_device);
+
+        ASSERT_EQ(reference_weights.size(), test_weights.size());
+        for (size_t i = 0; i < reference_weights.size(); i++) {
+            EXPECT_NEAR(reference_weights[i], test_weights[i], 0.0001f);
         }
     }
 };
@@ -195,7 +232,26 @@ TEST_F(ComputeDevicesTest, OpenCLComputeDeviceForwardPassTest)
     auto opencl_devices = OpenCLComputeDevice::GetOpenCLComputeDeviceInfo();
 
     for (const auto& it : opencl_devices) {
-        TestForwardPass(it);
+        printf("Testing %s\n", it.m_device_name.c_str());
+        TestForwardPass(it, ActivationFunction::ArcTan);
+        TestForwardPass(it, ActivationFunction::Identity);
+        TestForwardPass(it, ActivationFunction::LeakyReLU);
+        TestForwardPass(it, ActivationFunction::ReLU);
+        TestForwardPass(it, ActivationFunction::Sigmoid);
+        TestForwardPass(it, ActivationFunction::SoftPlus);
+        TestForwardPass(it, ActivationFunction::Tanh);
+        TestForwardPass(it, ActivationFunction::Threshold);
+    }
+}
+
+TEST_F(ComputeDevicesTest, OpenCLComputeDeviceGradientApplyTest)
+{
+    auto opencl_devices = OpenCLComputeDevice::GetOpenCLComputeDeviceInfo();
+
+    for (const auto& it : opencl_devices) {
+        printf("Testing %s\n", it.m_device_name.c_str());
+        TestApplyGradient(it, 1.0f, 0.0f, 0.0001f);
+        TestApplyGradient(it, 1.0f, 0.25f, 0.0001f);
     }
 }
 #endif
@@ -214,6 +270,34 @@ TEST_F(ComputeDevicesTest, VulkanComputeDeviceDeterministickCheck)
 
     for (const auto& it : vk_devices) {
         TestComputeDeviceDeterministicCheck(it);
+    }
+}
+
+TEST_F(ComputeDevicesTest, VulkanComputeDeviceForwardPassTest)
+{
+    auto vk_devices = VulkanComputeDevice::GetVulkanComputeDeviceInfo();
+
+    for (const auto& it : vk_devices) {
+        printf("Testing %s\n", it.m_device_name.c_str());
+        TestForwardPass(it, ActivationFunction::ArcTan);
+        TestForwardPass(it, ActivationFunction::Identity);
+        TestForwardPass(it, ActivationFunction::LeakyReLU);
+        TestForwardPass(it, ActivationFunction::ReLU);
+        TestForwardPass(it, ActivationFunction::Sigmoid);
+        TestForwardPass(it, ActivationFunction::SoftPlus);
+        TestForwardPass(it, ActivationFunction::Tanh);
+        TestForwardPass(it, ActivationFunction::Threshold);
+    }
+}
+
+TEST_F(ComputeDevicesTest, VulkanComputeDeviceGradientApplyTest)
+{
+    auto vk_devices = VulkanComputeDevice::GetVulkanComputeDeviceInfo();
+
+    for (const auto& it : vk_devices) {
+        printf("Testing %s\n", it.m_device_name.c_str());
+        TestApplyGradient(it, 1.0f, 0.0f, 0.0001f);
+        TestApplyGradient(it, 1.0f, 0.25f, 0.0001f);
     }
 }
 

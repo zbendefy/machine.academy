@@ -8,6 +8,6 @@
 #if __has_include(<CL/opencl.hpp>)
 #include <CL/opencl.hpp>
 #else
-//Note: For some reason some opencl installations do not provide opencl.hpp, only cl.hpp
+// Note: For some reason some opencl installations do not provide opencl.hpp, only cl.hpp
 #include <CL/cl.hpp>
 #endif

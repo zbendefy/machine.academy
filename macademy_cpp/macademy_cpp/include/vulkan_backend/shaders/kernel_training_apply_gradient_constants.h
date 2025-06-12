@@ -9,8 +9,8 @@ layout(push_constant) uniform constants_
 {
 #endif
 
-    uint current_layer_id;
-    uint current_layer_weights_offset; // ulong?
+    uint layer_neuron_count;
+    uint weights_per_neuron;
     float regularization_term_1;
     float regularization_term_2;
     float normalized_learning_rate;

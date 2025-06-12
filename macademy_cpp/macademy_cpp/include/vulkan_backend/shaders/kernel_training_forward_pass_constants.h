@@ -9,10 +9,10 @@ layout(push_constant) uniform constants_
 {
 #endif
 
-    uint current_layer_id;
-    uint current_layer_weights_offset; // ulong?
-    uint numTrainingSamples;
-    uint totalActivationCount;
+    uint activation_function;
+    uint layer_neuron_count;
+    uint weights_per_neuron;
+    uint num_training_samples;
 
 #ifdef VK_CONSTANTS_HOST
 };

@@ -16,12 +16,10 @@ class ShaderModule
   public:
     ShaderModule(Device* device, const std::string& name, const SpirvBinary& shader_code) : m_device(device)
     {
-        ASSERTM(shader_code.size() % 4 == 0, "Invalid SPIR-V bytecode!");
-
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        createInfo.codeSize = shader_code.size();
-        createInfo.pCode = reinterpret_cast<const uint32_t*>(shader_code.data());
+        createInfo.codeSize = shader_code.size() * sizeof(SpirvBinary::value_type);
+        createInfo.pCode = shader_code.data();
 
         if (vkCreateShaderModule(m_device->GetHandle(), &createInfo, nullptr, &m_shader_module) != VK_SUCCESS) {
             throw std::runtime_error("Failed to create shader module!");

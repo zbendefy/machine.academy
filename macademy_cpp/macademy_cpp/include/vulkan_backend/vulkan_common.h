@@ -7,7 +7,7 @@
 
 namespace macademy::vk {
 
-using SpirvBinary = std::vector<char>;
+using SpirvBinary = std::vector<uint32_t>;
 
 using ShaderSpecializationMap = std::map<uint32_t, uint32_t>;
 

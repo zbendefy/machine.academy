@@ -8,13 +8,16 @@ namespace macademy {
 
 class IWeightInitializer;
 
-struct Tensor 
+struct Tensor
 {
     DType m_dtype = DType::Float32;
     std::vector<uint8_t> m_data;
     std::vector<uint32_t> m_shape;
 
-    uint32_t GetElementSize() const { return std::accumulate(m_shape.begin(), m_shape.end(), 1u, [](uint32_t a, uint32_t b) {return a * b; }); };
+    uint32_t GetElementSize() const
+    {
+        return std::accumulate(m_shape.begin(), m_shape.end(), 1u, [](uint32_t a, uint32_t b) { return a * b; });
+    };
     size_t GetByteSize() const { return m_data.size(); }
     std::span<const uint8_t> GetRawData() const { return std::span<const uint8_t>(m_data.begin(), m_data.end()); }
     std::span<uint8_t> GetRawData() { return std::span<uint8_t>(m_data.begin(), m_data.end()); }
@@ -23,12 +26,7 @@ struct Tensor
     std::span<float> AsFloat32() { return std::span<float>(reinterpret_cast<float*>(m_data.data()), m_data.size() / sizeof(float)); }
     std::span<const float> AsFloat32() const { return std::span<const float>(reinterpret_cast<const float*>(m_data.data()), m_data.size() / sizeof(float)); }
 
-    Tensor(DType dtype, std::span<const uint8_t> data, std::span<const uint32_t> shape)
-        : m_dtype(dtype),
-        m_data(data.begin(), data.end()),
-        m_shape(shape.begin(), shape.end())
-    {
-    }
+    Tensor(DType dtype, std::span<const uint8_t> data, std::span<const uint32_t> shape) : m_dtype(dtype), m_data(data.begin(), data.end()), m_shape(shape.begin(), shape.end()) {}
 
     explicit Tensor(const Tensor& t) : Tensor(t.m_dtype, t.m_data, t.m_shape) {}
 };
